@@ -40,8 +40,26 @@
 | `subtitles.srt` | 字幕 / 旁白稿 |
 | `cover.jpg` | 封面 |
 | `cover.html` | 封面的生成页面（用浏览器打开就是封面） |
+| `preview/` | 从成片抽的关键帧预览图 |
 
 导出方法见仓库根目录的 [README](../README.md#本地导出一期视频)。
+
+## 关键帧预览
+
+从成片里按每句字幕抽的帧，拼成了 10 张预览图：
+
+- [keyframes_00.jpg](preview/keyframes_00.jpg)
+- [keyframes_01.jpg](preview/keyframes_01.jpg)
+- [keyframes_02.jpg](preview/keyframes_02.jpg)
+- [keyframes_03.jpg](preview/keyframes_03.jpg)
+- [keyframes_04.jpg](preview/keyframes_04.jpg)
+- [keyframes_05.jpg](preview/keyframes_05.jpg)
+- [keyframes_06.jpg](preview/keyframes_06.jpg)
+- [keyframes_07.jpg](preview/keyframes_07.jpg)
+- [keyframes_08.jpg](preview/keyframes_08.jpg)
+- [keyframes_09.jpg](preview/keyframes_09.jpg)
+
+![关键帧预览](preview/keyframes_00.jpg)
 
 ## 参考的源码
 
