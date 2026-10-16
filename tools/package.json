@@ -1,0 +1,9 @@
+{
+  "name": "video-log-tools",
+  "private": true,
+  "type": "module",
+  "description": "把 film.html 逐帧导出成视频（Chrome + ffmpeg/NVENC）",
+  "dependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

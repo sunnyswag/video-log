@@ -1,0 +1,8 @@
+node_modules/
+*.mp4
+*.wav
+timeline.json
+info.json
+# B 站登录凭证，绝对不要提交
+cookies.json
+*.cookies.json

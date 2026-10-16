@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="fonts.css">
+<style>html,body{margin:0;background:#000}#c{width:100vw;height:100vh;display:block}</style></head>
+<body><canvas id="c"></canvas><script src="film.js"></script><script>
+(async()=>{const cv=document.getElementById('c');cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;
+try{await Promise.all(FILM.fontsNeeded.map(f=>document.fonts.load(f,'时间0aA')));await document.fonts.ready;}catch(e){}
+FILM.drawCover(cv);window.__ready=true;})();
+</script></body></html>
