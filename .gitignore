@@ -6,3 +6,10 @@ info.json
 # B 站登录凭证，绝对不要提交
 cookies.json
 *.cookies.json
+
+# 本地整理时被仓库新版本取代的旧稿，确认后可清空
+.trash/
+# 其他本地工具产物
+biliup.exe
+desktop.ini
+Thumbs.db

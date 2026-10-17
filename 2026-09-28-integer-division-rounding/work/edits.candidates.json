@@ -1,0 +1,448 @@
+{
+  "schema_version": 2,
+  "deletes": [
+    {
+      "type": "range",
+      "start": 0.1,
+      "end": 3.23,
+      "reason": "opening silence 3.38s"
+    },
+    {
+      "type": "range",
+      "start": 112.54,
+      "end": 114.83,
+      "reason": "gap 2.59s cue 40-41"
+    },
+    {
+      "type": "range",
+      "start": 121.53,
+      "end": 124.18,
+      "reason": "gap 2.95s cue 44-45"
+    },
+    {
+      "type": "range",
+      "start": 148.2,
+      "end": 155.35,
+      "reason": "gap 7.45s cue 55-56"
+    },
+    {
+      "type": "range",
+      "start": 167.03,
+      "end": 168.77,
+      "reason": "gap 2.04s cue 60-61"
+    },
+    {
+      "type": "range",
+      "start": 196.55,
+      "end": 198.96,
+      "reason": "gap 2.71s cue 76-77"
+    },
+    {
+      "type": "range",
+      "start": 203.86,
+      "end": 205.48,
+      "reason": "gap 1.92s cue 79-80"
+    },
+    {
+      "type": "range",
+      "start": 268.58,
+      "end": 270.31,
+      "reason": "gap 2.03s cue 115-116"
+    },
+    {
+      "type": "range",
+      "start": 293.72,
+      "end": 295.46,
+      "reason": "gap 2.04s cue 129-130"
+    },
+    {
+      "type": "range",
+      "start": 351.9,
+      "end": 354.08,
+      "reason": "gap 2.48s cue 157-158"
+    },
+    {
+      "type": "range",
+      "start": 370.02,
+      "end": 372.61,
+      "reason": "gap 2.89s cue 161-162"
+    },
+    {
+      "type": "range",
+      "start": 423.79,
+      "end": 425.91,
+      "reason": "gap 2.42s cue 179-180"
+    },
+    {
+      "type": "range",
+      "start": 435.81,
+      "end": 437.51,
+      "reason": "gap 2.00s cue 182-183"
+    },
+    {
+      "type": "range",
+      "start": 451.31,
+      "end": 453.94,
+      "reason": "gap 2.93s cue 188-189"
+    },
+    {
+      "type": "range",
+      "start": 463.32,
+      "end": 465.1,
+      "reason": "gap 2.08s cue 192-193"
+    },
+    {
+      "type": "range",
+      "start": 474.84,
+      "end": 486.46,
+      "reason": "gap 11.92s cue 195-196"
+    },
+    {
+      "type": "range",
+      "start": 499.29,
+      "end": 501.44,
+      "reason": "gap 2.45s cue 199-200"
+    },
+    {
+      "type": "range",
+      "start": 517.8,
+      "end": 521.47,
+      "reason": "gap 3.97s cue 206-207"
+    },
+    {
+      "type": "range",
+      "start": 573.25,
+      "end": 574.79,
+      "reason": "gap 1.84s cue 230-231"
+    },
+    {
+      "type": "range",
+      "start": 593.75,
+      "end": 596.23,
+      "reason": "gap 2.78s cue 238-239"
+    },
+    {
+      "type": "range",
+      "start": 668.99,
+      "end": 671.03,
+      "reason": "gap 2.34s cue 274-275"
+    },
+    {
+      "type": "range",
+      "start": 698.67,
+      "end": 701.56,
+      "reason": "gap 3.19s cue 294-295"
+    },
+    {
+      "type": "range",
+      "start": 719.36,
+      "end": 721.16,
+      "reason": "gap 2.10s cue 303-304"
+    },
+    {
+      "type": "range",
+      "start": 753.44,
+      "end": 756.29,
+      "reason": "gap 3.15s cue 315-316"
+    },
+    {
+      "type": "range",
+      "start": 786.21,
+      "end": 788.48,
+      "reason": "gap 2.57s cue 334-335"
+    },
+    {
+      "type": "range",
+      "start": 805.92,
+      "end": 809.785,
+      "reason": "tail silence 4.07s"
+    },
+    {
+      "type": "range",
+      "start": 61.195,
+      "end": 62.516,
+      "reason": "mid-cue pause 1.32s in cue 18"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 35,
+      "reason": "filler_only: \"嗯\" (0.40s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 72,
+      "reason": "filler_only: \"在\" (0.44s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 82,
+      "reason": "filler_only: \"呃\" (0.44s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 95,
+      "reason": "filler_only: \"好\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 107,
+      "reason": "filler_only: \"对吧\" (0.54s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 124,
+      "reason": "filler_only: \"对吧\" (0.46s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 126,
+      "reason": "filler_only: \"嗯\" (0.48s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 129,
+      "reason": "filler_only: \"嗯\" (0.80s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 148,
+      "reason": "filler_only: \"嗯\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 152,
+      "reason": "filler_only: \"呃\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 161,
+      "reason": "filler_only: \"嗯\" (0.48s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 221,
+      "reason": "filler_only: \"嗯\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 241,
+      "reason": "filler_only: \"商\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 252,
+      "reason": "filler_only: \"呃\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 262,
+      "reason": "filler_only: \"嗯\" (0.34s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 282,
+      "reason": "filler_only: \"他\" (0.56s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 283,
+      "reason": "filler_only: \"呃\" (0.64s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 286,
+      "reason": "filler_only: \"啊\" (0.36s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 294,
+      "reason": "filler_only: \"1\" (0.04s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 300,
+      "reason": "filler_only: \"呃\" (0.22s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 312,
+      "reason": "filler_only: \"呃\" (0.24s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 315,
+      "reason": "filler_only: \"呃\" (0.48s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 320,
+      "reason": "filler_only: \"呃\" (0.42s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 324,
+      "reason": "filler_only: \"呃\" (0.42s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 326,
+      "reason": "filler_only: \"呃\" (0.42s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 337,
+      "reason": "filler_only: \"呃\" (0.40s)"
+    },
+    {
+      "type": "cue",
+      "cueIdx": 339,
+      "reason": "filler_only: \"用\" (0.40s)"
+    },
+    {
+      "type": "words",
+      "cueIdx": 93,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 122,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 140,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 163,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 166,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 174,
+      "pattern": "嗯",
+      "reason": "mid-cue hesitation \"嗯\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 176,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 179,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 207,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 213,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 214,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 215,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 220,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 231,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 232,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 234,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 237,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 240,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 243,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 301,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 302,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 309,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 325,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    },
+    {
+      "type": "words",
+      "cueIdx": 332,
+      "pattern": "呃",
+      "reason": "mid-cue hesitation \"呃\""
+    }
+  ],
+  "textEdits": [],
+  "notes": "suggest-edits 机械扫描结果：\n  gap>=1.80s 间隔 = 26 条\n  mid-cue>=1.30s 停顿 = 1 条\n  filler-only cues = 27 条\n  mid-cue hesitation (嗯/呃/啊/哦/um/uh) = 24 条 [呃×23 嗯×1]\n\n未自动切（需 LLM 判断——中文里有实义用法）：\n  semantic filler mid-cue counts: [一些×2 其实×14 然后×39 一个×15 就是×22 那个×2]\n\nLLM 务必再过一遍：合并 stutter/false-start 为 cue 范围、删除未完成片段、按上下文决定是否删 semantic filler、产出 textEdits。"
+}
