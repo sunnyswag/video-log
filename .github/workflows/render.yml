@@ -49,10 +49,14 @@ jobs:
           PROJECT: ${{ inputs.project }}
           SENSITIVE_WORDS: ${{ secrets.SENSITIVE_WORDS }}
         run: node tools/render/ci/pipeline.mjs check "$PROJECT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-static
+          key: ffmpeg-n8.1-linux64-gpl-v1
       - name: Install dependencies
+        timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          bash tools/render/ci/install_ffmpeg.sh
           npm ci --prefix tools/render --ignore-scripts --no-audit --no-fund
           python3 -m pip install numpy scipy
       - name: Prepare timeline, audio and matrix
@@ -88,10 +92,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-static
+          key: ffmpeg-n8.1-linux64-gpl-v1
       - name: Install dependencies
+        timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          bash tools/render/ci/install_ffmpeg.sh
           npm ci --prefix tools/render --ignore-scripts --no-audit --no-fund
       - uses: actions/download-artifact@v4
         with:
@@ -123,10 +131,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-static
+          key: ffmpeg-n8.1-linux64-gpl-v1
       - name: Install dependencies
+        timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          bash tools/render/ci/install_ffmpeg.sh
           python3 -m pip install Pillow
       - uses: actions/download-artifact@v4
         with:
