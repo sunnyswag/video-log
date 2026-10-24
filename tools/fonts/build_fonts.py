@@ -1,6 +1,6 @@
 """把 film.js 用到的字符从系统字体里子集化，生成 fonts.css（base64 内嵌 woff），
 保证在任何电脑上打开 film.html 都和成片字体一致。"""
-import base64, io, sys, string
+import base64, io, os, sys, string
 from fontTools.ttLib import TTFont
 from fontTools import subset
 
@@ -8,9 +8,10 @@ src = open(sys.argv[1], encoding='utf-8').read()
 chars = set(src) | set(string.printable) | set('0123456789−—·…“”‘’²³¹⁰⁴⁵⁶⁷⁸⁹≈≥≤←→↑×÷μ')
 text = ''.join(sorted(c for c in chars if ord(c) >= 32))
 
-N = '/usr/share/fonts/opentype/noto/'
-I = '/usr/share/fonts/opentype/inter/'
-D = '/usr/share/fonts/truetype/dejavu/'
+# 字体目录可用环境变量覆盖（例如本机把字体下载到 ~/.local/share/fonts/video-log/ 下，不用 sudo 安装）
+N = os.environ.get('NOTO_DIR', '/usr/share/fonts/opentype/noto').rstrip('/') + '/'
+I = os.environ.get('INTER_DIR', '/usr/share/fonts/opentype/inter').rstrip('/') + '/'
+D = os.environ.get('DEJAVU_DIR', '/usr/share/fonts/truetype/dejavu').rstrip('/') + '/'
 SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹'
 faces = [
     ('FSup', 500, I + 'Inter-Medium.otf', None),

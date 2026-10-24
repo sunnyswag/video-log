@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FilmKit · 视频预览</title>
+<!-- 使用内嵌字体时添加 <link rel="stylesheet" href="fonts.css">，并填写 fontsNeeded。 -->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; display: flex; gap: 12px; align-items: center;
+        background: linear-gradient(transparent, rgba(0,0,0,.85)); color: #9fe; font: 13px/1 Consolas, monospace; opacity: 0; transition: opacity .2s; }
+  body:hover #ui { opacity: 1; }
+  #ui button { background: #0a2a2a; color: #9fe; border: 1px solid #2aa; padding: 6px 12px; cursor: pointer; font: inherit; }
+  #seek { flex: 1; accent-color: #43f3e2; }
+  #hint { position: fixed; top: 12px; right: 16px; color: #5aa; font: 12px Consolas, monospace; opacity: .7; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">空格 播放/暂停 · ←/→ 跳 5 秒 · 声音请看成片 mp4</div>
+<div id="ui"><button id="pp">播放</button><input id="seek" type="range" min="0" max="1" step="0.001" value="0"><span id="tc">0.00</span></div>
+<!-- 复制到每期 YYYY-MM-DD-topic/work/ 时，引擎路径是 ../../tools/film-kit/engine.js。 -->
+<script src="../../tools/film-kit/engine.js"></script>
+<script src="film.js"></script>
+<script>
+(async function () {
+  const cv = document.getElementById('c');
+  const dpr = window.devicePixelRatio || 1;
+  function fit() { cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); }
+  fit();
+  await Promise.all(FILM.fontsNeeded.map(f => document.fonts.load(f, '时间0aA')));
+  await document.fonts.ready;
+  const D = FILM.duration;
+  let t = 0, playing = false, last = 0, raf = 0;
+  const seek = document.getElementById('seek'), tc = document.getElementById('tc'), pp = document.getElementById('pp');
+  seek.max = D;
+  function draw() { FILM.render(cv, t); seek.value = t; tc.textContent = t.toFixed(2) + ' / ' + D.toFixed(2); }
+  function loop(now) { if (!playing) return; t += (now - last) / 1000; last = now; if (t >= D) { t = D; playing = false; pp.textContent = '播放'; } draw(); raf = requestAnimationFrame(loop); }
+  window.__seek = tt => { t = Math.max(0, Math.min(D, tt)); draw(); };
+  window.__pause = () => { cancelAnimationFrame(raf); playing = false; pp.textContent = '播放'; };
+  window.__play = () => { if (playing) return; playing = true; last = performance.now(); pp.textContent = '暂停'; raf = requestAnimationFrame(loop); };
+  window.__duration = D;
+  addEventListener('resize', () => { fit(); draw(); });
+  pp.onclick = () => playing ? __pause() : __play();
+  seek.oninput = () => __seek(+seek.value);
+  addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); playing ? __pause() : __play(); }
+    if (e.code === 'ArrowRight') __seek(t + 5);
+    if (e.code === 'ArrowLeft') __seek(t - 5);
+  });
+  draw();
+  window.__ready = true;
+})().catch(error => { window.__ready = false; window.__error = String(error); document.getElementById('hint').textContent = String(error); console.error(error); });
+</script>
+</body>
+</html>
