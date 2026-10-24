@@ -144,7 +144,8 @@ try {
     : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '17'];
   const ffArgs = ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-'];
   if (audio) ffArgs.push('-ss', String(from), '-i', audio);
-  ffArgs.push(...vEnc, '-pix_fmt', 'yuv420p', '-r', String(fps));
+  // JPEG 帧是全范围色彩；显式转成标准范围 yuv420p（新版 ffmpeg 否则会输出 yuvj420p）
+  ffArgs.push('-vf', 'scale=in_range=pc:out_range=tv,format=yuv420p', ...vEnc, '-pix_fmt', 'yuv420p', '-color_range', 'tv', '-r', String(fps));
   if (audio) ffArgs.push('-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '320k', '-shortest');
   ffArgs.push('-movflags', '+faststart', outFile);
   ff = spawn('ffmpeg', ffArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
