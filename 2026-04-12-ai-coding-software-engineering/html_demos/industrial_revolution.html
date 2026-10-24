@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工业革命 · An Empirical Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;600;700&family=Noto+Serif+SC:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:     #ede0be;
+    --paper-hi:  #f4ead0;
+    --paper-lo:  #ddcea3;
+    --ink:       #1d150d;
+    --ink-soft:  #42321e;
+    --sepia:     #7b5728;
+    --oxblood:   #8a2323;
+    --patina:    #4d6036;
+    --gilded:    #a87b2a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    font-family: "Cormorant Garamond", "Noto Serif SC", Georgia, serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 3rem 2.5rem 2.5rem;
+    position: relative;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(122, 84, 52, 0.14), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(138, 35, 35, 0.09), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 0% 100%, rgba(77, 96, 54, 0.08), transparent 70%),
+      var(--paper);
+  }
+  /* paper grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.05 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.28;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* double margin border */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 1.4rem;
+    border: 1px solid var(--sepia);
+    outline: 1px solid var(--sepia);
+    outline-offset: 3px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 2;
+  }
+  main {
+    position: relative;
+    z-index: 3;
+    max-width: 1140px;
+    margin: 0 auto;
+  }
+
+  /* ============== HEADER ============== */
+  header {
+    text-align: center;
+    padding-bottom: 1.6rem;
+    margin-bottom: 2.4rem;
+    border-bottom: 2px solid var(--ink);
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    bottom: -6px;
+    height: 1px;
+    background: var(--ink);
+  }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.4em;
+    color: var(--sepia);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .eyebrow::before, .eyebrow::after {
+    content: ' — ';
+    color: var(--oxblood);
+  }
+  .title {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 4.2rem;
+    line-height: 0.95;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+  .title-zh {
+    display: block;
+    font-family: "Noto Serif SC", serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 1.5rem;
+    letter-spacing: 0.45em;
+    margin-top: 0.5rem;
+    color: var(--oxblood);
+  }
+  .subtitle {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 1.18rem;
+    color: var(--ink-soft);
+    margin-top: 1.1rem;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.45;
+  }
+  .star {
+    color: var(--oxblood);
+    font-style: normal;
+    margin: 0 0.4rem;
+  }
+  .dateline {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: var(--sepia);
+    margin-top: 1rem;
+  }
+
+  /* ============== SPECIMENS ============== */
+  .specimens {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    align-items: start;
+  }
+  .spec-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0.8rem;
+    position: relative;
+    min-height: 420px;
+  }
+  .spec-divider::before {
+    content: '';
+    position: absolute;
+    top: 4rem;
+    bottom: 2rem;
+    left: 50%;
+    width: 1px;
+    background-image: linear-gradient(to bottom, var(--sepia) 60%, transparent 0%);
+    background-size: 1px 8px;
+    background-repeat: repeat-y;
+    opacity: 0.55;
+  }
+  .versus {
+    font-family: "Playfair Display", serif;
+    font-style: italic;
+    font-size: 2.1rem;
+    color: var(--oxblood);
+    background: var(--paper);
+    padding: 0.3rem 0.7rem;
+    margin-top: 2.2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .specimen {
+    padding: 0 1.6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .fig-label {
+    font-family: "Playfair Display", serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.22em;
+    color: var(--sepia);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+  .fig-label::before, .fig-label::after {
+    content: '';
+    width: 22px; height: 1px;
+    background: var(--sepia);
+  }
+  .spec-name {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+  }
+  .spec-name-zh {
+    font-family: "Noto Serif SC", serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.35em;
+    color: var(--ink-soft);
+    margin-bottom: 1rem;
+  }
+
+  /* illustration frame */
+  .illustration {
+    width: 330px;
+    height: 240px;
+    border: 1.5px solid var(--ink);
+    position: relative;
+    background: var(--paper-hi);
+    box-shadow: 0 1px 0 var(--paper-hi), 0 3px 0 var(--ink), 4px 4px 0 var(--oxblood);
+    overflow: hidden;
+  }
+  .illustration::before, .illustration::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border: 1px solid var(--ink);
+    z-index: 2;
+  }
+  .illustration::before { top: 4px; left: 4px; border-right: none; border-bottom: none; }
+  .illustration::after  { bottom: 4px; right: 4px; border-left: none; border-top: none; }
+  .illustration svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .caption {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 0.6rem;
+    max-width: 330px;
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+  }
+
+  /* ============== LEDGER ============== */
+  .ledger {
+    width: 330px;
+    margin-top: 1.2rem;
+    border: 1.2px solid var(--ink);
+    padding: 0.75rem 1rem 0.9rem;
+    background: var(--paper-hi);
+    position: relative;
+  }
+  .ledger::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid var(--ink);
+    opacity: 0.28;
+    pointer-events: none;
+  }
+  .ledger-head {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.28em;
+    color: var(--sepia);
+    text-transform: uppercase;
+    text-align: center;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px dashed var(--sepia);
+    margin-bottom: 0.55rem;
+  }
+  .output-tray {
+    height: 28px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
+    background: var(--paper);
+    border: 1px dotted var(--sepia);
+  }
+  .cloth {
+    width: 14px; height: 14px;
+    position: absolute;
+    top: 7px;
+    transition: left 0.3s ease, opacity 0.3s;
+    transform: rotate(45deg);
+  }
+  .cloth::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 3px);
+  }
+  .cloth-hand { color: var(--sepia); border: 1px solid var(--sepia); }
+  .cloth-machine { color: var(--patina); border: 1px solid var(--patina); }
+  .counter-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 0.4rem;
+  }
+  .counter-label {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+  }
+  .counter-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.2rem;
+  }
+  .counter {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 2.6rem;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .spec-left .counter { color: var(--sepia); }
+  .spec-right .counter { color: var(--patina); }
+  .unit {
+    font-family: "Cormorant Garamond", serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  /* ============== RATIO ============== */
+  .ratio-block {
+    margin: 3rem auto 1.8rem;
+    text-align: center;
+    max-width: 760px;
+    position: relative;
+  }
+  .ratio-block::before,
+  .ratio-block::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--ink), transparent);
+    margin: 0.7rem auto;
+    width: 70%;
+  }
+  .ratio-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    color: var(--sepia);
+    text-transform: uppercase;
+  }
+  .ratio-label .cn {
+    color: var(--ink-soft);
+    font-family: "Noto Serif SC", serif;
+    letter-spacing: 0.3em;
+    margin-left: 0.6rem;
+  }
+  .ratio-value {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-size: 4rem;
+    color: var(--oxblood);
+    line-height: 1.1;
+    font-style: italic;
+    display: inline-block;
+  }
+  .ratio-value .x {
+    font-size: 2.1rem;
+    font-style: normal;
+    vertical-align: super;
+    font-weight: 400;
+    color: var(--ink-soft);
+    margin-left: 0.15rem;
+  }
+  .ratio-value.empty { color: var(--ink-soft); opacity: 0.35; }
+
+  /* ============== CONTROLS ============== */
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 1.3rem;
+    margin-top: 1.2rem;
+  }
+  button {
+    font-family: "Playfair Display", serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 0.75rem 2.2rem;
+    background: var(--paper-hi);
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    position: relative;
+    transition: all 0.18s;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  button:hover {
+    background: var(--ink);
+    color: var(--paper-hi);
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--oxblood);
+  }
+  button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  button.active {
+    background: var(--oxblood);
+    color: var(--paper-hi);
+    border-color: var(--oxblood);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+
+  /* ============== ANIMATIONS ============== */
+  @keyframes shuttle {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(90px); }
+  }
+  .shuttle-grp { animation: shuttle 3.2s ease-in-out infinite; }
+
+  @keyframes sway {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+  .worker-grp {
+    animation: sway 3.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+
+  @keyframes gear-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .gear-grp {
+    animation: gear-spin 1.4s linear infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  @keyframes piston {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-10px); }
+  }
+  .piston-grp { animation: piston 0.7s ease-in-out infinite; }
+
+  @keyframes smoke {
+    0% { opacity: 0.75; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(0, -55px) scale(2.6); }
+  }
+  .smoke { animation: smoke 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  .smoke-2 { animation-delay: 0.6s; }
+  .smoke-3 { animation-delay: 1.2s; }
+
+  /* responsive */
+  @media (max-width: 900px) {
+    .specimens { grid-template-columns: 1fr; }
+    .spec-divider { min-height: auto; order: 2; padding: 1.5rem 0; }
+    .spec-divider::before { display: none; }
+    .title { font-size: 2.6rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Chapter II · Folio One</div>
+    <h1 class="title">
+      Multiplicatio Laboris
+      <span class="title-zh">工 · 业 · 革 · 命</span>
+    </h1>
+    <p class="subtitle">
+      An empirical study on the multiplication of human labour
+      through the application of mechanical force
+      <span class="star">✦</span>
+      circa MDCCLXXXIV
+    </p>
+    <div class="dateline">FIGURE I &nbsp;·&nbsp; FIGURE II &nbsp;·&nbsp; COMPARATIVE OBSERVATION</div>
+  </header>
+
+  <section class="specimens">
+    <!-- =========== LEFT: Hand Loom =========== -->
+    <div class="specimen spec-left">
+      <div class="fig-label">Fig. I</div>
+      <div class="spec-name">The Hand Loom</div>
+      <div class="spec-name-zh">手 工 纺 织 机</div>
+
+      <div class="illustration">
+        <svg viewBox="0 0 330 240" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#1d150d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <!-- ground rule -->
+          <line x1="20" y1="218" x2="310" y2="218" stroke-dasharray="2 3" stroke-width="1"/>
+          <!-- spec tag -->
+          <text x="12" y="22" font-family="JetBrains Mono, monospace" font-size="7" fill="#7b5728" stroke="none">SPEC. I · HAND POWERED</text>
+          <line x1="12" y1="28" x2="130" y2="28" stroke="#7b5728" stroke-width="0.5"/>
+          <!-- loom frame -->
+          <rect x="75" y="82" width="185" height="95" fill="#f4ead0"/>
+          <line x1="75" y1="82" x2="75" y2="218"/>
+          <line x1="260" y1="82" x2="260" y2="218"/>
+          <line x1="90" y1="102" x2="245" y2="102"/>
+          <!-- warp threads -->
+          <g stroke="#7b5728" stroke-width="0.6">
+            <line x1="98" y1="102" x2="98" y2="168"/>
+            <line x1="110" y1="102" x2="110" y2="168"/>
+            <line x1="122" y1="102" x2="122" y2="168"/>
+            <line x1="134" y1="102" x2="134" y2="168"/>
+            <line x1="146" y1="102" x2="146" y2="168"/>
+            <line x1="158" y1="102" x2="158" y2="168"/>
+            <line x1="170" y1="102" x2="170" y2="168"/>
+            <line x1="182" y1="102" x2="182" y2="168"/>
+            <line x1="194" y1="102" x2="194" y2="168"/>
+            <line x1="206" y1="102" x2="206" y2="168"/>
+            <line x1="218" y1="102" x2="218" y2="168"/>
+            <line x1="230" y1="102" x2="230" y2="168"/>
+          </g>
+          <!-- woven cloth hanging -->
+          <path d="M 90 168 Q 100 175 90 183 L 245 183 Q 235 175 245 168 Z"
+                stroke="#7b5728" stroke-width="0.8" stroke-dasharray="1 2" fill="#f4ead0"/>
+          <!-- shuttle -->
+          <g class="shuttle-grp">
+            <ellipse cx="104" cy="133" rx="15" ry="4.5" fill="#ede0be" stroke="#1d150d" stroke-width="1.3"/>
+            <line x1="90" y1="133" x2="118" y2="133" stroke="#1d150d" stroke-width="0.6"/>
+          </g>
+          <!-- worker figure -->
+          <g class="worker-grp">
+            <circle cx="167" cy="192" r="7" fill="#f4ead0"/>
+            <line x1="167" y1="199" x2="167" y2="214"/>
+            <line x1="167" y1="204" x2="155" y2="195"/>
+            <line x1="167" y1="204" x2="179" y2="195"/>
+          </g>
+          <!-- labels -->
+          <g font-family="JetBrains Mono, monospace" font-size="7" fill="#7b5728" stroke="none">
+            <text x="28" y="90">a</text>
+            <text x="270" y="90">b</text>
+            <text x="160" y="232">c</text>
+          </g>
+          <line x1="34" y1="88" x2="74" y2="88" stroke="#7b5728" stroke-width="0.5"/>
+          <line x1="261" y1="88" x2="268" y2="88" stroke="#7b5728" stroke-width="0.5"/>
+          <!-- rhythm marks -->
+          <text x="290" y="132" font-family="Playfair Display, serif" font-size="10" fill="#8a2323" stroke="none" font-style="italic">○</text>
+          <text x="290" y="148" font-family="Playfair Display, serif" font-size="10" fill="#8a2323" stroke="none" font-style="italic">○</text>
+        </svg>
+      </div>
+      <p class="caption">a — oak frame &nbsp;·&nbsp; b — warp beam &nbsp;·&nbsp; c — human operator</p>
+
+      <div class="ledger">
+        <div class="ledger-head">Production Ledger · I</div>
+        <div class="output-tray" id="hand-output"></div>
+        <div class="counter-row">
+          <span class="counter-label">bolts woven · 匹布</span>
+          <span class="counter-value"><span class="counter" id="hand-count">0</span><span class="unit">pcs</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec-divider">
+      <div class="versus">vs.</div>
+    </div>
+
+    <!-- =========== RIGHT: Steam Loom =========== -->
+    <div class="specimen spec-right">
+      <div class="fig-label">Fig. II</div>
+      <div class="spec-name">The Steam Loom</div>
+      <div class="spec-name-zh">蒸 汽 纺 织 机</div>
+
+      <div class="illustration">
+        <svg viewBox="0 0 330 240" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#1d150d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <!-- ground rule -->
+          <line x1="20" y1="218" x2="310" y2="218" stroke-dasharray="2 3" stroke-width="1"/>
+          <!-- spec tag -->
+          <text x="12" y="22" font-family="JetBrains Mono, monospace" font-size="7" fill="#7b5728" stroke="none">SPEC. II · STEAM POWERED</text>
+          <line x1="12" y1="28" x2="140" y2="28" stroke="#7b5728" stroke-width="0.5"/>
+
+          <!-- smoke -->
+          <g fill="#7b5728" stroke="none" opacity="0.55">
+            <circle class="smoke" cx="108" cy="45" r="5"/>
+            <circle class="smoke smoke-2" cx="108" cy="45" r="5"/>
+            <circle class="smoke smoke-3" cx="108" cy="45" r="5"/>
+          </g>
+          <!-- chimney -->
+          <rect x="98" y="45" width="20" height="58" fill="#ede0be"/>
+          <line x1="94" y1="45" x2="122" y2="45" stroke-width="2"/>
+          <line x1="98" y1="60" x2="118" y2="60" stroke-width="0.8"/>
+          <!-- boiler body -->
+          <rect x="60" y="103" width="155" height="68" fill="#f4ead0"/>
+          <line x1="72" y1="115" x2="203" y2="115" stroke-width="0.8"/>
+          <line x1="72" y1="158" x2="203" y2="158" stroke-width="0.8"/>
+          <!-- firebox door -->
+          <circle cx="85" cy="137" r="5" fill="#8a2323" stroke="#1d150d"/>
+          <text x="95" y="141" font-family="JetBrains Mono, monospace" font-size="6" fill="#42321e" stroke="none">BOILER</text>
+          <!-- rivets -->
+          <g fill="#1d150d" stroke="none">
+            <circle cx="66" cy="109" r="1.3"/><circle cx="66" cy="165" r="1.3"/>
+            <circle cx="209" cy="109" r="1.3"/><circle cx="209" cy="165" r="1.3"/>
+          </g>
+          <!-- gauge -->
+          <g>
+            <circle cx="175" cy="132" r="8" fill="#ede0be"/>
+            <line x1="175" y1="132" x2="179" y2="127" stroke-width="1.2"/>
+            <circle cx="175" cy="132" r="1.2" fill="#1d150d"/>
+            <text x="186" y="136" font-family="JetBrains Mono, monospace" font-size="5" fill="#7b5728" stroke="none">PSI</text>
+          </g>
+          <!-- piston arm -->
+          <g class="piston-grp">
+            <rect x="38" y="129" width="27" height="9" fill="#ede0be"/>
+            <line x1="38" y1="133.5" x2="28" y2="133.5" stroke-width="2.2"/>
+          </g>
+          <!-- gear / flywheel -->
+          <g transform="translate(245 137)">
+            <g class="gear-grp">
+              <circle r="24"/>
+              <circle r="17"/>
+              <circle r="3" fill="#1d150d"/>
+              <g stroke-width="1.5">
+                <line x1="-24" y1="0" x2="-30" y2="0"/>
+                <line x1="24" y1="0" x2="30" y2="0"/>
+                <line x1="0" y1="-24" x2="0" y2="-30"/>
+                <line x1="0" y1="24" x2="0" y2="30"/>
+                <line x1="-17" y1="-17" x2="-21.2" y2="-21.2"/>
+                <line x1="17" y1="-17" x2="21.2" y2="-21.2"/>
+                <line x1="-17" y1="17" x2="-21.2" y2="21.2"/>
+                <line x1="17" y1="17" x2="21.2" y2="21.2"/>
+              </g>
+              <line x1="-17" y1="0" x2="17" y2="0" stroke-width="1"/>
+              <line x1="0" y1="-17" x2="0" y2="17" stroke-width="1"/>
+            </g>
+          </g>
+          <!-- base -->
+          <line x1="60" y1="171" x2="60" y2="218" stroke-dasharray="3 2"/>
+          <line x1="215" y1="171" x2="215" y2="218" stroke-dasharray="3 2"/>
+          <line x1="56" y1="203" x2="219" y2="203" stroke-dasharray="3 2" stroke-width="0.8"/>
+          <!-- labels -->
+          <g font-family="JetBrains Mono, monospace" font-size="7" fill="#7b5728" stroke="none">
+            <text x="15" y="110">d</text>
+            <text x="225" y="110">e</text>
+            <text x="22" y="146">f</text>
+          </g>
+          <line x1="20" y1="108" x2="58" y2="108" stroke="#7b5728" stroke-width="0.5"/>
+          <line x1="218" y1="108" x2="224" y2="108" stroke="#7b5728" stroke-width="0.5"/>
+          <line x1="28" y1="143" x2="36" y2="133" stroke="#7b5728" stroke-width="0.5"/>
+        </svg>
+      </div>
+      <p class="caption">d — fire-tube boiler &nbsp;·&nbsp; e — flywheel &nbsp;·&nbsp; f — piston arm</p>
+
+      <div class="ledger">
+        <div class="ledger-head">Production Ledger · II</div>
+        <div class="output-tray" id="machine-output"></div>
+        <div class="counter-row">
+          <span class="counter-label">bolts woven · 匹布</span>
+          <span class="counter-value"><span class="counter" id="machine-count">0</span><span class="unit">pcs</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ratio-block">
+    <div class="ratio-label">Ratio of Multiplication <span class="cn">效 率 之 比</span></div>
+    <div class="ratio-value empty" id="ratio">— <span class="x">×</span></div>
+  </div>
+
+  <div class="controls">
+    <button id="btn-start">Commence Production</button>
+    <button id="btn-reset">Reset Ledger</button>
+  </div>
+</main>
+
+<script>
+  const handCountEl    = document.getElementById('hand-count');
+  const machineCountEl = document.getElementById('machine-count');
+  const handOutput     = document.getElementById('hand-output');
+  const machineOutput  = document.getElementById('machine-output');
+  const ratioEl        = document.getElementById('ratio');
+  const btnStart       = document.getElementById('btn-start');
+  const btnReset       = document.getElementById('btn-reset');
+
+  let handCount = 0, machineCount = 0;
+  let running = false;
+  let handTimer = null, machineTimer = null;
+  let handCloths = [], machineCloths = [];
+
+  const HAND_INTERVAL    = 2400;
+  const MACHINE_INTERVAL = 400;
+  const MAX_CLOTHS       = 18;
+
+  function addCloth(container, cloths, className) {
+    const cloth = document.createElement('div');
+    cloth.className = `cloth ${className}`;
+    const idx = cloths.length % MAX_CLOTHS;
+    cloth.style.left = (8 + idx * 16) + 'px';
+    cloth.style.opacity = '0';
+    container.appendChild(cloth);
+    cloths.push(cloth);
+    requestAnimationFrame(() => { cloth.style.opacity = '1'; });
+    if (cloths.length > MAX_CLOTHS) {
+      cloths.shift().remove();
+    }
+  }
+
+  function updateRatio() {
+    if (handCount === 0) {
+      ratioEl.classList.add('empty');
+      ratioEl.innerHTML = '— <span class="x">×</span>';
+      return;
+    }
+    ratioEl.classList.remove('empty');
+    const r = (machineCount / handCount).toFixed(1);
+    ratioEl.innerHTML = `${r}<span class="x">×</span>`;
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function start() {
+    if (running) return;
+    running = true;
+    btnStart.classList.add('active');
+    btnStart.textContent = 'In Production…';
+
+    handTimer = setInterval(() => {
+      handCount++;
+      handCountEl.textContent = pad2(handCount);
+      addCloth(handOutput, handCloths, 'cloth-hand');
+      updateRatio();
+    }, HAND_INTERVAL);
+
+    machineTimer = setInterval(() => {
+      machineCount++;
+      machineCountEl.textContent = pad2(machineCount);
+      addCloth(machineOutput, machineCloths, 'cloth-machine');
+      updateRatio();
+    }, MACHINE_INTERVAL);
+  }
+
+  function reset() {
+    running = false;
+    clearInterval(handTimer);
+    clearInterval(machineTimer);
+    handCount = 0; machineCount = 0;
+    handCountEl.textContent = '0';
+    machineCountEl.textContent = '0';
+    handOutput.innerHTML = '';
+    machineOutput.innerHTML = '';
+    handCloths = []; machineCloths = [];
+    updateRatio();
+    btnStart.classList.remove('active');
+    btnStart.textContent = 'Commence Production';
+  }
+
+  btnStart.addEventListener('click', start);
+  btnReset.addEventListener('click', reset);
+</script>
+</body>
+</html>

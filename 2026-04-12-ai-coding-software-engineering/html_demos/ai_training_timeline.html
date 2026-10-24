@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL_ENV.LOG · AI 训练环境的演进</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #050b07;
+    --bg-2:      #071410;
+    --bg-3:      #0a1d15;
+    --phosphor:  #4dff88;
+    --phosphor-d:#2aa858;
+    --phosphor-f:#0a3a20;
+    --amber:     #ffb940;
+    --amber-d:   #a06a1a;
+    --red:       #ff5545;
+    --cyan:      #5ae4e4;
+    --magenta:   #ff6bc8;
+    --dim:       #528a6a;
+    --dimmer:    #2a4a38;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #000; }
+  body {
+    font-family: "JetBrains Mono", "Noto Sans SC", monospace;
+    color: var(--phosphor);
+    min-height: 100vh;
+    padding: 1.5rem;
+    position: relative;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, var(--bg-2) 0%, var(--bg) 70%, #000 100%);
+    text-shadow: 0 0 2px rgba(77, 255, 136, 0.35);
+  }
+
+  /* CRT scan lines */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0.25) 3px,
+      rgba(0, 0, 0, 0) 4px
+    );
+    pointer-events: none;
+    z-index: 10;
+    mix-blend-mode: multiply;
+  }
+  /* CRT vignette + subtle flicker */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 100% 80% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.65) 100%);
+    pointer-events: none;
+    z-index: 11;
+    animation: flicker 4s steps(8) infinite;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    48% { opacity: 0.98; }
+    50% { opacity: 0.94; }
+    52% { opacity: 0.99; }
+  }
+
+  /* Terminal frame */
+  .crt {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    border: 1px solid var(--phosphor-f);
+    background:
+      linear-gradient(180deg, rgba(10, 29, 21, 0.6), rgba(7, 20, 16, 0.5));
+    padding: 1.4rem 1.6rem 2rem;
+    box-shadow:
+      0 0 40px rgba(77, 255, 136, 0.08),
+      inset 0 0 80px rgba(0, 0, 0, 0.5);
+  }
+  .crt::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid var(--phosphor-f);
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  /* =========== HUD STATUS BAR =========== */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--phosphor-f);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .hud .left, .hud .right {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+  }
+  .hud .ok { color: var(--phosphor); }
+  .hud .warn { color: var(--amber); }
+  .hud .blink {
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink {
+    to { visibility: hidden; }
+  }
+  .hud-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--phosphor);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--phosphor);
+    margin-right: 0.3rem;
+  }
+
+  /* =========== TITLE =========== */
+  .title-block {
+    padding: 1.8rem 0 1.4rem;
+    position: relative;
+  }
+  .prompt-line {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--phosphor-d);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.8rem;
+  }
+  .prompt-line .p { color: var(--amber); }
+  .prompt-line .c { color: var(--phosphor); }
+  .title {
+    font-family: "VT323", monospace;
+    font-size: 4.8rem;
+    line-height: 0.85;
+    color: var(--phosphor);
+    letter-spacing: 0.02em;
+    text-shadow:
+      0 0 10px rgba(77, 255, 136, 0.55),
+      0 0 24px rgba(77, 255, 136, 0.25),
+      2px 0 0 rgba(255, 107, 200, 0.3),
+      -2px 0 0 rgba(90, 228, 228, 0.3);
+  }
+  .title .stroke {
+    color: var(--amber);
+  }
+  .subtitle {
+    margin-top: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+  }
+  .subtitle-zh {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    color: var(--phosphor-d);
+  }
+  .subtitle-en {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--dim);
+    text-transform: uppercase;
+    padding-left: 0.7rem;
+    border-left: 1px solid var(--phosphor-f);
+  }
+
+  /* =========== ASCII TIMELINE =========== */
+  .timeline-wrap {
+    margin-top: 2rem;
+    padding: 1.2rem 0 0;
+    border-top: 1px dashed var(--phosphor-f);
+    position: relative;
+  }
+  .timeline-label {
+    position: absolute;
+    top: -0.6rem;
+    left: 1rem;
+    background: var(--bg);
+    padding: 0 0.6rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.25em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.8rem;
+    padding: 1rem 0 0.4rem;
+  }
+  /* main track */
+  .track {
+    position: absolute;
+    top: 148px;
+    left: 4%;
+    right: 4%;
+    height: 2px;
+    background: var(--phosphor-f);
+    z-index: 0;
+  }
+  .track-fill {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, var(--red), var(--amber), var(--phosphor), var(--cyan));
+    transition: width 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 0 10px rgba(77, 255, 136, 0.5);
+  }
+
+  .node {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    opacity: 0.3;
+    filter: saturate(0.3);
+    transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 2;
+    padding: 0 0.3rem;
+  }
+  .node.revealed {
+    opacity: 1;
+    filter: saturate(1);
+  }
+
+  /* env pod visual */
+  .env-pod {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.8rem;
+  }
+  .env-pod .frame {
+    position: absolute;
+    inset: 12px;
+    border: 1px solid var(--color);
+    clip-path: polygon(
+      0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px,
+      100% calc(100% - 8px), calc(100% - 8px) 100%,
+      8px 100%, 0 calc(100% - 8px)
+    );
+  }
+  .env-pod .frame::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid var(--color);
+    opacity: 0.25;
+    clip-path: inherit;
+  }
+  .env-pod .glyph {
+    font-family: "VT323", monospace;
+    font-size: 3.8rem;
+    color: var(--color);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--color) 60%, transparent);
+    z-index: 2;
+    position: relative;
+    line-height: 1;
+  }
+  .env-pod .corners::before,
+  .env-pod .corners::after,
+  .env-pod .corners > span::before,
+  .env-pod .corners > span::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--color);
+  }
+  .env-pod .corners::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+  .env-pod .corners::after  { top: 0; right: 0; border-left: none; border-bottom: none; }
+  .env-pod .corners > span {
+    position: absolute;
+    inset: 0;
+  }
+  .env-pod .corners > span::before { bottom: 0; left: 0; border-right: none; border-top: none; }
+  .env-pod .corners > span::after  { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+  /* complexity rings (animated when active) */
+  .ring {
+    position: absolute;
+    border: 1px solid var(--color);
+    border-radius: 50%;
+    opacity: 0;
+    transition: all 0.6s;
+  }
+  .node.active .ring { opacity: 0.25; }
+  .node.active .ring.r1 { width: 150px; height: 150px; }
+  .node.active .ring.r2 { width: 170px; height: 170px; opacity: 0.18; }
+  .node.active .ring.r3 { width: 190px; height: 190px; opacity: 0.12; }
+  .node:nth-child(n+3).active .ring.r2 { animation: pulse 3s ease-in-out infinite; }
+  .node:nth-child(n+4).active .ring.r3 { animation: pulse 3s ease-in-out infinite; animation-delay: 0.6s; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.12; }
+    50% { transform: scale(1.08); opacity: 0.25; }
+  }
+
+  .track-dot {
+    width: 14px;
+    height: 14px;
+    background: var(--color);
+    margin-bottom: 0.8rem;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 0 8px var(--color);
+    transform: rotate(45deg);
+  }
+  .node.active .track-dot {
+    animation: dot-blink 1s steps(4, end) infinite;
+  }
+  @keyframes dot-blink {
+    0%, 100% { box-shadow: 0 0 12px var(--color), 0 0 24px var(--color); }
+    50% { box-shadow: 0 0 4px var(--color); }
+  }
+
+  .node-meta {
+    text-align: center;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .node-year {
+    font-size: 0.62rem;
+    color: var(--dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+  }
+  .node-name {
+    font-family: "VT323", monospace;
+    font-size: 1.7rem;
+    color: var(--color);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+    text-shadow: 0 0 8px color-mix(in srgb, var(--color) 55%, transparent);
+  }
+  .node-env {
+    font-size: 0.65rem;
+    color: var(--phosphor-d);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .node-env .zh {
+    font-family: "Noto Sans SC", sans-serif;
+    letter-spacing: 0.1em;
+    margin-left: 0.4rem;
+  }
+
+  /* node colors */
+  .node:nth-child(1) { --color: var(--red); }
+  .node:nth-child(2) { --color: var(--amber); }
+  .node:nth-child(3) { --color: var(--phosphor); }
+  .node:nth-child(4) { --color: var(--cyan); }
+
+  /* =========== TERMINAL OUTPUT PANEL =========== */
+  .panel {
+    margin-top: 1.8rem;
+    border: 1px solid var(--phosphor-f);
+    background: rgba(0, 0, 0, 0.3);
+    position: relative;
+    transition: border-color 0.4s;
+  }
+  .panel.has-content { border-color: var(--active-color, var(--phosphor-f)); }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid var(--phosphor-f);
+    background: rgba(77, 255, 136, 0.04);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  .panel-head .dots {
+    display: flex; gap: 0.4rem;
+  }
+  .panel-head .dots span {
+    width: 8px; height: 8px;
+    border: 1px solid var(--phosphor-f);
+  }
+  .panel-head .dots span:first-child { background: var(--red); border-color: var(--red); }
+  .panel-head .dots span:nth-child(2) { background: var(--amber); border-color: var(--amber); }
+  .panel-head .dots span:nth-child(3) { background: var(--phosphor); border-color: var(--phosphor); }
+
+  .panel-body {
+    padding: 1.1rem 1.2rem 1.3rem;
+    min-height: 160px;
+  }
+  .empty-msg {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--dimmer);
+    letter-spacing: 0.05em;
+  }
+  .empty-msg::before {
+    content: '> ';
+    color: var(--amber);
+  }
+  .empty-msg .blink-cursor {
+    display: inline-block;
+    width: 0.6em;
+    height: 1em;
+    background: var(--phosphor);
+    margin-left: 0.2em;
+    vertical-align: text-bottom;
+    animation: blink 1s steps(2, start) infinite;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem 2rem;
+  }
+  .field {
+    font-family: "JetBrains Mono", monospace;
+  }
+  .field-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .field-label::before {
+    content: '■';
+    font-size: 0.7rem;
+    color: var(--active-color, var(--phosphor));
+  }
+  .field-val {
+    font-family: "JetBrains Mono", "Noto Sans SC", monospace;
+    font-size: 0.82rem;
+    color: var(--phosphor);
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+  }
+  .field-val.insight {
+    font-family: "VT323", monospace;
+    font-size: 1.1rem;
+    color: var(--active-color, var(--phosphor));
+    line-height: 1.35;
+  }
+
+  .complexity-bar {
+    margin-top: 1.2rem;
+    padding-top: 0.9rem;
+    border-top: 1px dashed var(--phosphor-f);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .cb-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.22em;
+    color: var(--dim);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .cb-ascii {
+    flex: 1;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    color: var(--active-color, var(--phosphor));
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .cb-percent {
+    font-family: "VT323", monospace;
+    font-size: 1.4rem;
+    color: var(--active-color, var(--phosphor));
+    text-shadow: 0 0 8px color-mix(in srgb, var(--active-color, var(--phosphor)) 60%, transparent);
+  }
+
+  /* =========== CONTROLS =========== */
+  .controls {
+    margin-top: 1.6rem;
+    display: flex;
+    gap: 0.8rem;
+    justify-content: flex-end;
+    padding: 0.8rem 0;
+    border-top: 1px dashed var(--phosphor-f);
+  }
+  button {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding: 0.65rem 1.2rem;
+    background: transparent;
+    color: var(--phosphor);
+    border: 1px solid var(--phosphor-f);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  button::before {
+    content: '[ ';
+    color: var(--dim);
+  }
+  button::after {
+    content: ' ]';
+    color: var(--dim);
+  }
+  button:hover:not(:disabled) {
+    background: rgba(77, 255, 136, 0.08);
+    border-color: var(--phosphor);
+    color: var(--phosphor);
+    text-shadow: 0 0 6px var(--phosphor);
+  }
+  button:hover:not(:disabled)::before,
+  button:hover:not(:disabled)::after {
+    color: var(--phosphor);
+  }
+  button:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+  button.playing {
+    background: rgba(255, 185, 64, 0.1);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  button.playing::before,
+  button.playing::after { color: var(--amber); }
+
+  @media (max-width: 900px) {
+    .timeline { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .track { display: none; }
+    .title { font-size: 3.2rem; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="crt">
+  <!-- ======== HUD ======== -->
+  <div class="hud">
+    <div class="left">
+      <span><span class="hud-dot"></span>SYS.ONLINE</span>
+      <span>NODE: RL_ENV</span>
+      <span class="warn">◎ REC</span>
+    </div>
+    <div class="right">
+      <span>UPLINK: <span class="ok">STABLE</span></span>
+      <span>2016–202? UTC</span>
+      <span class="blink">█</span>
+    </div>
+  </div>
+
+  <!-- ======== TITLE ======== -->
+  <div class="title-block">
+    <div class="prompt-line">
+      <span class="p">user@research</span>:<span class="c">~/rl_env</span>$ cat evolution.log
+    </div>
+    <h1 class="title">EVOLUTION<span class="stroke">/</span>OF<span class="stroke">/</span>THE<span class="stroke">/</span>ENVIRONMENT</h1>
+    <div class="subtitle">
+      <span class="subtitle-zh">A I &nbsp;训&nbsp;练&nbsp;环&nbsp;境&nbsp;的&nbsp;演&nbsp;进</span>
+      <span class="subtitle-en">The richer the world, the smarter the agent</span>
+    </div>
+  </div>
+
+  <!-- ======== TIMELINE ======== -->
+  <div class="timeline-wrap">
+    <div class="timeline-label">◉ RL_ENV.TIMELINE</div>
+    <div class="timeline">
+      <div class="track"><div class="track-fill" id="track-fill"></div></div>
+
+      <div class="node" data-idx="0">
+        <div class="env-pod">
+          <div class="ring r1"></div>
+          <div class="frame"></div>
+          <div class="corners"><span></span></div>
+          <div class="glyph">+</div>
+        </div>
+        <div class="track-dot"></div>
+        <div class="node-meta">
+          <div class="node-year">▸ 2016 ▸</div>
+          <div class="node-name">AlphaGo /<br>AlphaZero</div>
+          <div class="node-env">BOARD <span class="zh">棋盘环境</span></div>
+        </div>
+      </div>
+
+      <div class="node" data-idx="1">
+        <div class="env-pod">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="frame"></div>
+          <div class="corners"><span></span></div>
+          <div class="glyph">Aa</div>
+        </div>
+        <div class="track-dot"></div>
+        <div class="node-meta">
+          <div class="node-year">▸ 2019 – 2023 ▸</div>
+          <div class="node-name">GPT Series</div>
+          <div class="node-env">LANG <span class="zh">语言环境</span></div>
+        </div>
+      </div>
+
+      <div class="node" data-idx="2">
+        <div class="env-pod">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
+          <div class="frame"></div>
+          <div class="corners"><span></span></div>
+          <div class="glyph">&gt;_</div>
+        </div>
+        <div class="track-dot"></div>
+        <div class="node-meta">
+          <div class="node-year">▸ 2024 – 2026 ▸</div>
+          <div class="node-name">Agentic Model</div>
+          <div class="node-env">COMPUTER <span class="zh">计算机环境</span></div>
+        </div>
+      </div>
+
+      <div class="node" data-idx="3">
+        <div class="env-pod">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
+          <div class="frame"></div>
+          <div class="corners"><span></span></div>
+          <div class="glyph">??</div>
+        </div>
+        <div class="track-dot"></div>
+        <div class="node-meta">
+          <div class="node-year">▸ FUTURE ▸</div>
+          <div class="node-name">???</div>
+          <div class="node-env">UNKNOWN <span class="zh">未知环境</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== TERMINAL PANEL ======== -->
+  <div class="panel" id="detail">
+    <div class="panel-head">
+      <span>◉ ENV_DETAIL.READOUT</span>
+      <span class="dots"><span></span><span></span><span></span></span>
+    </div>
+    <div class="panel-body" id="detail-body">
+      <div class="empty-msg">awaiting node selection<span class="blink-cursor"></span></div>
+    </div>
+  </div>
+
+  <!-- ======== CONTROLS ======== -->
+  <div class="controls">
+    <button id="btn-prev" disabled>◂ prev</button>
+    <button id="btn-next">next ▸</button>
+    <button id="btn-auto">⏵ auto</button>
+  </div>
+</div>
+
+<script>
+const data = [
+  {
+    env: '19×19 棋盘 · 黑白二色',
+    rules: '围棋规则，有限状态空间 (约 10^170)',
+    ability: '在规则明确、信息完备的封闭环境中超越人类',
+    complexity: 15,
+    color: '#ff5545',
+    insight: '环境是封闭的、规则是确定的。AI 在这个框架内穷尽了可能性。'
+  },
+  {
+    env: '人类语言文本 · 互联网规模',
+    rules: '语法、语义、常识推理、多语言',
+    ability: '理解和生成人类语言，进行推理、翻译、写作、编程',
+    complexity: 50,
+    color: '#ffb940',
+    insight: '环境从棋盘变成了整个人类知识。规则不再明确——语言是模糊的、多义的、文化相关的。'
+  },
+  {
+    env: '完整计算机系统 · 文件/终端/浏览器/API',
+    rules: '操作系统交互、软件工程实践、网络协议、工具链',
+    ability: '自主操作计算机、编写和调试代码、使用工具完成任务',
+    complexity: 80,
+    color: '#4dff88',
+    insight: 'AI 不只是「说」，还要「做」——执行操作、处理反馈、做出连续决策。'
+  },
+  {
+    env: '?',
+    rules: '?',
+    ability: '当环境的复杂度接近真实世界，量变是否会引起质变？',
+    complexity: 100,
+    color: '#5ae4e4',
+    insight: '如果给 AI 更复杂的环境——比如一个完整的物理世界——它会进化成什么？没有人知道。'
+  }
+];
+
+const nodes     = document.querySelectorAll('.node');
+const trackFill = document.getElementById('track-fill');
+const detail    = document.getElementById('detail');
+const detailBody= document.getElementById('detail-body');
+const btnPrev   = document.getElementById('btn-prev');
+const btnNext   = document.getElementById('btn-next');
+const btnAuto   = document.getElementById('btn-auto');
+
+let current = -1;
+let autoInterval = null;
+
+function asciiBar(pct) {
+  const total = 24;
+  const filled = Math.round((pct / 100) * total);
+  return '[' + '█'.repeat(filled) + '░'.repeat(total - filled) + ']';
+}
+
+function show(idx) {
+  current = idx;
+  nodes.forEach((n, i) => {
+    if (i <= idx) {
+      n.classList.add('revealed');
+      n.classList.toggle('active', i === idx);
+    } else {
+      n.classList.remove('revealed', 'active');
+    }
+  });
+
+  if (idx < 0) {
+    trackFill.style.width = '0';
+  } else {
+    trackFill.style.width = ((idx / 3) * 100) + '%';
+  }
+
+  if (idx >= 0 && idx < data.length) {
+    const d = data[idx];
+    detail.classList.add('has-content');
+    detail.style.setProperty('--active-color', d.color);
+    detailBody.innerHTML = `
+      <div class="grid-2">
+        <div class="field">
+          <div class="field-label">training environment</div>
+          <div class="field-val">${d.env}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">environment rules</div>
+          <div class="field-val">${d.rules}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">acquired capability</div>
+          <div class="field-val">${d.ability}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">insight // 启示</div>
+          <div class="field-val insight">${d.insight}</div>
+        </div>
+      </div>
+      <div class="complexity-bar">
+        <span class="cb-label">env.complexity →</span>
+        <span class="cb-ascii">${asciiBar(d.complexity)}</span>
+        <span class="cb-percent">${String(d.complexity).padStart(3, '0')}%</span>
+      </div>
+    `;
+  } else {
+    detail.classList.remove('has-content');
+    detailBody.innerHTML = '<div class="empty-msg">awaiting node selection<span class="blink-cursor"></span></div>';
+  }
+
+  btnPrev.disabled = idx <= -1;
+  btnNext.disabled = idx >= 3;
+}
+
+btnNext.addEventListener('click', () => { if (current < 3) show(current + 1); });
+btnPrev.addEventListener('click', () => { if (current > -1) show(current - 1); });
+
+btnAuto.addEventListener('click', () => {
+  if (autoInterval) {
+    clearInterval(autoInterval);
+    autoInterval = null;
+    btnAuto.classList.remove('playing');
+    btnAuto.textContent = '⏵ auto';
+    return;
+  }
+  current = -1;
+  show(-1);
+  btnAuto.classList.add('playing');
+  btnAuto.textContent = '⏸ stop';
+  autoInterval = setInterval(() => {
+    if (current >= 3) {
+      clearInterval(autoInterval);
+      autoInterval = null;
+      btnAuto.classList.remove('playing');
+      btnAuto.textContent = '⏵ auto';
+      return;
+    }
+    show(current + 1);
+  }, 2200);
+});
+
+nodes.forEach((n, i) => {
+  n.addEventListener('click', () => show(i));
+});
+
+show(-1);
+</script>
+</body>
+</html>

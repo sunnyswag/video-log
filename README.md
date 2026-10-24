@@ -1,51 +1,103 @@
 # video-log
 
-我在 B 站发的视频，制作过程中生成的产物都放在这里：动画源码、配乐音效的合成脚本、字幕/旁白稿、封面。一期视频一个文件夹。
+视频项目按录制或项目开始日期与主题归档，一期一个目录。这里保存成片、字幕、封面，以及制作过程中使用的源码和剪辑资料。
 
-这些视频的画面、配乐和音效**全部由 AI 写代码生成**：画面是 Canvas 逐帧绘制的网页动画，配乐和音效用 numpy 合成，最后用浏览器逐帧截图、ffmpeg 编码成视频。没有用视频生成模型，也没有素材库。
+## 目录约定
 
-## 视频列表
+```text
+video-log/
+├── YYYY-MM-DD-topic/       # 视频项目
+│   ├── topic.mp4           # 投稿成片（本地保存，不提交 Git）
+│   ├── topic.json          # 投稿信息
+│   ├── topic.srt           # 字幕（可选）
+│   ├── cover.jpg           # 封面（可选，由 JSON 指定）
+│   └── work/               # 源码、原始素材、中间产物和制作说明
+├── tools/
+│   ├── render/             # 动画渲染、时间线导出、抽帧
+│   ├── fonts/              # 字体子集化
+│   ├── preview/            # 关键帧拼图
+│   └── biliup-upload/      # B 站投稿与本地预检
+└── fonts/                  # 字体授权文本
+```
 
-| 日期 | 视频 | 风格 | 源码 |
+- 项目目录使用 `YYYY-MM-DD-英文主题`；日期取录制或项目开始日。
+- 新项目外层放最终投稿文件，工作资料放 `work/`。历史项目保留已有内部结构和各版剪辑。
+- 单 P 的 MP4、投稿 JSON 和可选 SRT 使用同一文件名主体；多 P 在 JSON 的 `videos` 数组中指定视频文件名。
+- MP4、WAV、登录凭据、`biliup.exe` 和 Node 依赖由 Git 忽略。换电脑时需另行迁移所需的大文件和本地工具。
+
+## 视频项目
+
+下表记录本地资料是否已配置投稿文件，不代表 B 站发布或审核状态。
+
+| 日期 | 主题 | 项目目录 | 本地资料 |
 | --- | --- | --- | --- |
-| 2026-10-16 | 32 位 ms 计时器的故事（事故） | 赛博朋克 HUD | [2026-10-16-32bit-ms-timer](2026-10-16-32bit-ms-timer/) |
-
-## 怎么看、怎么改
-
-- **直接预览**：下载对应文件夹，用 Chrome / Edge 打开里面的 `film.html`。空格播放/暂停，←/→ 跳 5 秒（预览里没有声音，声音在成片里）。
-- **改内容**：画面、字幕文字、每句字幕的时间点都在 `film.js` 里。字幕时长按字数自动计算，画面动作跟着字幕走，改字不用手动对时间轴。
-- **导出视频**：见下面的 `tools/render_local.mjs`。
+| 2026-10-16 | 32 位 ms 计时器的故事（事故） | [32bit-ms-timer](2026-10-16-32bit-ms-timer/) | 投稿文件齐备；[制作说明与源码](2026-10-16-32bit-ms-timer/work/README.md) |
+| 2026-09-28 | 整数除法的四舍五入 | [integer-division-rounding](2026-09-28-integer-division-rounding/) | 已配置投稿文件，另有重录版本 |
+| 2026-08-02 | 阻塞、非阻塞与同步、异步 | [blocking-nonblocking-sync-async](2026-08-02-blocking-nonblocking-sync-async/) | 已配置投稿文件，保留剪辑版本 |
+| 2026-04-12 | AI coding 与软件工程 | [ai-coding-software-engineering](2026-04-12-ai-coding-software-engineering/) | 历史归档，尚未补投稿配置 |
+| 2026-03-16 | C 语言宏使用心得 | [c-language-macros](2026-03-16-c-language-macros/) | 历史归档，尚未补投稿配置 |
 
 ## 工具
 
-| 文件 | 作用 |
-| --- | --- |
-| `tools/render_local.mjs` | 把 `film.html` 逐帧导出成 MP4。多个页面并行截帧；有 NVIDIA 显卡时用 NVENC 编码，没有就用 x264 |
-| `tools/build_fonts.py` | 把用到的字符从字体里子集化，生成内嵌字体的 `fonts.css`，保证任何电脑上渲染一致 |
-| `tools/sheet.py` | 把抽出来的关键帧拼成预览图，方便检查画面 |
-| `<视频>/audio_hud.py` | 读时间线（字幕、音效点、章节），合成配乐和音效，输出 wav |
+| 分类 | 入口 | 用途 |
+| --- | --- | --- |
+| 渲染 | [render_local.mjs](tools/render/render_local.mjs) | 导出时间线或 MP4；支持并行截帧、NVENC / x264 和混入音轨 |
+| 渲染 | [render2.mjs](tools/render/render2.mjs) | 较早的 Playwright 版本，提供时间线、指定时间抽帧和视频导出 |
+| 字体 | [build_fonts.py](tools/fonts/build_fonts.py) | 从字体中提取所需字符，生成内嵌 WOFF 的 CSS |
+| 预览 | [sheet.py](tools/preview/sheet.py) | 将已有 JPG 关键帧拼成预览图 |
+| 投稿 | [使用说明](tools/biliup-upload/使用说明.md) | 本地预检、选择项目、调用 biliup 投稿 |
+
+各工具的依赖、用法与运行条件见 [tools/README.md](tools/README.md)。视频专用的配乐和音效脚本保存在对应项目的 `work/` 中。
+
+## 投稿流程
+
+以下命令从仓库根目录执行：
+
+```powershell
+# 列出项目并检查投稿文件
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\biliup-upload\upload.ps1 -List
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\biliup-upload\upload.ps1 -Check
+
+# 打开交互投稿入口
+.\tools\biliup-upload\上传视频.bat
+```
+
+使用方向键选择项目，回车查看摘要，核对标题、分区、标签和文件后输入 `YES` 上传。`-List` 和 `-Check` 只读取本地资料，不需要登录凭据；实际上传需要工具目录中的 `biliup.exe` 和有效的 `cookies.json`。
+
+上传完成后，到 [B 站创作中心](https://member.bilibili.com/platform/upload-manager/article) 确认稿件状态，并手动上传项目的 SRT 字幕。投稿配置字段和登录方法见 [投稿工具使用说明](tools/biliup-upload/使用说明.md)。
+
+## 制作与预览
+
+计时器视频的画面由 Canvas 绘制，配乐与音效由 Python 合成。用 Chrome / Edge 打开 [work/film.html](2026-10-16-32bit-ms-timer/work/film.html) 可预览动画：空格播放或暂停，方向键跳转；网页预览不带声音。画面、字幕和时间点在同目录的 [film.js](2026-10-16-32bit-ms-timer/work/film.js) 中。
 
 ### 本地导出一期视频
 
-需要 Node 18+、Chrome 或 Edge、ffmpeg（要用显卡编码，需要带 `h264_nvenc` 的版本，比如 [gyan.dev 的 full 版](https://www.gyan.dev/ffmpeg/builds/)）。
+需要 Node 18+、Chrome 或 Edge、已加入 PATH 的 ffmpeg，以及 Python 的 numpy、scipy。渲染工具的 Node 依赖安装在 `tools/render/`。从仓库根目录执行：
 
-```bash
-cd tools && npm install && cd ..
-cd 2026-10-16-32bit-ms-timer
+```powershell
+npm --prefix tools/render install
+python -m pip install numpy scipy
 
-# 1. 导出时间线，合成配乐音效
-node ../tools/render_local.mjs film.html timeline.json
-python3 audio_hud.py timeline.json audio.wav          # 需要 numpy、scipy
+Push-Location 2026-10-16-32bit-ms-timer/work
 
-# 2. 导出 4K 视频并混入音轨（--scale 1 是 1080p）
-node ../tools/render_local.mjs film.html out.mp4 --scale 2 --audio audio.wav
+# 1. 导出时间线，合成配乐与音效
+node ../../tools/render/render_local.mjs film.html timeline.json
+python audio_v2.py timeline.json audio.wav
+
+# 2. 导出 4K 成片并混入音轨（--scale 1 为 1080p）
+# 此命令会覆盖项目外层的同名成片
+node ../../tools/render/render_local.mjs film.html ../32bit-ms-timer.mp4 --scale 2 --audio audio.wav
+
+Pop-Location
 ```
 
-常用参数：`--from` / `--to` 只导出一段，`--workers` 并行截帧的页面数，`--encoder nvenc|x264` 强制指定编码器。
+可用 `--from` / `--to` 导出片段，`--workers` 设置并行页面数，`--encoder nvenc|x264` 指定编码器。NVENC 需要兼容的 NVIDIA 显卡及支持该编码器的 ffmpeg；默认会在 NVENC 不可用时改用 x264。
 
-## 字体
+## 字体与授权
 
-`fonts.css` 里内嵌的是下面几款字体的子集，均为开源授权，授权文本见 [fonts/](fonts/)：
+项目的 `work/fonts.css` 内嵌字体子集，可直接用于预览和渲染。只有修改字符或字体时才需要运行字体工具；其当前字体路径为 Linux 路径，使用前须准备对应字体或调整路径，详见 [工具说明](tools/README.md#字体处理)。
+
+所用字体的授权文本保存在根目录的 [fonts/](fonts/)：
 
 - Noto Sans CJK SC（SIL Open Font License 1.1）
 - Inter / Inter Display（SIL Open Font License 1.1）

@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Four Ages · 和 AI 相处的四个阶段</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void:      #07091a;
+    --void-2:    #0c1028;
+    --void-3:    #141938;
+    --night:     #1b2145;
+    --starlight: #e8e6f2;
+    --dim:       #a6a3c2;
+    --faint:     #5a5776;
+    --faintest:  #2d2c44;
+
+    --c1: #ff5e5e;   /* ember */
+    --c2: #ffb23e;   /* amber */
+    --c3: #6ae3b3;   /* emerald */
+    --c4: #7bbcff;   /* ice */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--void); }
+  body {
+    font-family: "DM Sans", "Noto Serif SC", sans-serif;
+    background: var(--void);
+    color: var(--starlight);
+    min-height: 100vh;
+    padding: 3rem 2rem 2.5rem;
+    position: relative;
+    overflow-x: hidden;
+    background:
+      radial-gradient(ellipse 100% 70% at 50% 120%, rgba(123, 188, 255, 0.10), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 100% 0%, rgba(255, 94, 94, 0.06), transparent 60%),
+      radial-gradient(ellipse 70% 60% at 0% 30%, rgba(106, 227, 179, 0.04), transparent 60%),
+      radial-gradient(ellipse 90% 80% at 50% 50%, rgba(255, 178, 62, 0.03), transparent 70%),
+      linear-gradient(180deg, var(--void) 0%, var(--void-2) 50%, var(--void) 100%);
+  }
+  /* Starfield */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1.4px 1.4px at 10% 20%, rgba(232, 230, 242, 0.9), transparent 60%),
+      radial-gradient(1.1px 1.1px at 22% 38%, rgba(232, 230, 242, 0.7), transparent 60%),
+      radial-gradient(1.3px 1.3px at 38% 14%, rgba(232, 230, 242, 0.9), transparent 60%),
+      radial-gradient(1px 1px at 55% 42%, rgba(232, 230, 242, 0.6), transparent 60%),
+      radial-gradient(1.5px 1.5px at 68% 22%, rgba(232, 230, 242, 0.85), transparent 60%),
+      radial-gradient(1.2px 1.2px at 82% 48%, rgba(232, 230, 242, 0.75), transparent 60%),
+      radial-gradient(1px 1px at 95% 28%, rgba(232, 230, 242, 0.6), transparent 60%),
+      radial-gradient(1.4px 1.4px at 7% 62%, rgba(232, 230, 242, 0.8), transparent 60%),
+      radial-gradient(1.2px 1.2px at 27% 82%, rgba(232, 230, 242, 0.7), transparent 60%),
+      radial-gradient(1.3px 1.3px at 48% 72%, rgba(232, 230, 242, 0.85), transparent 60%),
+      radial-gradient(1px 1px at 62% 88%, rgba(232, 230, 242, 0.55), transparent 60%),
+      radial-gradient(1.5px 1.5px at 78% 78%, rgba(232, 230, 242, 0.9), transparent 60%),
+      radial-gradient(1.2px 1.2px at 92% 64%, rgba(232, 230, 242, 0.75), transparent 60%),
+      radial-gradient(1.1px 1.1px at 16% 94%, rgba(232, 230, 242, 0.7), transparent 60%),
+      radial-gradient(1px 1px at 86% 96%, rgba(232, 230, 242, 0.65), transparent 60%);
+    background-size: 100% 100%;
+    pointer-events: none;
+    z-index: 1;
+    animation: twinkle 6s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 0.45; }
+  }
+  /* grid overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(232, 230, 242, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(232, 230, 242, 0.025) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+    z-index: 1;
+    mask-image: radial-gradient(ellipse 100% 70% at 50% 50%, black, transparent);
+    -webkit-mask-image: radial-gradient(ellipse 100% 70% at 50% 50%, black, transparent);
+  }
+
+  main {
+    position: relative;
+    z-index: 3;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  /* =========== HEADER =========== */
+  header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.4em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .eyebrow::before, .eyebrow::after {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--dim), transparent);
+  }
+  .title {
+    font-family: "Instrument Serif", serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 5.4rem;
+    line-height: 0.95;
+    color: var(--starlight);
+    letter-spacing: -0.015em;
+  }
+  .title .amp {
+    color: var(--c2);
+    font-style: italic;
+  }
+  .title-zh {
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.45em;
+    color: var(--dim);
+    margin-top: 1.1rem;
+    font-weight: 300;
+  }
+  .subtitle {
+    font-family: "DM Sans", sans-serif;
+    font-size: 0.95rem;
+    color: var(--faint);
+    margin-top: 1.2rem;
+    font-style: italic;
+    letter-spacing: 0.02em;
+  }
+
+  /* =========== TIMELINE =========== */
+  .timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    padding: 0 1rem;
+  }
+  /* curved arc behind stages */
+  .arc {
+    position: absolute;
+    top: 120px;
+    left: 0;
+    right: 0;
+    height: 100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .arc svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+    padding: 0 0.5rem;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.9s cubic-bezier(0.22, 0.8, 0.36, 1);
+  }
+  .stage.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Huge roman numeral watermark */
+  .roman {
+    position: absolute;
+    top: -25px;
+    font-family: "Instrument Serif", serif;
+    font-style: italic;
+    font-size: 9rem;
+    font-weight: 400;
+    color: var(--color);
+    opacity: 0.08;
+    line-height: 1;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  .stage.active .roman { opacity: 0.18; }
+
+  /* Celestial dot */
+  .celestial {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    margin-top: 50px;
+    margin-bottom: 1.2rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .celestial svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .stage.active .celestial svg {
+    filter: drop-shadow(0 0 18px var(--color));
+  }
+  .celestial-core {
+    fill: var(--color);
+    transition: all 0.5s;
+  }
+  .stage.active .celestial-core {
+    filter: brightness(1.3);
+  }
+  .celestial-ring {
+    fill: none;
+    stroke: var(--color);
+    opacity: 0.3;
+    transition: all 0.5s;
+  }
+  .stage.active .celestial-ring {
+    opacity: 0.8;
+    stroke-dasharray: 4 3;
+    animation: spin 12s linear infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Card */
+  .stage-card {
+    width: 100%;
+    max-width: 270px;
+    padding: 1.6rem 1.4rem 1.8rem;
+    background: linear-gradient(180deg, rgba(20, 25, 56, 0.5), rgba(7, 9, 26, 0.3));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 2px;
+    position: relative;
+    text-align: center;
+    transition: all 0.5s;
+  }
+  .stage-card::before, .stage-card::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--color);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .stage-card::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .stage-card::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+  .stage.active .stage-card {
+    background: linear-gradient(180deg, rgba(20, 25, 56, 0.8), rgba(7, 9, 26, 0.5));
+    border-color: color-mix(in srgb, var(--color) 40%, transparent);
+    box-shadow: 0 0 40px color-mix(in srgb, var(--color) 12%, transparent);
+    transform: translateY(-6px);
+  }
+  .stage.active .stage-card::before,
+  .stage.active .stage-card::after { opacity: 1; }
+
+  .stage-mark {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--color);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+  }
+  .stage-title {
+    font-family: "Instrument Serif", serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.65rem;
+    color: var(--starlight);
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+  }
+  .stage-title-zh {
+    font-family: "Noto Serif SC", serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    margin-bottom: 1rem;
+  }
+  .stage-desc {
+    font-family: "DM Sans", "Noto Serif SC", sans-serif;
+    font-size: 0.82rem;
+    color: var(--dim);
+    line-height: 1.65;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.6s, opacity 0.5s;
+    letter-spacing: 0.01em;
+  }
+  .stage.active .stage-desc {
+    max-height: 250px;
+    opacity: 1;
+    margin-bottom: 0.9rem;
+  }
+  .stage-quote {
+    position: relative;
+    padding: 0.8rem 0 0.2rem;
+    font-family: "Instrument Serif", "Noto Serif SC", serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--color);
+    line-height: 1.5;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 0.6s;
+    border-top: 1px solid transparent;
+  }
+  .stage.active .stage-quote {
+    max-height: 220px;
+    opacity: 1;
+    border-top-color: color-mix(in srgb, var(--color) 25%, transparent);
+  }
+  .stage-quote::before {
+    content: '"';
+    font-family: "Instrument Serif", serif;
+    font-size: 2.2rem;
+    line-height: 0;
+    color: var(--color);
+    opacity: 0.5;
+    position: absolute;
+    top: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .stage-quote p {
+    padding-top: 0.8rem;
+  }
+
+  /* stage colors */
+  .stage:nth-child(1) { --color: var(--c1); }
+  .stage:nth-child(2) { --color: var(--c2); }
+  .stage:nth-child(3) { --color: var(--c3); }
+  .stage:nth-child(4) { --color: var(--c4); }
+
+  /* =========== CONTROLS =========== */
+  .controls {
+    margin-top: 3.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    justify-content: center;
+  }
+  button {
+    font-family: "Instrument Serif", serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    padding: 0.7rem 1.8rem;
+    background: rgba(20, 25, 56, 0.5);
+    color: var(--starlight);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: all 0.3s;
+  }
+  button:hover:not(:disabled) {
+    background: rgba(20, 25, 56, 0.9);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+  }
+  button:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+  .step-hint {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--faint);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    min-width: 180px;
+    text-align: center;
+  }
+
+  @media (max-width: 1000px) {
+    .timeline { grid-template-columns: 1fr 1fr; gap: 2rem 1rem; }
+    .arc { display: none; }
+    .title { font-size: 3.4rem; }
+  }
+  @media (max-width: 600px) {
+    .timeline { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">◇ Chapter V · A Personal Cosmology ◇</div>
+    <h1 class="title"><em>Four Ages</em> of coexistence<br>with the <span class="amp">Machine</span>.</h1>
+    <div class="title-zh">和 &nbsp;A &nbsp;I &nbsp;相 &nbsp;处 &nbsp;的 &nbsp;四 &nbsp;个 &nbsp;阶 &nbsp;段</div>
+    <p class="subtitle">— from indifference, to awe, to quiet vertigo —</p>
+  </header>
+
+  <div class="timeline" id="timeline">
+    <!-- Curved arc -->
+    <div class="arc">
+      <svg viewBox="0 0 1200 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="arcGrad" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0"    stop-color="#ff5e5e"/>
+            <stop offset="0.33" stop-color="#ffb23e"/>
+            <stop offset="0.66" stop-color="#6ae3b3"/>
+            <stop offset="1"    stop-color="#7bbcff"/>
+          </linearGradient>
+        </defs>
+        <path d="M 80 80 Q 300 10, 600 50 T 1120 80"
+              stroke="url(#arcGrad)" stroke-width="1.2"
+              stroke-dasharray="2 4" fill="none"
+              opacity="0.45"/>
+      </svg>
+    </div>
+
+    <!-- =========== STAGE I =========== -->
+    <div class="stage" data-step="1">
+      <div class="roman">I</div>
+      <div class="celestial">
+        <svg viewBox="0 0 80 80">
+          <circle class="celestial-ring" cx="40" cy="40" r="30" stroke-width="1"/>
+          <circle class="celestial-core" cx="40" cy="40" r="6"/>
+        </svg>
+      </div>
+      <div class="stage-card">
+        <div class="stage-mark">THE FIRST AGE</div>
+        <div class="stage-title">Merely a tool.</div>
+        <div class="stage-title-zh">AI 仅仅是工具</div>
+        <div class="stage-desc">
+          像用搜索引擎一样用 AI。问一个问题，拿到一个答案。本质上，只是另一个 Stack Overflow。
+        </div>
+        <div class="stage-quote"><p>方便是挺方便，<br>但也就那样吧。</p></div>
+      </div>
+    </div>
+
+    <!-- =========== STAGE II =========== -->
+    <div class="stage" data-step="2">
+      <div class="roman">II</div>
+      <div class="celestial">
+        <svg viewBox="0 0 80 80">
+          <circle class="celestial-ring" cx="40" cy="40" r="32" stroke-width="1"/>
+          <circle class="celestial-ring" cx="40" cy="40" r="22" stroke-width="1"/>
+          <circle class="celestial-core" cx="40" cy="40" r="10"/>
+          <g class="celestial-core">
+            <line x1="40" y1="4" x2="40" y2="14" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="40" y1="66" x2="40" y2="76" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="4" y1="40" x2="14" y2="40" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="66" y1="40" x2="76" y2="40" stroke="currentColor" stroke-width="1.5"/>
+          </g>
+        </svg>
+      </div>
+      <div class="stage-card">
+        <div class="stage-mark">THE SECOND AGE</div>
+        <div class="stage-title">A formidable <em>instrument.</em></div>
+        <div class="stage-title-zh">很 强 的 工 具</div>
+        <div class="stage-desc">
+          发现 AI 可以补齐自己的短板，放大自己的长处。不擅长前端？AI 帮你写。擅长架构？AI 帮你更快落地。
+        </div>
+        <div class="stage-quote"><p>有了 AI，<br>我好像什么都能做了。</p></div>
+      </div>
+    </div>
+
+    <!-- =========== STAGE III =========== -->
+    <div class="stage" data-step="3">
+      <div class="roman">III</div>
+      <div class="celestial">
+        <svg viewBox="0 0 80 80">
+          <circle class="celestial-ring" cx="40" cy="40" r="34" stroke-width="1"/>
+          <circle class="celestial-ring" cx="40" cy="40" r="24" stroke-width="1"/>
+          <g>
+            <circle class="celestial-core" cx="40" cy="40" r="11"/>
+            <polygon points="40,26 44,38 56,38 46,45 50,58 40,50 30,58 34,45 24,38 36,38" fill="none" stroke="currentColor" stroke-width="1" opacity="0.9"/>
+          </g>
+        </svg>
+      </div>
+      <div class="stage-card">
+        <div class="stage-mark">THE THIRD AGE</div>
+        <div class="stage-title">Learn <em>with.</em> Work <em>with.</em></div>
+        <div class="stage-title-zh">与 A I 共 学 共 事</div>
+        <div class="stage-desc">
+          让 AI 搭 demo，再去理解。输入输出暴增，大脑带宽被撑大。突然顿悟——自己变得非常强。
+        </div>
+        <div class="stage-quote"><p>AI 帮我把代码写出来，<br>我再去理解，反而学得更深了。</p></div>
+      </div>
+    </div>
+
+    <!-- =========== STAGE IV =========== -->
+    <div class="stage" data-step="4">
+      <div class="roman">IV</div>
+      <div class="celestial">
+        <svg viewBox="0 0 80 80">
+          <circle class="celestial-ring" cx="40" cy="40" r="36" stroke-width="1"/>
+          <circle class="celestial-ring" cx="40" cy="40" r="28" stroke-width="1"/>
+          <circle class="celestial-ring" cx="40" cy="40" r="20" stroke-width="1"/>
+          <g>
+            <circle class="celestial-core" cx="40" cy="40" r="13" fill="#07091a" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="40" cy="40" r="6" fill="currentColor" opacity="0.5"/>
+          </g>
+        </svg>
+      </div>
+      <div class="stage-card">
+        <div class="stage-mark">THE FOURTH AGE</div>
+        <div class="stage-title">An <em>oceanic</em> dread.</div>
+        <div class="stage-title-zh">难 以 企 及 之 境</div>
+        <div class="stage-desc">
+          感觉到自己完全无法超越 AI 的速度和广度。焦虑，但也因此开始更深层的思考——什么是不可替代的？
+        </div>
+        <div class="stage-quote"><p>于是，有了<br>今天的这些思考。</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btn-prev" disabled>← Previous</button>
+    <span class="step-hint" id="hint">▷ BEGIN THE PASSAGE</span>
+    <button id="btn-next">Next →</button>
+  </div>
+</main>
+
+<script>
+  const stages = document.querySelectorAll('.stage');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const hint = document.getElementById('hint');
+  let current = 0;
+  const romanNums = ['I', 'II', 'III', 'IV'];
+
+  function update() {
+    stages.forEach((s, i) => {
+      const step = i + 1;
+      if (step <= current) {
+        s.classList.add('visible');
+        s.classList.toggle('active', step === current);
+      } else {
+        s.classList.remove('visible', 'active');
+      }
+    });
+
+    btnPrev.disabled = current <= 0;
+    btnNext.disabled = current >= 4;
+
+    if (current === 0)       hint.textContent = '▷ BEGIN THE PASSAGE';
+    else if (current === 4)  hint.textContent = '✦ ALL FOUR AGES REVEALED';
+    else                     hint.textContent = `AGE ${romanNums[current - 1]} / IV`;
+  }
+
+  btnNext.addEventListener('click', () => {
+    if (current < 4) { current++; update(); }
+  });
+  btnPrev.addEventListener('click', () => {
+    if (current > 0) { current--; update(); }
+  });
+
+  stages.forEach(s => {
+    s.addEventListener('click', () => {
+      const step = parseInt(s.dataset.step);
+      if (step <= current && !s.classList.contains('active')) {
+        current = step;
+        update();
+      }
+    });
+  });
+
+  update();
+</script>
+</body>
+</html>

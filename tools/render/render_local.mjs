@@ -2,8 +2,8 @@
  * 本地导出：Chrome（GPU 绘制）多页面并行截帧 + 一路 NVENC（显卡）编码
  *
  * 用法（在 film.html 所在目录执行）：
- *   node render_local.mjs film.html out.mp4 [选项]     导出视频
- *   node render_local.mjs film.html timeline.json       只导出时间线（给 audio_hud.py 合成配乐用）
+ *   node ../../tools/render/render_local.mjs film.html out.mp4 [选项]     导出视频
+ *   node ../../tools/render/render_local.mjs film.html timeline.json       只导出时间线（给 audio_v2.py 合成配乐用）
  *
  * 选项：
  *   --from 0           起始秒（默认 0）
@@ -16,8 +16,8 @@
  *   --chrome <路径>    指定 Chrome / Edge 可执行文件
  *
  * 依赖：Node 18+、Chrome 或 Edge、ffmpeg（要用 NVENC 需带 h264_nvenc 的版本，
- *       如 https://www.gyan.dev/ffmpeg/builds/ 的 full 版），以及在本目录执行一次：
- *       npm i puppeteer-core
+ *       如 https://www.gyan.dev/ffmpeg/builds/ 的 full 版），以及从仓库根目录执行一次：
+ *       npm --prefix tools/render install
  *
  * 页面约定：window.__ready / __seek(t) / __pause() / __duration，画面在 <canvas id="c">。
  * ===================================================================== */
@@ -100,7 +100,7 @@ const info = await first.evaluate(() => {
   try { const gl = document.createElement('canvas').getContext('webgl'); const d = gl.getExtension('WEBGL_debug_renderer_info'); gpu = gl.getParameter(d.UNMASKED_RENDERER_WEBGL); } catch (e) {}
   return { duration: window.__duration, gpu, w: document.getElementById('c').width, h: document.getElementById('c').height };
 });
-if (outFile.endsWith('.json')) { // 只导出时间线（字幕 / 音效点 / 场景），给 audio_hud.py 用
+if (outFile.endsWith('.json')) { // 只导出时间线（字幕 / 音效点 / 场景），给 audio_v2.py 用
   const tl = await first.evaluate(() => ({ duration: FILM.duration, scenes: FILM.scenes, captions: FILM.captions, cues: FILM.cues, chapters: FILM.chapters }));
   fs.writeFileSync(outFile, JSON.stringify(tl, null, 1)); await browser.close();
   console.log('时间线已导出 →', outFile, '时长', tl.duration.toFixed(2), '秒'); process.exit(0);

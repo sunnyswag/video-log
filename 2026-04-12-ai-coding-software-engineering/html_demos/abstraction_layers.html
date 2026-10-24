@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strata · 抽象范式的演进</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,500;1,9..144,700;1,9..144,900&family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Serif+SC:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #161310;
+    --bg-2:     #1d1812;
+    --bg-3:     #251e16;
+    --bg-4:     #30261a;
+    --cream:    #ede1c6;
+    --cream-2:  #c6b896;
+    --mute:     #85755c;
+    --mute-2:   #5a4d3b;
+    --line:     #3a3126;
+    --rule:     #4a3e2e;
+    --accent:   #ff5a1f;
+    --accent-2: #ffc14a;
+    --asm:      #ff6b6b;
+    --c:        #ffb454;
+    --oop:      #a5d96a;
+    --pkg:      #ffa36b;
+    --os:       #6cb8f5;
+    --web:      #d96fe0;
+    --cloud:    #5cd4c9;
+    --meta:     #ede1c6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    font-family: "JetBrains Mono", "Noto Serif SC", monospace;
+    background: var(--bg);
+    color: var(--cream);
+    min-height: 100vh;
+    padding: 3rem 2.5rem 5rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* film grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.86 0 0 0 0 0.6 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: screen;
+  }
+  /* ambient warmth */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255, 90, 31, 0.07), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 0% 0%, rgba(255, 193, 74, 0.035), transparent 60%),
+      radial-gradient(ellipse 40% 40% at 100% 0%, rgba(217, 111, 224, 0.03), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  main {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ============== MASTHEAD ============== */
+  header {
+    padding-bottom: 2rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.35em;
+    color: var(--accent);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.3rem;
+    border-bottom: 1px dashed var(--line);
+    margin-bottom: 2.2rem;
+  }
+  .eyebrow .r { color: var(--mute); }
+  .eyebrow .diamond { color: var(--accent-2); margin: 0 0.4rem; }
+
+  .title-row {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 3rem;
+    align-items: end;
+  }
+  .title {
+    font-family: "Fraunces", serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: 5.4rem;
+    line-height: 0.92;
+    letter-spacing: -0.02em;
+    color: var(--cream);
+  }
+  .title em {
+    font-weight: 900;
+    font-style: italic;
+    color: var(--accent);
+    position: relative;
+  }
+  .title em::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 0.3em;
+    height: 4px;
+    background: var(--accent);
+    opacity: 0.2;
+  }
+  .title-zh {
+    font-family: "Noto Serif SC", serif;
+    font-size: 1.15rem;
+    letter-spacing: 0.4em;
+    color: var(--cream-2);
+    margin-top: 1.2rem;
+  }
+  .lead {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--cream-2);
+    line-height: 1.8;
+    border-left: 2px solid var(--accent);
+    padding-left: 1.2rem;
+    max-width: 440px;
+  }
+  .lead .hl { color: var(--cream); }
+  .lead .arrow { color: var(--accent); }
+
+  /* ============== COLUMNS ============== */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    position: relative;
+  }
+  .columns::before {
+    content: '';
+    position: absolute;
+    top: 2.6rem;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--rule);
+    transform: translateX(-50%);
+  }
+  .col-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 0.9rem;
+    margin-bottom: 0.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .col-num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.66rem;
+    color: var(--accent);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+  .col-title {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.35rem;
+    color: var(--cream);
+  }
+
+  /* ============== LAYER ============== */
+  .layer {
+    cursor: pointer;
+    border-bottom: 1px solid var(--line);
+    transition: background 0.3s;
+    position: relative;
+  }
+  .layer:hover { background: rgba(255, 255, 255, 0.02); }
+  .layer.active { background: rgba(255, 90, 31, 0.045); }
+  .layer.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--lcolor, var(--accent));
+  }
+
+  .layer-header {
+    display: grid;
+    grid-template-columns: 36px 1fr auto 14px;
+    align-items: baseline;
+    gap: 0.9rem;
+    padding: 1.05rem 0.4rem 1.05rem 1rem;
+  }
+  .layer-num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--mute);
+    letter-spacing: 0.05em;
+  }
+  .layer.active .layer-num { color: var(--lcolor, var(--accent)); }
+  .layer-name {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.3rem;
+    color: var(--cream);
+    line-height: 1.1;
+  }
+  .layer-name small {
+    display: block;
+    font-family: "JetBrains Mono", monospace;
+    font-style: normal;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin-top: 0.25rem;
+  }
+  .layer.active .layer-name small { color: var(--lcolor, var(--accent)); }
+  .layer-brief {
+    font-family: "Noto Serif SC", "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--mute);
+    text-align: right;
+    max-width: 140px;
+    line-height: 1.45;
+    letter-spacing: 0.03em;
+  }
+  .expand {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    color: var(--mute);
+    transition: transform 0.3s;
+  }
+  .layer.active .expand { transform: rotate(90deg); color: var(--lcolor, var(--accent)); }
+
+  .layer-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.22, 0.8, 0.36, 1);
+  }
+  .layer.active .layer-detail { max-height: 700px; }
+  .detail-inner {
+    padding: 0 1rem 1.4rem 2.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .hidden-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    color: var(--lcolor, var(--accent));
+    text-transform: uppercase;
+  }
+  .hidden-text {
+    font-family: "Fraunces", "Noto Serif SC", serif;
+    font-size: 0.96rem;
+    color: var(--cream-2);
+    line-height: 1.65;
+  }
+  .code {
+    background: #0c0a06;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--lcolor, var(--accent));
+    padding: 0.75rem 0.9rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--cream-2);
+    line-height: 1.7;
+    white-space: pre;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code::before {
+    content: '▎ CODE';
+    position: absolute;
+    top: 0.4rem;
+    right: 0.6rem;
+    font-size: 0.52rem;
+    color: var(--mute-2);
+    letter-spacing: 0.15em;
+  }
+  .kw { color: #ff9e64; }
+  .fn { color: #e0cf63; }
+  .str { color: #a5d96a; }
+  .cmt { color: #5a4d3b; font-style: italic; }
+  .tp { color: #7dcfff; }
+
+  /* layer colors */
+  .layer[data-id="asm"]   { --lcolor: var(--asm);  }
+  .layer[data-id="c"]     { --lcolor: var(--c);    }
+  .layer[data-id="oop"]   { --lcolor: var(--oop);  }
+  .layer[data-id="pkg"]   { --lcolor: var(--pkg);  }
+  .layer[data-id="os"]    { --lcolor: var(--os);   }
+  .layer[data-id="web"]   { --lcolor: var(--web);  }
+  .layer[data-id="cloud"] { --lcolor: var(--cloud);}
+  .layer[data-id="meta"]  { --lcolor: var(--meta); }
+
+  /* ============== MERGE ============== */
+  .merge-zone {
+    position: relative;
+    height: 110px;
+    margin-top: 0.5rem;
+  }
+  .merge-zone svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .merge-label {
+    position: absolute;
+    left: 50%;
+    bottom: 0.6rem;
+    transform: translateX(-50%);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    background: var(--bg);
+    padding: 0.3rem 0.9rem;
+    border: 1px solid var(--rule);
+    white-space: nowrap;
+    z-index: 2;
+  }
+
+  /* ============== CONVERGE / META ============== */
+  .converge {
+    margin-top: 0.4rem;
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--accent);
+    position: relative;
+  }
+  .meta-badge {
+    position: absolute;
+    top: -1px;
+    left: 2rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.28em;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0.28rem 0.9rem;
+    text-transform: uppercase;
+  }
+  .converge .layer {
+    border: none;
+    background: transparent !important;
+  }
+  .converge .layer::before { display: none; }
+  .converge .layer.active { background: transparent !important; }
+  .converge .layer-header { padding: 1.6rem 1.4rem 1rem 2rem; }
+  .converge .layer-name { font-size: 1.6rem; }
+  .converge .detail-inner { padding: 0 1.4rem 1.6rem 2rem; }
+
+  /* ============== META DEMO ============== */
+  .meta-demo {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 1.8rem;
+    padding: 0.3rem 1.4rem 1.6rem 2rem;
+  }
+  .prompt-head {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
+    color: var(--mute);
+    text-transform: uppercase;
+    margin-bottom: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .prompt-head::before {
+    content: '●';
+    color: var(--accent);
+    font-size: 0.5rem;
+  }
+  .prompt-btn {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--cream-2);
+    font-family: "Fraunces", "Noto Serif SC", serif;
+    font-style: italic;
+    font-size: 0.84rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1.4;
+    margin-bottom: 0.55rem;
+  }
+  .prompt-btn:hover { border-color: var(--accent); }
+  .prompt-btn.active {
+    border-color: var(--accent);
+    background: rgba(255, 90, 31, 0.08);
+    color: var(--cream);
+  }
+  .prompt-btn .plabel {
+    display: block;
+    font-family: "JetBrains Mono", monospace;
+    font-style: normal;
+    font-size: 0.52rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  .wireframe-wrap { min-width: 0; }
+  .wf-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.52rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .wf-l { color: var(--mute); border: 1px dashed var(--line); padding: 0.15rem 0.5rem; }
+  .wf-v {
+    color: var(--meta-accent, var(--accent));
+    border: 1px solid var(--meta-accent, var(--accent));
+    padding: 0.15rem 0.5rem;
+  }
+  .wireframe {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    height: 235px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .wf-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+    font-family: "Fraunces", serif;
+    font-size: 0.9rem;
+    color: var(--cream);
+  }
+  .wf-header .app-name { color: var(--meta-accent, var(--cream)); font-style: italic; transition: color 0.3s; }
+  .wf-body { flex: 1; display: flex; overflow: hidden; }
+  .wf-sidebar {
+    width: 92px;
+    border-right: 1px solid var(--line);
+    padding: 0.45rem 0.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .slot {
+    padding: 0.3rem 0.3rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.04em;
+    text-align: center;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+  .slot.core { color: var(--mute); border: 1px dashed var(--line); }
+  .slot.variable {
+    color: var(--meta-accent, var(--accent));
+    border: 1px solid var(--meta-accent, var(--accent));
+    background: color-mix(in srgb, var(--meta-accent, var(--accent)) 8%, transparent);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all 0.4s;
+  }
+  .slot.variable.show { opacity: 1; transform: translateX(0); }
+
+  .wf-main { flex: 1; display: flex; flex-direction: column; }
+  .wf-features {
+    flex: 1;
+    padding: 0.45rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+    align-content: start;
+  }
+  .feat {
+    padding: 0.38rem 0.5rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.58rem;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .feat.core { color: var(--mute); border: 1px dashed var(--line); }
+  .feat.variable {
+    color: var(--meta-accent, var(--accent));
+    border: 1px solid var(--meta-accent, var(--accent));
+    background: color-mix(in srgb, var(--meta-accent, var(--accent)) 8%, transparent);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.4s;
+  }
+  .feat.variable.show { opacity: 1; transform: translateY(0); }
+  .wf-input {
+    padding: 0.45rem 0.7rem;
+    border-top: 1px solid var(--line);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.55rem;
+    color: var(--mute);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .input-bar {
+    flex: 1;
+    height: 18px;
+    border: 1px dashed var(--line);
+  }
+
+  /* ============== INSIGHT ============== */
+  .insight {
+    margin: 3rem auto 0;
+    padding: 1.6rem 2rem;
+    background: transparent;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    max-width: 820px;
+    text-align: center;
+    font-family: "Fraunces", "Noto Serif SC", serif;
+    font-style: italic;
+    font-size: 1.08rem;
+    color: var(--cream-2);
+    line-height: 1.65;
+    transition: all 0.4s;
+    min-height: 4rem;
+    position: relative;
+  }
+  .insight::before, .insight::after {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    background: var(--accent);
+    transform: rotate(45deg);
+  }
+  .insight::before { top: -5px; left: 50%; margin-left: -4px; }
+  .insight::after  { bottom: -5px; left: 50%; margin-left: -4px; }
+  .insight strong {
+    color: var(--accent);
+    font-weight: 900;
+    font-style: italic;
+  }
+
+  /* colophon */
+  .colophon {
+    margin-top: 3rem;
+    text-align: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--mute-2);
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 900px) {
+    .title-row, .columns { grid-template-columns: 1fr; gap: 1.5rem; }
+    .columns::before { display: none; }
+    .title { font-size: 3.2rem; }
+    .meta-demo { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">
+      <span>◆ STRATA <span class="diamond">/</span> VOL. 001 <span class="diamond">/</span> THE ART OF HIDING COMPLEXITY</span>
+      <span class="r">EDITION MMXXVI</span>
+    </div>
+    <div class="title-row">
+      <div>
+        <h1 class="title">
+          On the <em>evolution</em><br>
+          of abstraction.
+        </h1>
+        <div class="title-zh">抽 象 范 式 的 演 进</div>
+      </div>
+      <p class="lead">
+        Every layer you see below is a <span class="hl">compression</span> of the
+        one beneath it &mdash; an agreement to forget certain details so that
+        larger ideas become thinkable.
+        <br><br>
+        <span class="arrow">→</span> Click any stratum to observe
+        <span class="hl">what it hides.</span>
+      </p>
+    </div>
+  </header>
+
+  <div class="columns">
+    <!-- ========== LEFT COLUMN ========== -->
+    <div class="column">
+      <div class="col-head">
+        <div class="col-title"><em>The Code Axis.</em></div>
+        <div class="col-num">I · LANGUAGE</div>
+      </div>
+
+      <div class="layer" data-id="asm">
+        <div class="layer-header">
+          <span class="layer-num">N.01</span>
+          <span class="layer-name">Machine Instructions<small>汇编 · ASM</small></span>
+          <span class="layer-brief">直接操作寄存器</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ Nothing</span>
+          <p class="hidden-text">最底层。每个寄存器、每个内存偏移、每个中断向量都要手动管理。换一个 CPU 架构，代码就完全作废。</p>
+          <pre class="code"><span class="kw">MOV</span>  AX, [0x1234]
+<span class="kw">ADD</span>  AX, BX
+<span class="kw">INT</span>  0x21
+<span class="cmt">; 每一行对应一条 CPU 指令</span></pre>
+        </div></div>
+      </div>
+
+      <div class="layer" data-id="c">
+        <div class="layer-header">
+          <span class="layer-num">N.02</span>
+          <span class="layer-name">The C Language<small>C · 编译器</small></span>
+          <span class="layer-brief">隐藏指令集差异</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ CPU specifics</span>
+          <p class="hidden-text">不再关心具体的 CPU 型号、寄存器和指令集——编译器替你做指令选择和寄存器分配。但内存仍需手动 malloc / free。</p>
+          <pre class="code"><span class="tp">int</span> result = a + b;
+<span class="tp">char</span> *buf = <span class="fn">malloc</span>(256);
+<span class="cmt">// 编译器处理指令选择</span>
+<span class="cmt">// 但内存仍需手动管理</span></pre>
+        </div></div>
+      </div>
+
+      <div class="layer" data-id="oop">
+        <div class="layer-header">
+          <span class="layer-num">N.03</span>
+          <span class="layer-name">Object-Oriented<small>OOP · 面向对象</small></span>
+          <span class="layer-brief">封装数据与行为</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ Global state</span>
+          <p class="hidden-text">数据和操作绑定在一起，通过继承和多态复用逻辑。不用在全局追踪"哪个函数操作哪块数据"——对象自己管理自己的状态。</p>
+          <pre class="code"><span class="kw">class</span> <span class="tp">TextFile</span> {
+  <span class="fn">save</span>() { <span class="cmt">/* 自己管理自己 */</span> }
+  <span class="fn">render</span>() { ... }
+}
+<span class="cmt">// 数据 + 行为封装在一起</span></pre>
+        </div></div>
+      </div>
+
+      <div class="layer" data-id="pkg">
+        <div class="layer-header">
+          <span class="layer-num">N.04</span>
+          <span class="layer-name">Libraries &amp; Packages<small>生态 · 复用</small></span>
+          <span class="layer-brief">复用别人的方案</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ Solved problems</span>
+          <p class="hidden-text">npm / pip / cargo——把别人解决过的问题打包复用。不用自己实现 HTTP 客户端、JSON 解析、加密算法。但每种语言一套生态，跨语言的重复劳动仍然存在。</p>
+          <pre class="code"><span class="kw">import</span> requests  <span class="cmt"># Python</span>
+<span class="kw">const</span> axios = <span class="fn">require</span>(<span class="str">'axios'</span>) <span class="cmt">// JS</span>
+
+<span class="cmt">// 同一个问题，每种语言各写一套</span>
+<span class="cmt">// 跨语言的重复仍然存在</span></pre>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- ========== RIGHT COLUMN ========== -->
+    <div class="column">
+      <div class="col-head">
+        <div class="col-title"><em>The Platform Axis.</em></div>
+        <div class="col-num">II · ENVIRONMENT</div>
+      </div>
+
+      <div class="layer" data-id="os">
+        <div class="layer-header">
+          <span class="layer-num">N.05</span>
+          <span class="layer-name">The Operating System<small>OS · 内核</small></span>
+          <span class="layer-brief">隐藏硬件调度</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ Hardware scheduling</span>
+          <p class="hidden-text">进程调度、内存分页、文件系统、设备驱动、权限隔离。应用程序不再需要知道磁盘怎么转、内存怎么分页、多个程序怎么共享 CPU。</p>
+          <pre class="code"><span class="tp">File</span> f = <span class="fn">open</span>(<span class="str">"data.txt"</span>);
+<span class="fn">read</span>(f, buf, 256);
+<span class="cmt">// 不知道磁盘怎么转</span>
+<span class="cmt">// 不知道内存怎么分页</span></pre>
+        </div></div>
+      </div>
+
+      <div class="layer" data-id="web">
+        <div class="layer-header">
+          <span class="layer-num">N.06</span>
+          <span class="layer-name">Browser &amp; the Web<small>跨平台 · Web</small></span>
+          <span class="layer-brief">隐藏平台差异</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ Platform differences</span>
+          <p class="hidden-text">同一份代码在 Windows、macOS、Linux、手机上都能运行。浏览器处理渲染引擎差异、网络协议栈、安全沙箱、GPU 加速。</p>
+          <pre class="code"><span class="kw">&lt;button</span> <span class="fn">onclick</span>=<span class="str">"alert('hi')"</span><span class="kw">&gt;</span>
+  Click me
+<span class="kw">&lt;/button&gt;</span>
+<span class="cmt">&lt;!-- 在任何设备上都能运行 --&gt;</span></pre>
+        </div></div>
+      </div>
+
+      <div class="layer" data-id="cloud">
+        <div class="layer-header">
+          <span class="layer-num">N.07</span>
+          <span class="layer-name">Cloud &amp; Serverless<small>云 · 基础设施</small></span>
+          <span class="layer-brief">隐藏运维与资源</span>
+          <span class="expand">▸</span>
+        </div>
+        <div class="layer-detail"><div class="detail-inner">
+          <span class="hidden-label">Hides ⟶ Infrastructure</span>
+          <p class="hidden-text">不用关心服务器在哪、怎么扩缩容、如何做负载均衡。上传一个函数就能运行。从"我部署软件"到"我使用服务"的跃迁。</p>
+          <pre class="code"><span class="cmt">// Serverless function</span>
+<span class="kw">export default</span> <span class="kw">async</span> (req) => {
+  <span class="kw">return</span> <span class="fn">Response</span>(<span class="str">"Hello"</span>);
+}
+<span class="cmt">// 不知道跑在哪台机器上</span></pre>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MERGE ========== -->
+  <div class="merge-zone">
+    <svg viewBox="0 0 1200 110" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="mergeGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#4a3e2e"/>
+          <stop offset="1" stop-color="#ff5a1f"/>
+        </linearGradient>
+      </defs>
+      <path d="M 300 0 L 600 95" stroke="url(#mergeGrad)" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>
+      <path d="M 900 0 L 600 95" stroke="url(#mergeGrad)" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>
+      <circle cx="600" cy="97" r="5" fill="#ff5a1f"/>
+      <circle cx="600" cy="97" r="10" fill="none" stroke="#ff5a1f" stroke-width="0.8" opacity="0.4"/>
+    </svg>
+    <div class="merge-label">✦ Two axes converge ↓ ✦</div>
+  </div>
+
+  <!-- ========== META CONVERGE ========== -->
+  <div class="converge">
+    <div class="meta-badge">N.08 ✦ META</div>
+    <div class="layer" data-id="meta" id="meta-layer">
+      <div class="layer-header">
+        <span class="layer-num">N.08</span>
+        <span class="layer-name">Meta Software<small>软件的软件</small></span>
+        <span class="layer-brief">隐藏具体的软件实现</span>
+        <span class="expand">▸</span>
+      </div>
+      <div class="layer-detail">
+        <div class="detail-inner" style="padding-bottom: 0.4rem;">
+          <span class="hidden-label">Hides ⟶ The program itself</span>
+          <p class="hidden-text">同一个通信 APP，不同用户的 <em>soul.md</em> 描述各自的使用习惯，软件自动适配。骨架不变，用户偏好决定它的面貌。</p>
+        </div>
+        <div class="meta-demo" id="meta-demo">
+          <div class="meta-prompt-area">
+            <div class="prompt-head">soul.md ⟶ manifest</div>
+            <button class="prompt-btn active" data-preset="minimal">
+              <span class="plabel">USER · A</span>
+              "我喜欢简洁，只保留核心功能，不要打扰我。"
+            </button>
+            <button class="prompt-btn" data-preset="power">
+              <span class="plabel">USER · B</span>
+              "重度用户，快捷键、多窗口、Bot 自动化全都要。"
+            </button>
+            <button class="prompt-btn" data-preset="social">
+              <span class="plabel">USER · C</span>
+              "社交达人，表情包多多益善，朋友圈必须有。"
+            </button>
+          </div>
+
+          <div class="wireframe-wrap">
+            <div class="wf-labels">
+              <span class="wf-l">▢ SKELETON — immutable</span>
+              <span class="wf-v">▣ VARIABLE — from soul.md</span>
+            </div>
+            <div class="wireframe" id="app-wireframe">
+              <div class="wf-header">
+                <span class="app-icon" id="wf-icon">◉</span>
+                <span class="app-name" id="wf-name">Conduit</span>
+              </div>
+              <div class="wf-body">
+                <div class="wf-sidebar" id="wf-sidebar">
+                  <div class="slot core">Msgs</div>
+                  <div class="slot core">Contacts</div>
+                  <div class="slot core">Search</div>
+                </div>
+                <div class="wf-main">
+                  <div class="wf-features" id="wf-features">
+                    <div class="feat core">message list</div>
+                    <div class="feat core">notifications</div>
+                  </div>
+                  <div class="wf-input">
+                    <span>⌨</span>
+                    <div class="input-bar"></div>
+                    <span>⌘</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight" id="insight">
+    The essence of every layer: <strong>hide the complexity below, expose a simpler surface above.</strong>
+  </div>
+
+  <div class="colophon">— end of folio · strata 001 —</div>
+</main>
+
+<script>
+const insights = {
+  asm:   'Assembly speaks directly to silicon. There is <strong>no abstraction to protect you</strong>.',
+  c:     'C lets you forget the chip, but <strong>memory remains your responsibility</strong>.',
+  oop:   'OOP binds <strong>data and the operations upon it</strong> into a single thinking unit.',
+  pkg:   '包管理让你<strong>站在别人的肩膀上</strong>。但每种语言各造一套轮子——跨语言的脑力重复劳动仍然存在。',
+  os:    '操作系统是最重的抽象层——<strong>它让每个程序以为自己独占整台机器</strong>。',
+  web:   'The browser delivers on <strong>"write once, run anywhere"</strong>.',
+  cloud: '云把"我有一台服务器"<strong>变成了"我有一个函数"</strong>。基础设施成了别人的问题。',
+  meta:  '我们不是在创造某个软件，而是<strong>在创造某类软件</strong>。语言抽象与平台抽象在此汇聚——代码怎么写、在哪里跑，<strong>都被隐藏了</strong>。'
+};
+const defaultInsight = 'The essence of every layer: <strong>hide the complexity below, expose a simpler surface above.</strong>';
+const insightEl = document.getElementById('insight');
+
+document.querySelectorAll('.layer').forEach(el => {
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('.meta-demo')) return;
+    const id = el.dataset.id;
+    const wasActive = el.classList.contains('active');
+    document.querySelectorAll('.layer').forEach(l => l.classList.remove('active'));
+    if (!wasActive) {
+      el.classList.add('active');
+      insightEl.innerHTML = insights[id] || defaultInsight;
+      if (id === 'meta') applyPreset('minimal');
+    } else {
+      insightEl.innerHTML = defaultInsight;
+    }
+  });
+});
+
+/* ========== Meta Demo ========== */
+const presets = {
+  minimal: {
+    accent: '#85755c',
+    name: 'Conduit',
+    icon: '◉',
+    sidebar: [],
+    features: []
+  },
+  power: {
+    accent: '#a5d96a',
+    name: 'Conduit/Pro',
+    icon: '⟠',
+    sidebar: ['Hotkeys', 'Bots'],
+    features: [
+      { icon: '⌘', name: 'shortcuts' },
+      { icon: '▦', name: 'multi-window' },
+      { icon: '◈', name: 'automations' },
+      { icon: '⎔', name: 'api hooks' },
+    ]
+  },
+  social: {
+    accent: '#ff6b9a',
+    name: 'Conduit/Play',
+    icon: '✦',
+    sidebar: ['Moments', 'Stickers'],
+    features: [
+      { icon: '◕', name: 'stickers' },
+      { icon: '▶', name: 'video call' },
+      { icon: '✿', name: 'red envelope' },
+      { icon: '♤', name: 'mini games' },
+    ]
+  }
+};
+
+function applyPreset(key) {
+  const p = presets[key];
+  const wireframe = document.getElementById('app-wireframe');
+  wireframe.style.setProperty('--meta-accent', p.accent);
+  document.querySelectorAll('.wf-v').forEach(el => {
+    el.style.color = p.accent;
+    el.style.borderColor = p.accent;
+  });
+  document.getElementById('wf-name').textContent = p.name;
+  document.getElementById('wf-name').style.color = p.accent;
+  document.getElementById('wf-icon').textContent = p.icon;
+  document.getElementById('wf-icon').style.color = p.accent;
+
+  const sidebar = document.getElementById('wf-sidebar');
+  sidebar.querySelectorAll('.variable').forEach(el => el.remove());
+  p.sidebar.forEach((label, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot variable';
+    slot.textContent = label;
+    slot.style.setProperty('--meta-accent', p.accent);
+    sidebar.appendChild(slot);
+    setTimeout(() => slot.classList.add('show'), 80 * (i + 1));
+  });
+
+  const features = document.getElementById('wf-features');
+  features.querySelectorAll('.variable').forEach(el => el.remove());
+  p.features.forEach((f, i) => {
+    const block = document.createElement('div');
+    block.className = 'feat variable';
+    block.style.setProperty('--meta-accent', p.accent);
+    block.innerHTML = `<span>${f.icon}</span>&nbsp;${f.name}`;
+    features.appendChild(block);
+    setTimeout(() => block.classList.add('show'), 60 * (i + 1));
+  });
+
+  document.querySelectorAll('.prompt-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.prompt-btn[data-preset="${key}"]`).classList.add('active');
+}
+
+document.querySelectorAll('.prompt-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    applyPreset(btn.dataset.preset);
+  });
+});
+
+applyPreset('minimal');
+</script>
+</body>
+</html>

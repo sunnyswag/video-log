@@ -1,0 +1,1035 @@
+{
+  "deletes": [
+    {
+      "pathSet": {
+        "parent": 3
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 4,
+        "children": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 5
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 6,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 7,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 8,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 9
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 10,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 11
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 12,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          7,
+          8,
+          9,
+          10
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 13
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 14,
+        "children": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 15,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 16
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 18
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 19,
+        "children": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 20,
+        "children": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 25,
+        "children": [
+          13,
+          14
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 26
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 32,
+        "children": [
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 37,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 38
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 39,
+        "children": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 43,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 44,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 47,
+        "children": [
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 48,
+        "children": [
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 59,
+        "children": [
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 60,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 77,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 85,
+        "children": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 97,
+        "children": [
+          4
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 99,
+        "children": [
+          10
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 101,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 108,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 111
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 116,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 122,
+        "children": [
+          2,
+          3,
+          4,
+          6
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 124,
+        "children": [
+          6
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 126,
+        "children": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 127,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 131
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 139,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 143
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 180,
+        "children": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 181,
+        "children": [
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 184,
+        "children": [
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 193,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 194,
+        "children": [
+          5,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 195
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 214,
+        "children": [
+          0,
+          1,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 219,
+        "children": [
+          6,
+          7,
+          8,
+          13,
+          14
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 220,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 228,
+        "children": [
+          5,
+          6
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 229,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 232,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 234,
+        "children": [
+          12,
+          13,
+          14
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 235
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 236,
+        "children": [
+          0
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 238,
+        "children": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 255,
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 258,
+        "children": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 263,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 268,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 272,
+        "children": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 282,
+        "children": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 284,
+        "children": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 285,
+        "children": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 286
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 294,
+        "children": [
+          0
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 295
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 296,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 298,
+        "children": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 300,
+        "children": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 301
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 302,
+        "children": [
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "pathSet": {
+        "parent": 310
+      }
+    }
+  ],
+  "restores": [
+    {
+      "pathSet": {
+        "parent": 275,
+        "children": [
+          0,
+          1
+        ]
+      }
+    }
+  ],
+  "textChanges": [
+    {
+      "pathSet": {
+        "parent": 2,
+        "children": [
+          5
+        ]
+      },
+      "newText": "C 语言一年半",
+      "oldText": "C 语言宏"
+    },
+    {
+      "pathSet": {
+        "parent": 28,
+        "children": [
+          3
+        ]
+      },
+      "newText": "这个",
+      "oldText": "这"
+    },
+    {
+      "pathSet": {
+        "parent": 53,
+        "children": [
+          14
+        ]
+      },
+      "newText": "#define",
+      "oldText": "define"
+    },
+    {
+      "pathSet": {
+        "parent": 62,
+        "children": [
+          7
+        ]
+      },
+      "newText": "#",
+      "oldText": "井"
+    },
+    {
+      "pathSet": {
+        "parent": 86,
+        "children": [
+          8
+        ]
+      },
+      "newText": "#",
+      "oldText": "井"
+    },
+    {
+      "pathSet": {
+        "parent": 104,
+        "children": [
+          6
+        ]
+      },
+      "newText": "#",
+      "oldText": "井"
+    },
+    {
+      "pathSet": {
+        "parent": 112,
+        "children": [
+          4
+        ]
+      },
+      "newText": "的",
+      "oldText": "个"
+    },
+    {
+      "pathSet": {
+        "parent": 113,
+        "children": [
+          2
+        ]
+      },
+      "newText": "a   b",
+      "oldText": "AB"
+    },
+    {
+      "pathSet": {
+        "parent": 113,
+        "children": [
+          11
+        ]
+      },
+      "newText": "\"a   b\"",
+      "oldText": "AB"
+    },
+    {
+      "pathSet": {
+        "parent": 142,
+        "children": [
+          1
+        ]
+      },
+      "newText": "多路复用",
+      "oldText": "Dolof"
+    },
+    {
+      "pathSet": {
+        "parent": 157,
+        "children": [
+          6
+        ]
+      },
+      "newText": "uint8_t",
+      "oldText": "uint8_t 的 8"
+    },
+    {
+      "pathSet": {
+        "parent": 176,
+        "children": [
+          3
+        ]
+      },
+      "newText": "置",
+      "oldText": "这"
+    },
+    {
+      "pathSet": {
+        "parent": 176,
+        "children": [
+          5
+        ]
+      },
+      "newText": "置",
+      "oldText": "这"
+    },
+    {
+      "pathSet": {
+        "parent": 184,
+        "children": [
+          9
+        ]
+      },
+      "newText": "第",
+      "oldText": "一"
+    },
+    {
+      "pathSet": {
+        "parent": 184,
+        "children": [
+          13
+        ]
+      },
+      "newText": "置",
+      "oldText": "制"
+    },
+    {
+      "pathSet": {
+        "parent": 187,
+        "children": [
+          4
+        ]
+      },
+      "newText": "1",
+      "oldText": "e"
+    },
+    {
+      "pathSet": {
+        "parent": 229,
+        "children": [
+          13
+        ]
+      },
+      "newText": "可",
+      "oldText": "颗"
+    },
+    {
+      "pathSet": {
+        "parent": 229,
+        "children": [
+          14
+        ]
+      },
+      "newText": "以",
+      "oldText": "粒"
+    },
+    {
+      "pathSet": {
+        "parent": 230,
+        "children": [
+          0
+        ]
+      },
+      "newText": "理解",
+      "oldText": "学"
+    },
+    {
+      "pathSet": {
+        "parent": 230,
+        "children": [
+          1
+        ]
+      },
+      "newText": "成",
+      "oldText": "生"
+    },
+    {
+      "pathSet": {
+        "parent": 239,
+        "children": [
+          2
+        ]
+      },
+      "newText": "#define",
+      "oldText": "define"
+    },
+    {
+      "pathSet": {
+        "parent": 267,
+        "children": [
+          7
+        ]
+      },
+      "newText": "enum",
+      "oldText": "init"
+    },
+    {
+      "pathSet": {
+        "parent": 274,
+        "children": [
+          8
+        ]
+      },
+      "newText": "name",
+      "oldText": "链"
+    },
+    {
+      "pathSet": {
+        "parent": 274,
+        "children": [
+          14
+        ]
+      },
+      "newText": "字",
+      "oldText": "呃"
+    },
+    {
+      "pathSet": {
+        "parent": 275,
+        "children": [
+          0
+        ]
+      },
+      "newText": "符",
+      "oldText": "作"
+    },
+    {
+      "pathSet": {
+        "parent": 280,
+        "children": [
+          4
+        ]
+      },
+      "newText": "str",
+      "oldText": "STR"
+    },
+    {
+      "pathSet": {
+        "parent": 282,
+        "children": [
+          8
+        ]
+      },
+      "newText": "#define",
+      "oldText": "define"
+    }
+  ],
+  "combines": []
+}
