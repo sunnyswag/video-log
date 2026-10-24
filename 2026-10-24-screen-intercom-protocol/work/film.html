@@ -6,45 +6,41 @@
 <title>Kotlin 实现 SIP 通信协议</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
-  html, body { margin: 0; height: 100%; background: #F6F1E7; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: #F3ECE0; overflow: hidden; }
   #c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   #ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; display: flex; gap: 12px; align-items: center;
-        background: #FFFFFF; color: #252936; border-top: 2px solid #252936; font: 13px/1 "FCJK"; opacity: 0; transition: opacity .2s; }
+        background: linear-gradient(transparent, rgba(30,35,51,.85)); color: #fff; font: 13px/1 Consolas, monospace; opacity: 0; transition: opacity .2s; }
   body:hover #ui { opacity: 1; }
-  #ui button { background: #F6F1E7; color: #252936; border: 2px solid #252936; border-radius: 8px; padding: 6px 12px; cursor: pointer; font: inherit; }
-  #seek { flex: 1; accent-color: #245CC5; }
-  #hint { position: fixed; top: 12px; right: 16px; color: #252936; font: 12px "FCJK"; opacity: 0; pointer-events: none; }
-  body:hover #hint { opacity: .7; }
+  #ui button { background: #1E2333; color: #fff; border: 1px solid #fff; padding: 6px 12px; cursor: pointer; font: inherit; }
+  #seek { flex: 1; accent-color: #3563E9; }
+  #hint { position: fixed; top: 12px; right: 16px; color: #1E2333; font: 12px Consolas, monospace; opacity: .6; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hint"></div>
-<div id="ui"><button id="pp"></button><input id="seek" type="range" min="0" max="1" step="0.001" value="0"><span id="tc"></span></div>
-<!-- 复制到每期 YYYY-MM-DD-topic/work/ 时，引擎路径是 ../../tools/film-kit/engine.js。 -->
+<div id="hint">空格 播放/暂停 · ←/→ 跳 5 秒 · 声音请看成片 mp4</div>
+<div id="ui"><button id="pp">播放</button><input id="seek" type="range" min="0" max="1" step="0.001" value="0"><span id="tc">0.00</span></div>
 <script src="../../tools/film-kit/engine.js"></script>
+<script src="script.js"></script>
+<script src="kit.js"></script>
 <script src="film.js"></script>
 <script>
 (async function () {
   const cv = document.getElementById('c');
-  const ui = FILM_STYLE.ui;
-  document.getElementById('hint').textContent = ui.hint;
   const dpr = window.devicePixelRatio || 1;
   function fit() { cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); }
   fit();
-  // fontsNeeded 直接使用 film.js 导出值，避免两份字体配置漂移。
-  await Promise.all(FILM.fontsNeeded.map(f => document.fonts.load(f, ui.fontProbe)));
+  await Promise.all(FILM.fontsNeeded.map(f => document.fonts.load(f, '时间0aA')));
   await document.fonts.ready;
   const D = FILM.duration;
   let t = 0, playing = false, last = 0, raf = 0;
   const seek = document.getElementById('seek'), tc = document.getElementById('tc'), pp = document.getElementById('pp');
-  pp.textContent = ui.play;
   seek.max = D;
   function draw() { FILM.render(cv, t); seek.value = t; tc.textContent = t.toFixed(2) + ' / ' + D.toFixed(2); }
-  function loop(now) { if (!playing) return; t += (now - last) / 1000; last = now; if (t >= D) { t = D; playing = false; pp.textContent = ui.play; } draw(); raf = requestAnimationFrame(loop); }
+  function loop(now) { if (!playing) return; t += (now - last) / 1000; last = now; if (t >= D) { t = D; playing = false; pp.textContent = '播放'; } draw(); raf = requestAnimationFrame(loop); }
   window.__seek = tt => { t = Math.max(0, Math.min(D, tt)); draw(); };
-  window.__pause = () => { cancelAnimationFrame(raf); playing = false; pp.textContent = ui.play; };
-  window.__play = () => { if (playing) return; playing = true; last = performance.now(); pp.textContent = ui.pause; raf = requestAnimationFrame(loop); };
+  window.__pause = () => { cancelAnimationFrame(raf); playing = false; pp.textContent = '播放'; };
+  window.__play = () => { if (playing) return; playing = true; last = performance.now(); pp.textContent = '暂停'; raf = requestAnimationFrame(loop); };
   window.__duration = D;
   addEventListener('resize', () => { fit(); draw(); });
   pp.onclick = () => playing ? __pause() : __play();

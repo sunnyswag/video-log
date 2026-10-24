@@ -1,204 +1,107 @@
-# Kotlin 实现 SIP 通信协议 · 第 2 轮画面修订
+# Kotlin 实现 SIP 通信协议 · v2
 
-完整 **29 幕 / 338 秒 / 10140 帧 / 30 fps**；逻辑画布 1920×1080。本轮已打开并对照 `第2版_00.jpg` 至 `第2版_10.jpg` 全部 11 张审阅拼图，只修画面。
+29 幕，338 秒，30 fps（10,140 个视频帧）；逻辑画布为 1920×1080。云端按时间段并行渲染，`FILM.render(canvas, t)` 的输出必须只依赖时间、画布尺寸和固定资源，允许任意跳帧与冷启动。
 
-修改 `film.js`、`film.test.cjs`、本 README；新增三个自检脚本，并按下方字体命令重建 `fonts.css`。没有执行 git 操作。
+## 文件组成
 
-`audio.py`、`audio.wav`、`film.html`、`render.json`、原有 `timeline.json` 的 SHA-256 均与改前一致。用户更新过的页面标题、film.js 首行注释、UI.title、第二项章节英文副标题、原测试内标题文本全部保留。未合成或覆盖正式配乐。
-
-## 逐条修复
-
-1. **第 15 幕候选与字幕一致**：三个等宽并列面板为“加锁 / Handler 同步屏障 / Flow 串行消费”。加锁面板的锁扣在共享会话上，两条消息在锁外排队；Handler 面板有三条排队消息、完整的条纹栏杆和“暂停 / 恢复”；Flow 保留队列到单工位。183 s 起前两项变灰、Flow 打勾，186.4 s 起出现“好懂 / 好维护”，对应原字幕第三、四句。
-2. **左列设备**：统一使用 x=100–450、y=165–852 的列框；屏体缩至 0.94 倍，网关缩至 0.8 倍。三个“图 + 标签”组占约 y=184–454、471–637、654–839，含描边、天线、阴影、文字下沿后组间仍至少 17 px。标签均在框内；结束态单独放在 A 组内。所有复用列布局的镜头一并修正。
-3. **章节横幅**：第二章三设备整体下移 30 px，网关文字与横幅阴影保持至少约 18 px 间隔。第五章横幅占 y=165–275，内容边界从 y=300 开始，工位标题保持在 y=360，横幅与内容不重叠。时间轴和章首事件不变。
-4. **标签与过渡重叠**：125.6 s 的“结果没对齐”独占 y=657；第 21 幕响铃支线说明在右上 y=304，响铃胶囊在右上空白区，沿设备列旁的小信号点表示 B → 网关 → A；停表标签移至 y=747，时间说明下移至 y=819。174 s 的取消残影删除。另修正片头/片名转场、日志槽入场、第 18 幕上下两条消息路径、状态枚举行距以及恰好到达时重复绘制一帧的问题。移动消息的底板不再透明淡出，防止连线从字下透出。
-5. **导演指令式文字**：“暂停看两边”改为“网关只转发”。全片搜查后，将第 18 幕说明改为面向观众的“只排启动动作 ≠ 等完整处理结束”；保留说明机制所需的“时间已缩放”“快进”和指定的“后续不展开”等标签。警告符号用线和圆点绘制，不依赖缺失字形。
-
-## 本轮自检结果
-
-| 项目 | 结果 |
+| 文件 | 职责 |
 | --- | --- |
-| `node film.test.cjs` | 10 组：9 通过，0 失败，1 跳过 |
-| `FULL_FRAMES=1 node film.test.cjs` | 11,205 次 render + 3 个尺寸封面；无非有限数、非法透明度、负尺寸、save/restore 泄漏；同样 9 通过、1 跳过 |
-| 纯函数检查 | 677 个半秒时刻，顺序/乱序、封面穿插、尺寸切换、独立 VM 的绘图指令哈希一致 |
-| 文字重叠：每 0.5 秒 | 677 个采样点，原始相交 **0**，豁免 **0**，剩余 **0** |
-| 文字重叠：30 fps | 10,141 个采样点（含 338 s 终点），原始相交 **0**，豁免 **0**，剩余 **0** |
-| 直线、边框、后绘底板审计 | 同样半秒/30 fps 全片扫描，接触或遮字 **0** |
-| 时间线 | 与改画面之前从实际 FILM 对象导出的基线逐字段一致；338 s、29 幕、84 字幕、57 cue、10 章节；SCRIPT 数据原文哈希一致 |
-| 字体 | 已重建 12 个字体子集；所有实际绘制文字可在嵌入字体及其声明的回退字体中找到 |
-| 敏感词 | 本机 38 条规则，命中 0 |
+| `script.js` | 29 幕的时长、章节和 84 条字幕；字幕原文的唯一数据源 |
+| `kit.js` | 主题、字体族、图元、镜头、纸面纹理和后期；`prepareStyle` 创建固定离屏资源 |
+| `film.js` | 场景编排、事件和绘制钩子；最后调用 `film.finish()` 导出 `window.FILM` |
+| `film.html` | 预览页面、字体加载、播放与跳转控制 |
+| `audio.py` | 根据导出的时间线生成配乐与音效 |
+| `fonts.css` | 内嵌 WOFF 字体子集，供预览与正式渲染共用 |
+| `render.json` | 页面、音频脚本、输出名与帧率配置 |
+| `checks.cjs` | 无浏览器的 v2 自动检查器，只读取画面源码 |
+| `checks.report.txt` | 本次自动检查完整输出，包含结论、问题清单及检测局限 |
 
-唯一跳过项是原测试指定路径的外部视频稿不可用；本轮新增的“改前实际时间线 + SCRIPT 原文”比较全部通过，因此字幕的文本、顺序、起止以及 cue 均有独立的不变性校验。
+引擎位于 `../../tools/film-kit/engine.js`，API 见其文件头与 [FilmKit 说明](../../tools/film-kit/README.md)。页面依次加载 **engine.js → script.js → kit.js → film.js**，四个普通 `<script>` 共享全局词法作用域；不要改成独立 CommonJS 模块加载。
 
-时间线前后共同 SHA-256（对实际导出对象的紧凑 JSON）：
+v1 的 `film.test.cjs`、`film.overlap.cjs`、`film.layout-check.cjs`、`film.timeline-check.cjs` 已删除。旧版 README 中的测试数字不适用于 v2，应以当前源码重新运行的报告为准。
 
-```text
-d692b966bdc6c4aab9b991cff201aea1156a662b3da964b8c16b6290e3ba3146
+## 预览
+
+以下命令均从本期 `work` 目录运行。可直接用浏览器打开 `film.html`，或提供覆盖仓库根目录的静态服务，让页面能读取共享引擎：
+
+```sh
+python3 -m http.server 8000 --directory ../..
 ```
 
-### 检查器的范围
+浏览器访问 `http://localhost:8000/2026-10-24-screen-intercom-protocol/work/film.html`。空格播放/暂停，左右方向键跳转 5 秒，底部滑条可定位时间。预览页面不播放成片配乐。
 
-- `film.overlap.cjs` 在 VM 内拦截每次 `fillText`，用 `measureText` 宽度和基线 −1.10em 至 +0.25em 的高度估算包围盒，并变换四个角。`measureText` 从当前 `fonts.css` 的实际字形 advance 取宽度，包含声明的回退字体；需要已有的 Python `fontTools`。所有非零透明度文字都检查，代码分词、字幕富文本、同底板多行也未豁免。报告按幕、文本对和时间汇总；`--details` 可列出每次相交坐标。
-- `film.layout-check.cjs` 补查文字与直线、圆角卡片的直边、后绘制卡片填充的接触，考虑变换、裁剪、遮挡关系。弧线/圆角与字形光栅、真实浏览器字距不由这个近似检查器验收。
-- 第 18 幕仍保留“取消撞到半成品会话卡外缘”的图形动作。文字已避开，胶囊底板遮住经过的边框；**没有因此豁免文字或线条检查**。
-- 本轮没有运行 Chromium，也没有生成或宣称验收真实浏览器截图。最终字体光栅和动画观感由下方沙箱外命令复拍。
+页面等待字体加载完成后设置 `window.__ready`；可在浏览器控制台使用 `__pause()`、`__seek(120)` 定位检查。
 
-## 文件
+## 生成字体
 
-| 文件 | 用途 |
-| --- | --- |
-| `film.js` | 29 幕画面与原封不动的 SCRIPT 字幕、时长、cue |
-| `film.test.cjs` | 纯函数、事件、数值、范围及本轮回归检查；导出 VM / 假画布工具 |
-| `film.overlap.cjs` | 全片文字包围盒两两相交检查，默认半秒，可选 `--full` |
-| `film.layout-check.cjs` | 文字与线条/边框/后绘底板的补充检查 |
-| `film.timeline-check.cjs` | 内嵌改前实际导出，比较字幕、cue、幕边界、章节及保护文件；可导出前后快照 |
-| `fonts.css` | 重新生成的字体子集 |
-| `film.html` / `render.json` / `timeline.json` | 保持原文件不变 |
-| `audio.py` / `audio.wav` | 用户正式音轨脚本和现有音频，本轮未修改或重新生成 |
+在安装了 Python `fontTools`、Noto Sans CJK、Inter、DejaVu 字体的环境运行：
 
-## 风格包与图元
-
-主题：背景 `#F6F1E7`，墨色 `#252936`，纸白 `#FFFFFF`，蓝 `#245CC5`，珊瑚红 `#C8474C`，琥珀 `#A66009`，绿 `#198565`，紫 `#7956B3`。浅底从主题色混白得到；背景点阵为固定坐标，无随机流。
-
-基础设备图元维持原始尺寸，场景使用明确的布局缩放。状态、消息、队列工位等带文本组件按给定宽高重新排版；不靠缩小字体塞进面板。
-
-| 图元 / 钩子 | 用途与本轮约定 |
-| --- | --- |
-| `panel / line / dot / label / tag` | 圆角卡、线、点、文字、避让衬底；先画线再画遮挡底和文字 |
-| `drawItems / item` | 层级排序、位置、尺寸、透明度和入退场；时间均由参数决定 |
-| `screen / gateway / trio` | 两屏与网关；常规三角色布局为 x=340/960/1580，y=335，scale=1.5 |
-| `legend` | 窗口幕左侧三设备列；图与标签成组，组间净距至少 17 px |
-| `actionButton / bell / retry` | 按压、铃纹、停止重发 |
-| `message / flight / pathAt` | 300×96 起的含 S1 胶囊；无 S1 则使用横排胶囊；网络每段 0.6 秒匀速 |
-| `lanes / arrow / stateArrow` | 时序泳道、显式路径、状态箭头；没有随机路径 |
-| `stateLabel / stateNode` | 准确枚举、ENDED. 后折行；当前节点有填色及双描边 |
-| `boundary` | 各设备自己的本地处理边界 |
-| `timerBar / ruler / clockFace` | 创建进度、案例时间标尺、从 RINGING 启动的响铃表盘 |
-| `sessionCard / sessionKey` | 会话未就绪/就绪、sessionId 匹配 |
-| `queue / workstation` | 等待槽与唯一工位；创建带始终位于工位内部 |
-| `logSlot` | 忽略消息留在灰槽；不会复活、回队或重试 |
-| `codeCard` | 第 17 幕七行静态代码、单行高亮，不滚动 |
-| `compareCard / summaryCard` | 保留可复用方案卡、经验卡组件 |
-| `drawSummary / dockedSummary` | 本片四张总结卡；归位后文字重新排版 |
-| `chapterCard` | 蓝色章节条卡，嵌在各章首幕独立区域内，零额外时长 |
-| `symbol / demoBadge` | 勾、叉、问号、警告；不依赖彩色 emoji 字体 |
-| `prepareStyle / drawBackground` | 静态离屏缓存与背景贴图 |
-| `drawChrome` | 章节角标、演绎标记与时间缩放说明 |
-| `drawCaptionBackground / drawCaption` | 保留 60 px 富文本字幕；区间内淡入淡出，不跨幕重叠 |
-| `drawCover` | “已取消 vs 还在响”；主标题“取消去哪了”，副标题“约50毫秒的会话竞态” |
-
-`FILM_STYLE` 导出主题、字体、SCRIPT、消息表、布局、代码、系列常量及公共图元。`FILM.drawCover(canvas)` 是封面入口。封面主要内容位于 x=200–1720，适合居中 16:10 裁切，角标为“机制演绎”。
-
-系列片尾只需改一处：
-
-```js
-const SERIES = { title: '工作档案', sub: '把做过的设计，讲成故事', next: '' };
+```sh
+cat kit.js script.js film.js > /tmp/all.js
+python3 ../../tools/fonts/build_fonts.py /tmp/all.js fonts.css
 ```
 
-## 章节时间轴
+合并文件只用于收集字符，不是页面的加载顺序。可通过 `NOTO_DIR`、`INTER_DIR`、`DEJAVU_DIR` 环境变量指定字体目录。增改文字后应重新生成字体；已有 `fonts.css` 时可直接预览。
 
-全部通过 `film.chapter(n, zh, en, desc)` 在正确起点登记，标题、英文、说明均非空；可直接用 `FILM.chapterInfo` 生成投稿章节时间戳。
+## 自动检查
 
-| 起点 | 章节 |
-| --- | --- |
-| 00:00 | 开场：取消去哪了 |
-| 00:15 | Kotlin 实现 SIP 通信协议 |
-| 00:22 | 第一章：接通，原来这么麻烦 |
-| 01:14 | 第二章：取消，掉进了缝里 |
-| 02:08 | 第三章：状态机，背不了这锅 |
-| 02:56 | 第四章：先排队，别抢跑 |
-| 03:52 | 第五章：这回，终于接住了 |
-| 04:54 | 总结：这次记住四件事 |
-| 05:26 | 结尾：把那条取消接住 |
-| 05:36 | 系列片尾 |
-| **05:38** | **全片结束** |
+需要 Node.js 18 或以上，不需要 npm 依赖或 Chromium：
 
-## 29 幕场景表
-
-| 幕 | 时间 | 时长 | 内容 / 关键事件 |
-| --- | --- | --- | --- |
-| 1 | 00:00–00:15 | 15 s | 已取消 vs 还在响；402 下落；冻结的约 50 ms；问号 |
-| 2 | 00:15–00:22 | 7 s | 片名、“先排队，再开口”；不重复底部字幕 |
-| 3 | 00:22–00:34 | 12 s | 第一章卡；A—网关—B；两端独立状态 |
-| 4 | 00:34–00:47 | 13 s | INVITE 到 B，创建完成才 RINGING；RING 到 A 才停重发 |
-| 5 | 00:47–01:01 | 14 s | B 接听变 PREPARE；A 收 ACCEPT 后 CHATTING，立即放出确认与媒体 |
-| 6 | 01:01–01:14 | 13 s | 确认经网关到 B；B 才 CHATTING；双向媒体与双状态卡 |
-| 7 | 01:14–01:26 | 12 s | 第二章卡；重放 INVITE；解释 S1；B 收到邀请定义 t=0 |
-| 8 | 01:26–01:40 | 14 s | 创建冻结在约五分之一；构造的 t+10 ms 取消先到 |
-| 9 | 01:40–01:54 | 14 s | 未匹配且非邀请 → 仅记日志；取消不回流 |
-| 10 | 01:54–02:08 | 14 s | 约 50 ms 创建完成才响铃；B 启动 60 s；RING 支线后续不展开 |
-| 11 | 02:08–02:20 | 12 s | 第三章卡；消息 → 会话匹配 → 状态机 |
-| 12 | 02:20–02:32 | 12 s | 两端取消规则；+8 s 回看未进入状态机的输入断口 |
-| 13 | 02:32–02:44 | 12 s | 创建与取消两轨；尚未完成窗口内出现下一项 |
-| 14 | 02:44–02:56 | 12 s | B 本地响铃超时；404 只在本地；RINGING_TIMEOUT |
-| 15 | 02:56–03:10 | 14 s | 第四章卡；方案比较；选择 Flow 的理由为好懂、好维护 |
-| 16 | 03:10–03:24 | 14 s | 等待槽 + 唯一工位；创建在处理内；只说明条件，暂不放行 |
-| 17 | 03:24–03:38 | 14 s | 七行示意；高亮 collect / 创建完成 / 下一次迭代路由 |
-| 18 | 03:38–03:52 | 14 s | 上排只排启动动作的反例；下排等待完整创建 |
-| 19 | 03:52–04:04 | 12 s | 第五章卡；邀请重放；B 创建占工位，没有提前出现取消 |
-| 20 | 04:04–04:16 | 12 s | 取消经网关进入等待槽；会话未好、日志槽为空 |
-| 21 | 04:16–04:29 | 13 s | 创建完成、响铃、再取取消、匹配 S1、OTHER_TERMINATED、停表 |
-| 22 | 04:29–04:42 | 13 s | 两端不同结束枚举；本次呼叫均结束；三个完成步骤 |
-| 23 | 04:42–04:54 | 12 s | 主叫创建与被叫入站各自串行，不共享队列/工位/状态 |
-| 24 | 04:54–05:02 | 8 s | 01 先认会话；归位保留 |
-| 25 | 05:02–05:10 | 8 s | 02 排完整过程；归位保留 |
-| 26 | 05:10–05:18 | 8 s | 03 状态机管规则；归位保留 |
-| 27 | 05:18–05:26 | 8 s | 04 超时留退路；四卡同排 |
-| 28 | 05:26–05:36 | 10 s | 开场回扣；取消滑入完成托盘；约 50 ms 条带仍为 700 px |
-| 29 | 05:36–05:38 | 2 s | 工作档案；0.2 s 入、0.4 s 出，无额外 cue |
-
-## 本地复核命令
-
-以下均从本期 `work` 目录执行：
-
-```bash
-node film.test.cjs
-node film.overlap.cjs
-node film.layout-check.cjs
-node film.timeline-check.cjs
-
-# 全帧审计；同时包含纯函数、边界、多尺寸检查
-FULL_FRAMES=1 node film.test.cjs
-
-# 导出的时间线逐字比较（bash/zsh）；成功时 diff 无输出
-diff -u <(node film.timeline-check.cjs --export-before) \
-        <(node film.timeline-check.cjs --export-after)
+```sh
+node checks.cjs
 ```
 
-字体已重建；以后新增画面文字，仍按此命令生成：
+保存完整报告并保留检查退出码：
 
-```bash
-NOTO_DIR=~/.local/share/fonts/video-log/noto \
-INTER_DIR=~/.local/share/fonts/video-log/inter \
-python3 -B ../../tools/fonts/build_fonts.py film.js fonts.css
+```sh
+node checks.cjs > checks.report.txt 2>&1
 ```
 
-## 沙箱外复拍命令
+退出码为 `0` 表示全部规则通过，`1` 表示至少一项失败或检查器中止。重叠、越界与字幕区告警也会返回 `1`；不能把它们直接当作经浏览器确认的视觉缺陷。脚本自身不写文件，重定向会替换旧报告。
 
-从本期 work 目录执行，使用新目录保留上一轮截图。无需重新运行音频脚本。
+- **加载与时间线**：同一 VM 顺序执行四份脚本；检查 338 秒（误差小于 0.01）、29 幕、84 条字幕与 `SCRIPT` 原文逐条一致、cue 类型白名单、0–9 章节顺序。
+- **数值健康**：1080p、4K 各扫描 0–338 秒，每 0.25 秒一次，包含终点，共 1,353 帧/尺寸。检查异常、坐标/尺寸/状态中的非有限数、每帧主画布与离屏画布的 save/restore 平衡。
+- **确定性**：固定种子分层随机抽取 120 个时刻，在两个尺寸下分别顺序、倒序、每个时刻全新 VM 首帧渲染。比较数字保留 3 位小数的完整指令序列与属性写入，包含 Path2D、渐变、离屏内容和 ImageData 字节哈希；不使用随机资源编号。禁止读取未播种随机数及当前时钟。
+- **文字重叠**：1080p 每 0.25 秒拦截 `fillText`。ASCII 约 0.6em、CJK/其他非 ASCII 约 1em，加字间距；高约 1.2em。按对齐、基线和当前变换生成屏幕轴对齐包围盒，忽略 globalAlpha 小于 0.15 的字，交集达到较小框的 15% 时命中。不同调用即使文字相同也检查。
+- **聚合与边界**：相邻采样点同一文字对合并为连续区间，按跨度排序输出前 40 条重叠；全部越界文字单列。区间起止是实际命中的采样时间，不是精确的动画起止时间。
+- **字幕保留区**：屏幕内 y > 890 的区域出现任何非字幕文字都报告。通过实际 `drawCaption` 钩子识别字幕，不按文字内容或位置猜测；没有字幕正在显示时也保留此规则。按文字与连续时间聚合，列出全部区间。
 
-```bash
-cd <仓库根目录>/2026-10-24-screen-intercom-protocol/work
-export CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
+假画布会记录裁切与合成指令，但不计算真实像素遮挡。估算字体、旋转外接框、转场交叉淡化、裁切和后绘底板都可能造成误报；0.25 秒采样也可能漏掉短暂问题。自动检查不代替真实浏览器关键帧复核，完整限制见 `checks.report.txt` 末尾。
 
-# 全片 84 条字幕中点，1080p
+## 抽关键帧（沙箱外）
+
+在可启动 Chrome/Chromium/Edge 的终端执行；本检查环境无法启动 Chromium。安装渲染工具依赖：
+
+```sh
+npm --prefix ../../tools/render install
+```
+
+工具会尝试查找系统浏览器；未找到时，将 `CHROME_PATH` 环境变量设为实际可执行文件，或传入 `--chrome`。输出目录应使用新的空目录。
+
+抽取每句字幕中点（84 个时间点）：
+
+```sh
 node ../../tools/render/render_local.mjs film.html \
-  --frames captions --out-dir preview-round2-captions --scale 1
-python3 -B ../../tools/preview/sheet.py \
-  preview-round2-captions preview-round2-captions-sheet
-
-# 原问题帧 + 补修转场/消息路径
-node ../../tools/render/render_local.mjs film.html \
-  --frames 14.83,19.87,21.8,53.7,58.5,76,80,84,88.3,92.9,97.6,109.8,125.6,174,177.8,181.3,184.7,188.2,222,230.5,234,238,242,246,250,254,258.1,262.4,266.8 \
-  --out-dir preview-round2-events --scale 1
-python3 -B ../../tools/preview/sheet.py \
-  preview-round2-events preview-round2-events-sheet
-
-# 真页面导出另存至新目录，不覆盖原 timeline.json
-node ../../tools/render/render_local.mjs film.html \
-  preview-round2-captions/timeline-browser.json
-node film.timeline-check.cjs \
-  --compare-browser preview-round2-captions/timeline-browser.json
+  --frames captions --out-dir preview-v2-captions --scale 1
 ```
 
-重点看：第二章网关与横幅的净距、三设备图文组、三个候选同屏及第三/四句切换、258.1 s 响铃胶囊的位置、262.4/266.8 s 支线说明和计时标签。全片字幕中点仍需逐张复核。
+按报告里的问题时间定点抽帧，例：
+
+```sh
+node ../../tools/render/render_local.mjs film.html \
+  --frames 0,24.5,120,180,240,337.5 --out-dir preview-v2-picked --scale 1
+```
+
+`--scale 1` 为 1080p，`--scale 2` 为 4K；抽帧时间须在 `[0,338)` 内，不包含终点。输出为 JPEG，通过 canvas 导出，不依赖 ffmpeg。可安装 Python Pillow 后拼图审阅：
+
+```sh
+python3 ../../tools/preview/sheet.py preview-v2-captions preview-v2-sheet 6
+```
+
+如需为音频生成当前 v2 时间线，可在同一沙箱外环境执行：
+
+```sh
+node ../../tools/render/render_local.mjs film.html timeline.json
+```
+
+此检查任务不重建字体、音频、时间线或画面；以上命令供后续制作与验收使用。

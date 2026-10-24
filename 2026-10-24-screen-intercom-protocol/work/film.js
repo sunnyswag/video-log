@@ -1,25 +1,9 @@
-/* Kotlin 实现 SIP 通信协议｜扁平 MG 风格包与完整 29 幕。
- * 所有画面文字、字幕和 cue 集中在本文件；时间只取自参数，不读时钟、不积累帧状态。
- * 图元坐标默认取中心；drawItems 按 zIndex 排序，其余图元按调用顺序叠放。
- */
-(function (root) {
+/* =====================================================================
+ * Kotlin 实现 SIP 通信协议 v2 —— 29 幕编排（字幕数据在 script.js，图元在 kit.js）
+ * 镜头：每幕 cam 关键帧 [[t, cx, cy, z]]；B 的“内部处理”视图画在屏幕坐标里（board）。
+ * 章节编号沿用 v1：0 开场、1 片名、2–6 五章、7 总结、8 结尾、9 片尾（配乐脚本按此划段）。
+ * ===================================================================== */
 'use strict';
-const { TAU, clamp, lerp, seg, eo, eio, rgba } = FilmKit;
-const W = 1920, H = 1080, FPS = 30;
-const theme = Object.freeze({
-  bg: '#F6F1E7', ink: '#252936', paper: '#FFFFFF', blue: '#245CC5',
-  coral: '#C8474C', amber: '#A66009', green: '#198565', purple: '#7956B3',
-});
-const C = theme;
-const fonts = Object.freeze({ cjk: '"FCJK","FSup"', disp: '"FDisp","FCJK"', mono: '"FMono","FMonoCJK"' });
-const fontsNeeded = [
-  ...[500,700,900].map(w => `${w} 32px "FCJK"`),
-  ...[800,900].map(w => `${w} 32px "FDisp"`),
-  ...[500,700,900].map(w => `${w} 32px "FSup"`),
-  ...[400,700].flatMap(w => [`${w} 32px "FMono"`, `${w} 32px "FMonoCJK"`]),
-];
-const UI = { title: 'Kotlin 实现 SIP 通信协议', play: '播放', pause: '暂停', hint: '空格 播放/暂停 · ←/→ 跳 5 秒 · 声音请看成片 mp4', fontProbe: '时间0aA⁰¹' };
-const SERIES = { title: '工作档案', sub: '把做过的设计，讲成故事', next: '' };
 const CHAPTERS = [
   ['开场｜取消去哪了', 'WHERE DID CANCEL GO', '按机制构造的两端不一致：取消消息悬在创建窗口外。'],
   ['Kotlin 实现 SIP 通信协议', 'A SIP-STYLE PROTOCOL IN KOTLIN', '先排队，再开口。'],
@@ -32,956 +16,10 @@ const CHAPTERS = [
   ['结尾｜把那条取消接住', 'LET IT FINISH', '无需虚构创建变快，让完整处理先做完。'],
   ['系列片尾', 'WORK ARCHIVE', '工作档案：把做过的设计，讲成故事。'],
 ];
-const MSG = Object.freeze({
-  invite: { code: '101', name: 'INVITE', tone: 'blue' }, ring: { code: '102', name: 'RING', tone: 'blue' },
-  accept: { code: '200', name: 'ACCEPT', tone: 'green' }, confirm: { code: '201', name: 'PREPARE_CONFIRM', tone: 'green' },
-  terminate: { code: '402', name: 'TERMINATE_END', tone: 'coral' }, timeout: { code: '404', name: 'TIMEOUT_END', tone: 'purple' },
-});
-const T = Object.freeze({ a: [340,335], gateway: [960,335], b: [1580,335],
-  outgoing: [[340,585],[960,615],[1580,645]], incoming: [[1580,710],[960,750],[340,790]],
-});
-// 与绘制函数分开；替换字幕不必碰图元。end 保留原稿的精确停留区间。
-const SCRIPT = {
-  "s01": {
-    "dur": 15,
-    "chapter": 0,
-    "name": "取消去哪了",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 3.6,
-        "text": "我这边，已经{取消}了"
-      },
-      {
-        "t": 3.6,
-        "end": 7.2,
-        "text": "对面，怎么[还在响]"
-      },
-      {
-        "t": 7.2,
-        "end": 11.0,
-        "text": "问题藏在^约50毫秒^里"
-      },
-      {
-        "t": 11.0,
-        "end": 15.0,
-        "text": "那条{取消消息}，去哪了"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "ring"
-      },
-      {
-        "t": 3.6,
-        "type": "error"
-      },
-      {
-        "t": 4,
-        "type": "ring"
-      },
-      {
-        "t": 14.7,
-        "type": "whoosh"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s02": {
-    "dur": 7,
-    "chapter": 1,
-    "name": "片名落下",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.8,
-        "text": "Kotlin 实现 SIP 通信协议"
-      },
-      {
-        "t": 4.8,
-        "end": 7.0,
-        "text": "先排队，再开口"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0,
-        "type": "whoosh"
-      }
-    ],
-    "title": true
-  },
-  "s03": {
-    "dur": 12,
-    "chapter": 2,
-    "name": "先交代这条路",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "工作上，要做一个{语音通话}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "数据走{网关}，它替代了{代理服务器}"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "通话怎么建立，得{自己实现}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4,
-        "type": "send"
-      }
-    ]
-  },
-  "s04": {
-    "dur": 13,
-    "chapter": 2,
-    "name": "邀请要有回声",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.2,
-        "text": "我先发出一条{邀请}"
-      },
-      {
-        "t": 4.2,
-        "end": 8.6,
-        "text": "对面回一句：{我开始响铃了}"
-      },
-      {
-        "t": 8.6,
-        "end": 13.0,
-        "text": "收到回音，我就{停止重发}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 1,
-        "type": "send"
-      },
-      {
-        "t": 4,
-        "type": "ring"
-      },
-      {
-        "t": 4.4,
-        "type": "send"
-      }
-    ]
-  },
-  "s05": {
-    "dur": 14,
-    "chapter": 2,
-    "name": "点接听，还没全接上",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.4,
-        "text": "对面点了{接听}"
-      },
-      {
-        "t": 4.4,
-        "end": 9.0,
-        "text": "我收到消息，先进入{通话}"
-      },
-      {
-        "t": 9.0,
-        "end": 14.0,
-        "text": "可对面，还在{准备状态}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "latch"
-      },
-      {
-        "t": 3.2,
-        "type": "send"
-      }
-    ]
-  },
-  "s06": {
-    "dur": 13,
-    "chapter": 2,
-    "name": "最后一句，我收到了",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "还差最后一条{确认}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.4,
-        "text": "对面收到，才进入{通话}"
-      },
-      {
-        "t": 8.4,
-        "end": 13.0,
-        "text": "两边的状态，靠{消息}对齐"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.3,
-        "type": "send"
-      },
-      {
-        "t": 1.5,
-        "type": "success"
-      }
-    ]
-  },
-  "s07": {
-    "dur": 12,
-    "chapter": 3,
-    "name": "把取消放到更早",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "接通的路，先看到这里"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "如果{取消}来得更早呢"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "就在被叫{创建会话}的时候"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0,
-        "type": "whoosh"
-      },
-      {
-        "t": 2.8,
-        "type": "send"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s08": {
-    "dur": 14,
-    "chapter": 3,
-    "name": "这道缝，大概五十毫秒",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.6,
-        "text": "创建会话，大概需要^50毫秒^"
-      },
-      {
-        "t": 4.6,
-        "end": 9.2,
-        "text": "偏偏这时候，{取消}先到了"
-      },
-      {
-        "t": 9.2,
-        "end": 14.0,
-        "text": "消息到了，会话还[没建好]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4.6,
-        "type": "send"
-      },
-      {
-        "t": 9.2,
-        "type": "error"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s09": {
-    "dur": 14,
-    "chapter": 3,
-    "name": "到了，也可能没人接",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.6,
-        "text": "它得先找到{自己的会话}"
-      },
-      {
-        "t": 4.6,
-        "end": 9.2,
-        "text": "找不到，又不是{邀请}"
-      },
-      {
-        "t": 9.2,
-        "end": 14.0,
-        "text": "于是，只留下了一条[日志]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "send"
-      },
-      {
-        "t": 9.2,
-        "type": "error"
-      }
-    ],
-    "demo": true
-  },
-  "s10": {
-    "dur": 14,
-    "chapter": 3,
-    "name": "它建好了，可取消没了",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.6,
-        "text": "会话终于建好了"
-      },
-      {
-        "t": 4.6,
-        "end": 9.2,
-        "text": "它开始{响铃}，取消却没了"
-      },
-      {
-        "t": 9.2,
-        "end": 14.0,
-        "text": "我结束了，对面还在[等接听]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.8,
-        "type": "ring"
-      },
-      {
-        "t": 1,
-        "type": "send"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s11": {
-    "dur": 12,
-    "chapter": 4,
-    "name": "先过会话这一关",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "消息不是直接丢给{状态机}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "先用{会话标识}，找到归属"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "匹配上，才轮到{状态转移}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4,
-        "type": "latch"
-      }
-    ]
-  },
-  "s12": {
-    "dur": 12,
-    "chapter": 4,
-    "name": "规则其实在这里",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "状态机知道{怎么结束}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "被叫收到取消，就能{结束}"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "可刚才，消息根本[没进来]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 1.2,
-        "type": "latch"
-      },
-      {
-        "t": 5.2,
-        "type": "success"
-      }
-    ],
-    "demoAt": 8
-  },
-  "s13": {
-    "dur": 12,
-    "chapter": 4,
-    "name": "出事的是先后顺序",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "坑在{创建}和{处理}之间"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "上一件还没做完，下一件就来了"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "先后顺序，被[并发]打乱了"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4,
-        "type": "error"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s14": {
-    "dur": 12,
-    "chapter": 4,
-    "name": "等一分钟，才算结束",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "最后，还有^60秒^兜底"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "到点，本地产生{超时消息}"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "但这救不了[丢掉的取消]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "tick"
-      },
-      {
-        "t": 3.8,
-        "type": "tick"
-      },
-      {
-        "t": 4,
-        "type": "send"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s15": {
-    "dur": 14,
-    "chapter": 5,
-    "name": "这回先把队排好",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 3.6,
-        "text": "我需要让处理过程{排队}"
-      },
-      {
-        "t": 3.6,
-        "end": 7.0,
-        "text": "候选有{加锁}、{同步屏障}、{Flow}"
-      },
-      {
-        "t": 7.0,
-        "end": 10.4,
-        "text": "最后，我选了{Flow}"
-      },
-      {
-        "t": 10.4,
-        "end": 14.0,
-        "text": "理由很朴素：{好懂，好维护}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "whoosh"
-      },
-      {
-        "t": 7,
-        "type": "latch"
-      }
-    ]
-  },
-  "s16": {
-    "dur": 14,
-    "chapter": 5,
-    "name": "这一个做完，再取下一个",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 3.6,
-        "text": "消息先进入{同一条队列}"
-      },
-      {
-        "t": 3.6,
-        "end": 7.0,
-        "text": "前一个{做完}，才取下一个"
-      },
-      {
-        "t": 7.0,
-        "end": 10.4,
-        "text": "创建会话，也算这一步"
-      },
-      {
-        "t": 10.4,
-        "end": 14.0,
-        "text": "这样，取消就不会{抢跑}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "tick"
-      },
-      {
-        "t": 0.8,
-        "type": "tick"
-      },
-      {
-        "t": 2,
-        "type": "latch"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s17": {
-    "dur": 14,
-    "chapter": 5,
-    "name": "把完成边界写出来",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.6,
-        "text": "关键，是这一步{处理完成}"
-      },
-      {
-        "t": 4.6,
-        "end": 9.2,
-        "text": "会话建好，才结束本次处理"
-      },
-      {
-        "t": 9.2,
-        "end": 14.0,
-        "text": "下一条消息，再交给会话"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4.6,
-        "type": "latch"
-      }
-    ]
-  },
-  "s18": {
-    "dur": 14,
-    "chapter": 5,
-    "name": "排队，别只排个开头",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 3.6,
-        "text": "注意，我说的是{处理完}"
-      },
-      {
-        "t": 3.6,
-        "end": 7.0,
-        "text": "只把启动动作排队，[不够]"
-      },
-      {
-        "t": 7.0,
-        "end": 10.4,
-        "text": "活儿没做完，坑就还在"
-      },
-      {
-        "t": 10.4,
-        "end": 14.0,
-        "text": "队列要等到{会话可用了}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 3.6,
-        "type": "error"
-      },
-      {
-        "t": 12,
-        "type": "latch"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s19": {
-    "dur": 12,
-    "chapter": 6,
-    "name": "同一条邀请，再来一遍",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "现在，把那两条消息{再放一遍}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "邀请先到，开始{创建会话}"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "这一步结束前，{不取下一条}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "send"
-      },
-      {
-        "t": 2.6,
-        "type": "latch"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s20": {
-    "dur": 12,
-    "chapter": 6,
-    "name": "这回先等在外面",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "取消，还是{提前到了}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "这回，它被{留在队列里}"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "它没有撞上[半成品会话]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "latch"
-      },
-      {
-        "t": 0.6,
-        "type": "send"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s21": {
-    "dur": 13,
-    "chapter": 6,
-    "name": "终于轮到取消",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.2,
-        "text": "会话建好，先进入{响铃}"
-      },
-      {
-        "t": 4.2,
-        "end": 8.6,
-        "text": "再取取消，这次{找得到会话}"
-      },
-      {
-        "t": 8.6,
-        "end": 13.0,
-        "text": "于是，立刻{结束这次呼叫}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 1,
-        "type": "ring"
-      },
-      {
-        "t": 1,
-        "type": "send"
-      },
-      {
-        "t": 4.2,
-        "type": "latch"
-      },
-      {
-        "t": 8.6,
-        "type": "success"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s22": {
-    "dur": 13,
-    "chapter": 6,
-    "name": "终于对上了",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.2,
-        "text": "我取消了，你也{结束了}"
-      },
-      {
-        "t": 4.2,
-        "end": 8.6,
-        "text": "状态名不同，结果终于{对上了}"
-      },
-      {
-        "t": 8.6,
-        "end": 13.0,
-        "text": "补上的，是{本地处理顺序}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "success"
-      },
-      {
-        "t": 8.6,
-        "type": "tick"
-      },
-      {
-        "t": 9.3,
-        "type": "tick"
-      },
-      {
-        "t": 10,
-        "type": "tick"
-      }
-    ],
-    "demo": true
-  },
-  "s23": {
-    "dur": 12,
-    "chapter": 6,
-    "name": "各排各的，别画成一条",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "被叫收消息，要{按顺序处理}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "主叫建会话，也要{串行化}"
-      },
-      {
-        "t": 8.0,
-        "end": 12.0,
-        "text": "两块屏，仍是{各管各的状态}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4,
-        "type": "latch"
-      }
-    ]
-  },
-  "s24": {
-    "dur": 8,
-    "chapter": 7,
-    "name": "记住一：先有归属",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "先确认：消息{属于哪个会话}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "会话还没好，消息就[可能丢]"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "latch"
-      }
-    ]
-  },
-  "s25": {
-    "dur": 8,
-    "chapter": 7,
-    "name": "记住二：等完整做完",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "要排队的，是{完整处理过程}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "处理完一条，再处理下一条"
-      }
-    ],
-    "cues": [
-      {
-        "t": 4,
-        "type": "latch"
-      }
-    ]
-  },
-  "s26": {
-    "dur": 8,
-    "chapter": 7,
-    "name": "记住三：规则也需要入口",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "状态机定义{收到后怎么办}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "顺序对了，规则才有机会生效"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "send"
-      },
-      {
-        "t": 4.8,
-        "type": "success"
-      }
-    ]
-  },
-  "s27": {
-    "dur": 8,
-    "chapter": 7,
-    "name": "记住四：兜底不能当修复",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "每条等待，都要有{退出办法}"
-      },
-      {
-        "t": 4.0,
-        "end": 8.0,
-        "text": "超时能兜底，{不能代替正确顺序}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "tick"
-      },
-      {
-        "t": 4,
-        "type": "latch"
-      }
-    ]
-  },
-  "s28": {
-    "dur": 10,
-    "chapter": 8,
-    "name": "那条取消，有人接住了",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 4.0,
-        "text": "那条{取消}，这回有人接住了"
-      },
-      {
-        "t": 4.0,
-        "end": 7.2,
-        "text": "这^约50毫秒^，不用变快"
-      },
-      {
-        "t": 7.2,
-        "end": 10.0,
-        "text": "只要让它{做完}"
-      }
-    ],
-    "cues": [
-      {
-        "t": 0.4,
-        "type": "success"
-      },
-      {
-        "t": 7.2,
-        "type": "latch"
-      }
-    ],
-    "demo": true,
-    "scaled": true
-  },
-  "s29": {
-    "dur": 2,
-    "chapter": 9,
-    "name": "系列片尾",
-    "captions": [
-      {
-        "t": 0.0,
-        "end": 2.0,
-        "text": "{系列片尾}"
-      }
-    ],
-    "cues": [],
-    "title": true
-  }
-};
-SCRIPT.s29.captions[0].text = SERIES.title;
-// 全片唯一允许的上屏代码；仅在第 17 幕绘制。
+const CARD = { 2: ['01', '接通，原来这么麻烦', 'THE CALL BEGINS', C.blue], 3: ['02', '取消，掉进了缝里', 'THE CREATION GAP', C.coral],
+  4: ['03', '状态机，背不了这锅', 'BEFORE THE STATE MACHINE', C.purple], 5: ['04', '先排队，别抢跑', 'ONE AT A TIME', C.green],
+  6: ['05', '这回，终于接住了', 'CANCEL FINALLY ARRIVES', C.orange], 7: ['✓', '这次记住四件事', 'FOUR RULES', C.ink] };
+const SERIES = { title: '工作档案', sub: '把做过的设计，讲成故事' };
 const CODE = [
   'controls.collect { packet ->',
   '    if (isNewInvite(packet)) {',
@@ -991,765 +29,1033 @@ const CODE = [
   '    }',
   '}',
 ];
+
+/* ---------------- 引擎与钩子 ---------------- */
 const film = FilmKit.create({
-  W, H, FPS, fonts, fontsNeeded,
-  theme: { ...C, white: C.ink, cyan: C.blue, red: C.coral, amber: C.amber, pink: C.purple,
-    code: C.ink, comment: C.purple, punct: C.ink, constant: C.amber },
-  code: { keywords: ['if','else'], types: [] },
-  captions: { font: { f: 'cjk', s: 60, w: 700 }, colors: { emphasis: C.blue, danger: C.coral, accent: C.amber },
-    maxWidth: 1580, lineHeight: 68, baseY: n => n > 1 ? 925 : 969, slide: 0, fadeIn: .1, fadeOut: .1, revealDuration: () => 0 },
-  prepare: prepareStyle, drawBackground, beforeScene, drawChrome, drawCaptionBackground, drawCaption, drawCover,
+  W, H, FPS, fontsNeeded,
+  fonts: { cjk: F.cjk, disp: F.disp, mono: F.mono },
+  theme: { bg: C.bg, white: C.ink, cyan: C.blue, red: C.coral, amber: C.amber },
+  captions: { font: { f: 'cjk', s: 54, w: 700 }, colors: { emphasis: C.blue, danger: C.coral, accent: C.amber },
+    maxWidth: 1500, lineHeight: 64, baseY: n => n > 1 ? 932 : 972, slide: 0, fadeIn: .12, fadeOut: .12, revealDuration: () => 0 },
+  prepare: prepareStyle, drawBackground,
+  beforeScene(g, frame) {
+    const { sc, lt } = frame; SCX = frame.scaleX;
+    const [cx, cy, z] = camAt(sc.cam, lt); CAMZ = z;
+    g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-cx, -cy);
+    g.globalAlpha *= Math.min(sc.fi ? eo(seg(lt, 0, sc.fi)) : 1, sc.fo ? 1 - eo(seg(lt, sc.d - sc.fo, sc.d)) : 1);
+  },
+  drawTransition(g, frame) { CAMZ = 1; postFX(g, frame); chapterWipe(g, frame); },
+  drawChrome, drawCaptionBackground, drawCaption, drawCover,
 });
-const { txt, tw } = film;
-const tone = name => C[name] || name || C.blue;
-function tint(c, p = .12) { // 与白色混合，派生浅底不引入新的主题色。
-  const n = parseInt(c.slice(1),16), a = [n>>16,(n>>8)&255,n&255];
-  return '#' + a.map(v => Math.round(lerp(255,v,p)).toString(16).padStart(2,'0')).join('');
-}
+/* 在屏幕坐标里画（不受镜头影响） */
+function screenSpace(g, fn) { g.save(); g.setTransform(SCX, 0, 0, SCX, 0, 0); const z = CAMZ; CAMZ = 1; try { fn(); } finally { CAMZ = z; g.restore(); } }
 
-/* ---------------- 基础形状与公共参数 ---------------- */
-function rr(g,x,y,w,h,r=24) { g.beginPath(); g.roundRect(x,y,w,h,Math.min(r,w/2,h/2)); }
-function panel(g,x,y,w,h,o={}) {
+/* 章节转场：斜切色带扫入 → 停留标题 → 扫出 */
+function chapterWipe(g, { sc, lt }) {
+  const cd = CARD[sc.card]; if (!cd || lt > 1.95) return;
+  const [num, zh, en, col] = cd;
+  const pin = eio(seg(lt, 0, .38)), pout = eio(seg(lt, 1.42, 1.92));
+  const x0 = lerp(-W - 400, -200, pin) + lerp(0, W + 600, pout);
+  const band = new Path2D(); band.moveTo(x0, 0); band.lineTo(x0 + W + 400, 0); band.lineTo(x0 + W + 200, H); band.lineTo(x0 - 200, H); band.closePath();
   g.save();
-  if (o.shadow) { rr(g,x+6,y+7,w,h,o.r); g.fillStyle=C.ink; g.fill(); }
-  rr(g,x,y,w,h,o.r); g.fillStyle=o.fill||C.paper; g.fill();
-  if (o.dashed) g.setLineDash([10,9]);
-  g.strokeStyle=o.stroke||C.ink; g.lineWidth=o.lw??4; if (g.lineWidth) g.stroke(); g.restore();
-}
-function line(g,points,o={}) {
-  if (points.length<2) return;
-  g.save(); g.strokeStyle=o.c||C.ink; g.lineWidth=o.w||4; g.lineCap='round'; g.lineJoin='round';
-  if(o.dashed) g.setLineDash([10,12]);
-  g.beginPath(); points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y)); g.stroke(); g.restore();
-}
-function dot(g,x,y,r,c) { g.beginPath(); g.arc(x,y,r,0,TAU); g.fillStyle=c; g.fill(); }
-function label(g,s,x,y,o={}) { txt(g,s,x,y,{s:32,w:700,c:C.ink,a:'center',...o}); }
-// Caption-like opaque backing for labels on connectors; use after lines, before the main captions.
-function tag(g,s,x,y,o={}) {
-  const style={s:28,w:700,a:'center',...o},w=tw(g,s,style)+32,h=style.s+24;
-  const left=style.a==='left'?x-16:style.a==='right'?x-w+16:x-w/2;
-  panel(g,left,y-style.s-9,w,h,{fill:o.fill||C.bg,lw:0,r:12}); label(g,s,x,y,style);
-}
-function boxText(g,s,x,y,w=300,h=86,o={}) {
-  panel(g,x-w/2,y-h/2,w,h,{fill:o.fill||C.paper,stroke:o.stroke||C.ink,shadow:o.shadow,r:20});
-  const {fill,stroke,shadow,...textStyle}=o;label(g,s,x,y+12,{s:32,...textStyle});
-}
-function fade(g,a,fn) { g.save();g.globalAlpha*=clamp(a);try{fn();}finally{g.restore();} }
-
-function item(g,t,o,w,h,draw) {
-  const a=(o.opacity??1)*(o.enterAt==null?1:eo(seg(t,o.enterAt,o.enterAt+.3)))*(o.exitAt==null?1:1-seg(t,o.exitAt,o.exitAt+.3));
-  if(a<=0) return;
-  g.save(); g.globalAlpha*=a; g.translate(o.x??0,o.y??0);
-  g.scale((o.scale??1)*(o.width??w)/w,(o.scale??1)*(o.height??h)/h);
-  try { draw(); } finally { g.restore(); }
-}
-function drawItems(g,t,items) { items.map((a,i)=>({...a,i})).sort((a,b)=>(a.zIndex||0)-(b.zIndex||0)||a.i-b.i).forEach(o=>o.draw(g,t,o)); }
-function arrow(g,t,o={}) {
-  const pts=o.points||[[0,0],[100,0]], p=clamp(o.reveal??1); if(p<=0)return;
-  const q=pathAt(pts,p), index=Math.min(pts.length-2,Math.floor(p*(pts.length-1))), part=pts.slice(0,index+1).concat([[q.x,q.y]]);
-  item(g,t,o,W,H,()=>{line(g,part,{c:tone(o.tone||'ink'),w:o.lineWidth||4,dashed:o.dashed});
-  if(!o.blocked) { const prev=pts[index], a=Math.atan2(q.y-prev[1],q.x-prev[0]);
-    line(g,[[q.x-14*Math.cos(a-.52),q.y-14*Math.sin(a-.52)],[q.x,q.y],[q.x-14*Math.cos(a+.52),q.y-14*Math.sin(a+.52)]],{c:tone(o.tone||'ink'),w:o.lineWidth||4}); }
-  if(o.label) tag(g,o.label,o.labelX??q.x,o.labelY??q.y-25,{s:28});});
-}
-// 每个控制点之间独立缓动；中点和到达时刻固定，弹性只改变胶囊姿态，不让消息越过接收端。
-function pathAt(points,p) { const n=points.length-1,k=clamp(p)*n,i=Math.min(n-1,Math.floor(k)),f=k-i;
-  return {x:lerp(points[i][0],points[i+1][0],f),y:lerp(points[i][1],points[i+1][1],f)}; }
-function easedPath(points,p) { const n=points.length-1,k=clamp(p)*n,i=Math.min(n-1,Math.floor(k)); return pathAt(points,(i+eio(k-i))/n); }
-function symbol(g,t,o={}) {
-  item(g,t,o,64,64,()=>{ const c=tone(o.tone||'green');
-    if(o.kind==='check') line(g,[[-22,0],[-6,17],[25,-20]],{c,w:7});
-    else if(o.kind==='cross') { line(g,[[-18,-18],[18,18]],{c,w:7}); line(g,[[18,-18],[-18,18]],{c,w:7}); }
-    else if(o.kind==='warning') { line(g,[[0,-27],[29,24],[-29,24],[0,-27]],{c,w:4});line(g,[[0,-10],[0,5]],{c,w:4});dot(g,0,15,2.5,c); }
-    else label(g,'?',0,23,{f:'disp',s:64,c});
-  });
+  g.save(); shadow(g, .25, 40, 0); g.fillStyle = col; g.fill(band); g.restore();
+  g.beginPath(); g.moveTo(x0 + W + 400, 0); g.lineTo(x0 + W + 470, 0); g.lineTo(x0 + W + 270, H); g.lineTo(x0 + W + 200, H); g.closePath();
+  g.fillStyle = C.amber; g.fill();
+  g.clip(band);
+  const a = eo(seg(lt, .3, .62)) * (1 - eo(seg(lt, 1.38, 1.6)));
+  const dx = (1 - eo(seg(lt, .3, .7))) * 80;
+  text(g, num, 470 - dx, 520, { f: 'disp', w: 900, s: 300, c: rgba('#ffffff', .95), al: a });
+  text(g, zh, 760 + dx * .5, 488, { s: 104, w: 900, c: '#fff', a: 'left', al: a });
+  text(g, en, 766 + dx * .5, 584, { f: 'mono', s: 30, w: 700, ls: 8, c: rgba('#ffffff', .8), a: 'left', al: a });
+  g.restore();
 }
 
-/* ---------------- 角色、状态与传输 ---------------- */
-function actionButton(g,t,o={}) {
-  item(g,t,o,80,80,()=>{ const dt=t-(o.pressedAt??-10),s=dt>=0&&dt<.24?1-.1*Math.sin(Math.PI*dt/.24):1;
-    g.scale(s,s); dot(g,0,0,38,tint(tone(o.tone||'blue'))); g.strokeStyle=C.ink;g.lineWidth=4;g.stroke();
-    if(o.action==='cancel') symbol(g,t,{kind:'cross',tone:'coral',scale:.52});
-    else { line(g,[[-16,-8],[-12,6],[0,15],[12,6],[16,-8]],{w:6}); line(g,[[-19,-9],[-10,-12]],{w:7});line(g,[[10,-12],[19,-9]],{w:7}); }
-  });
-}
-function bell(g,t,o={}) {
-  item(g,t,o,220,140,()=>{ const amp=o.amplitude??1;
-    for(const side of [-1,1]) for(let i=0;i<2;i++) { g.save();g.globalAlpha*=.65+.35*amp;g.strokeStyle=C.amber;g.lineWidth=5;g.lineCap='round';
-      g.beginPath();const r=24+i*20+amp*6,a=side>0?0:Math.PI;g.arc(side*110,0,r,a-.62,a+.62);g.stroke();g.restore(); }
-  });
-}
-function screen(g,t,o={}) {
-  item(g,t,o,220,140,()=>{ const c=o.role==='B'?C.amber:C.blue;
-    panel(g,-110,-70,220,140,{fill:tint(c,.2),shadow:true,r:24}); panel(g,-94,-53,188,105,{fill:C.paper,lw:3,r:17});
-    dot(g,0,-61,3,C.ink); label(g,o.uiText||'',0,0,{s:26,w:900});
-    line(g,[[-23,64],[23,64]],{w:3});
-    if(o.roleLabel!==false) label(g,o.role==='B'?'被叫屏 B':'主叫屏 A',0,-94,{s:28,c});
-    if(o.button) actionButton(g,t,{y:31,scale:.38,action:o.button,pressedAt:o.pressedAt});
-    else { line(g,[[-33,28],[33,28]],{w:7,c:tint(c,.35)});dot(g,44,28,4,c); }
-    if(o.ringing) bell(g,t,{amplitude:o.ringAt==null?.4:(t>=o.ringAt&&t<o.ringAt+.5?Math.sin(seg(t,o.ringAt,o.ringAt+.5)*Math.PI):0)});
-  });
-}
-function gateway(g,t,o={}) {
-  item(g,t,o,150,100,()=>{ line(g,[[-48,-36],[-60,-78]],{w:6});line(g,[[48,-36],[60,-78]],{w:6});
-    dot(g,-60,-80,5,C.purple);dot(g,60,-80,5,C.purple); panel(g,-75,-44,150,88,{fill:tint(C.purple,.26),shadow:true,r:22});
-    for(let i=0;i<3;i++)panel(g,-41+i*29,-6,15,15,{fill:o.active&&i===1?C.green:C.paper,r:4,lw:2});
-    if(o.label!==false)label(g,'网关',0,-102,{s:28,c:C.purple});
-  });
-}
-function stateLabel(g,t,o={}) {
-  const ended=(o.state||'').startsWith('ENDED.'),w=o.width??(ended?440:320),h=o.height??(ended?92:64);
-  item(g,t,{...o,width:w,height:h},w,h,()=>{
-    const c=tone(o.tone||'blue');panel(g,-w/2,-h/2,w,h,{fill:tint(c,.08),stroke:o.emphasis?c:C.ink,r:18,lw:o.emphasis?6:4});
-    const parts=ended?['ENDED.',o.state.slice(6)]:[o.state||'IDLE'];
-    parts.forEach((v,i)=>label(g,v,0,parts.length===1?10:-10+i*(o.lineHeight||38),{f:'mono',s:o.fontSize||28,c}));
-  });
-}
-
-function message(g,t,o={}) {
-  const c=tone(o.tone||'blue'),stacked=!!o.sid||!!o.compact,name=o.name||'',size=stacked?28:30;
-  const w=o.width??Math.max(stacked?300:260,tw(g,name,{f:'mono',s:size,w:700})+(stacked?36:122)),h=stacked?96:68;
-  item(g,t,{...o,width:w,height:h},w,h,()=>{panel(g,-w/2,-h/2,w,h,{fill:o.outlined?C.paper:tint(c,.14),stroke:c,r:20,shadow:o.shadow??true});
-    if(stacked){label(g,String(o.code||''),-w/2+20,-9,{a:'left',f:'mono',s:28,c});label(g,o.sid||'',w/2-20,-9,{a:'right',f:'mono',s:28,c});label(g,name,0,29,{f:'mono',s:28});}
-    else {line(g,[[-w/2+74,-23],[-w/2+74,23]],{c,w:3});label(g,String(o.code||''),-w/2+37,11,{f:'mono',s:30,c});label(g,name,-w/2+94,11,{a:'left',f:'mono',s:30});}
-  });
-}
-
-function flight(g,t,o={}) {
-  const start=o.start??0,end=o.end??start+1.2,hold=o.hold??.45;
-  if(t<start||t>=end+hold)return;
-  const p=seg(t,start,end),pos=pathAt(o.points,p),dt=Math.max(0,t-end),landing=dt<.4?.07*Math.sin(dt/.4*TAU)*Math.exp(-dt*8):0;
-  const bob=p<1?Math.sin(p*Math.PI*4)*3*Math.sin(p*Math.PI):0;
-  // Keep the backing opaque on the route; fading it reveals the connector
-  // through the letters. The capsule is removed when its existing hold ends.
-  message(g,t,{...o,x:pos.x+(o.x??0),y:pos.y+bob+(o.y??0),scale:(o.scale??1)*(1+landing),opacity:o.opacity??1});
-}
-function lanes(g,t,o={}) {
-  for(const x of [340,960,1580])arrow(g,t,{points:[[x,559],[x,836]],opacity:.18,reveal:o.reveal??1,lineWidth:3});
-  tag(g,'时间',1780,790,{s:24});arrow(g,t,{points:[[1780,806],[1780,836]],lineWidth:3});
-}
-
-function stateNode(g,t,o={}) {
-  const w=o.width??440,h=o.height??110;
-  item(g,t,{...o,width:w,height:h},w,h,()=>{const c=tone(o.tone||'blue');
-    panel(g,-w/2,-h/2,w,h,{fill:o.current?tint(c,.14):C.bg});
-    if(o.current)panel(g,-w/2+7,-h/2+7,w-14,h-14,{fill:tint(c,.14),stroke:c,r:18,lw:3});
-    const names=(o.label||'IDLE').replace('ENDED.','ENDED.\n').split('\n');
-    names.forEach((v,i)=>label(g,v,0,names.length===1?11:-10+i*38,{f:o.generic?'cjk':'mono',s:o.fontSize||28}));
-  });
-}
-
-function stateArrow(g,t,o={}) { arrow(g,t,{...o,reveal:o.reveal??1,lineWidth:5}); }
-function retry(g,t,o={}) {
-  item(g,t,o,72,72,()=>{g.rotate(o.running?t*1.8:0);g.strokeStyle=C.blue;g.lineWidth=5;g.lineCap='round';g.beginPath();g.arc(0,0,27,.4,TAU-.5);g.stroke();
-    line(g,[[14,-27],[26,-14],[9,-10]],{w:5,c:C.blue});});
-}
-
-/* ---------------- 会话、计时、队列与卡片 ---------------- */
-function boundary(g,t,o={}) {
-  const w=o.width??1720,h=o.height??640;
-  item(g,t,{...o,width:w,height:h},w,h,()=>{panel(g,-w/2,-h/2,w,h,{fill:o.fill||tint(C.purple,.035),dashed:true,stroke:tint(C.ink,.5)});
-    if(o.title!==false)label(g,o.title||'B 的入站控制消息处理链',-w/2+28,-h/2+50,{a:'left',s:30});});
-}
-
-function timerBar(g,t,o={}) {
-  const w=o.width??1400,h=o.height??90,p=clamp(o.fill??0),c=tone(o.tone||'amber');
-  item(g,t,{...o,width:w,height:h},w,h,()=>{panel(g,-w/2,-h/2,w,h,{fill:C.paper,r:18});
-    g.save();rr(g,-w/2+4,-h/2+4,Math.max(.01,(w-8)*p),h-8,14);g.clip();g.fillStyle=tint(c,.28);g.fillRect(-w/2,-h/2,w,h);
-    for(let x=-w/2-h;x<w/2;x+=25)line(g,[[x,h/2],[x+h,-h/2]],{c:tint(c,.5),w:5});g.restore();
-    if(o.label)tag(g,o.label,0,Math.min(12,h*.2),{s:o.fontSize||30,fill:C.paper});
-  });
-}
-function ruler(g,t,o={}) {
-  const w=o.width??1100;
-  item(g,t,{...o,width:w},w,90,()=>{line(g,[[-w/2,0],[w/2,0]],{w:4});
-    for(const [x,v,a] of [[-w/2,'t=0','left'],[-w*.3,'t+10 ms','center'],[w/2,'约 50 ms','right']]){
-      line(g,[[x,-11],[x,12]],{w:4});tag(g,v,x,-28,{f:'mono',s:30,a});}
-    if(o.cursor!=null)dot(g,lerp(-w/2,w/2,clamp(o.cursor)),0,9,C.coral);
-  });
-}
-
-function sessionCard(g,t,o={}) {
-  const w=o.width??300,h=o.height??140;
-  item(g,t,{...o,width:w,height:h},w,h,()=>{const c=o.ready?C.green:(o.warning?C.coral:C.purple);
-    panel(g,-w/2,-h/2,w,h,{dashed:!o.ready,fill:o.ready?tint(C.green,.09):C.paper,stroke:c,r:22});
-    label(g,'会话 '+(o.sid||'S1'),0,-8,{s:32,c});label(g,o.ready?'会话已就绪':'新会话未就绪',0,35,{s:26});
-    if(o.matched)symbol(g,t,{x:w/2-25,y:-h/2+25,scale:.45,kind:'check'});
-  });
-}
-
-function sessionKey(g,t,o={}) {
-  item(g,t,o,160,70,()=>{g.beginPath();g.arc(-48,0,23,0,TAU);g.fillStyle=tint(C.blue,.25);g.fill();g.strokeStyle=C.ink;g.lineWidth=5;g.stroke();
-    line(g,[[-24,0],[56,0],[56,18]],{w:9,c:C.blue});line(g,[[35,0],[35,16]],{w:9,c:C.blue});
-    if(o.label!==false)label(g,'sessionId',0,64,{f:'mono',s:27});
-  });
-}
-function queue(g,t,o={}) {
-  const n=o.slots??2,w=o.slotWidth??310;
-  item(g,t,o,n*(w+24),110,()=>{for(let i=0;i<n;i++)panel(g,-(n*(w+24))/2+i*(w+24),-55,w,110,{fill:C.paper,stroke:tint(C.ink,.3),r:20});});
-}
-
-function workstation(g,t,o={}) {
-  const w=o.width??370,h=o.height??270;
-  item(g,t,{...o,width:w,height:h},w,h,()=>{
-    panel(g,-w/2,-h/2,w,h,{fill:tint(C.blue,.055),shadow:true});
-    if(o.busy)panel(g,-w/2+8,-h/2+8,w-16,h-16,{fill:tint(C.blue,.055),stroke:C.blue,lw:3,r:18});
-    if(o.label!==false)label(g,'唯一处理工位',0,-h/2-25,{s:30});
-    if(o.task)message(g,t,{...o.task,compact:true,x:0,y:-42,shadow:false});
-    timerBar(g,t,{x:0,y:67,width:w-44,height:56,fill:o.completion??0,label:o.progressLabel||'创建会话',fontSize:26,tone:o.highlight?'amber':'blue'});
-    line(g,[[-w/2-22,-92],[-w/2-22,o.gateOpen?-126:92]],{w:12,c:o.gateOpen?C.green:C.coral});
-  });
-}
-
-function codeCard(g,t,o={}) {
-  item(g,t,o,1050,600,()=>{panel(g,-525,-300,1050,600,{shadow:true});label(g,'重新编写的 Kotlin 风格示意',-485,-235,{a:'left',s:28,c:C.purple});
-    const lines=o.lines||CODE;if(lines.length>10)throw new Error('上屏示意代码不可超过 10 行');
-    film.drawCode(g,-475,-148,lines,{s:34,lh:62,width:945,hl:o.focusLine==null?{}:{[o.focusLine]:C.amber},hlA:.16});
-  });
-}
-function compareCard(g,t,o={}) {
-  item(g,t,o,720,560,()=>{panel(g,-360,-280,720,560,{fill:o.selected?tint(C.green,.07):C.paper,stroke:o.selected?C.green:C.ink,shadow:true});
-    label(g,o.title||'',0,-207,{s:38,w:900});if(o.selected)symbol(g,t,{x:292,y:-218,scale:.65,kind:'check'});
-    if(o.drawBody)o.drawBody(g,t);});
-}
-function summaryCard(g,t,o={}) {
-  item(g,t,o,1200,380,()=>{panel(g,-600,-190,1200,380,{shadow:true});panel(g,-600,-190,150,125,{fill:C.blue,r:24});
-    label(g,o.index||'01',-525,-105,{f:'disp',s:74,w:900,c:C.paper});label(g,o.title||'先认会话',0,-103,{s:64,w:900});
-    if(o.drawBody)o.drawBody(g,t);});
-}
-
-/* ---------------- 风格钩子 ---------------- */
-function prepareStyle({mk,cw,ch}) {
-  const paper=mk(cw,ch),g=paper.getContext('2d');g.scale(cw/W,ch/H);g.fillStyle=C.bg;g.fillRect(0,0,W,H);
-  // 固定网格点，无噪声状态；重新生成、跨尺寸生成都对应同一逻辑坐标。
-  for(let y=16;y<H;y+=28)for(let x=16;x<W;x+=28)dot(g,x,y,.9,rgba(C.ink,.055));
-  return {paper};
-}
-function drawBackground(g,{cache}) {g.drawImage(cache.paper,0,0,W,H);}
-function demoBadge(g,t,o={}) {
-  item(g,t,{x:1690,y:74,...o},230,62,()=>{panel(g,-115,-31,230,62,{fill:tint(C.amber,.08),stroke:C.amber,r:18,lw:3});
-    // 自绘 ⚠，避免警告符号落到彩色 emoji 字体。
-    symbol(g,t,{x:-72,y:0,scale:.53,kind:'warning',tone:'amber'});label(g,o.label||'演绎',25,11,{s:28,c:C.amber});});
-}
-function drawChrome(g,{sc,lt}) {
-  if(sc.title)return;
-  line(g,[[104,53],[104,83]],{w:8,c:C.blue});label(g,CHAPTERS[sc.chap][0],128,81,{s:30,a:'left'});
-  if(sc.scaled)label(g,'机制示意·时间已缩放',104,131,{s:24,a:'left',c:C.amber});
-  if(sc.demo || (sc.demoAt!=null&&lt>=sc.demoAt))demoBadge(g,lt);
-}
-function captionState(g,frame) {
-  const {sc,lt}=frame;if(sc.title||!sc.captions?.length)return null;
-  const i=sc.cs.findIndex((s,i)=>lt>=s&&lt<sc.ce[i]);if(i<0)return null;
-  const c={t0:sc.start+sc.cs[i],t1:sc.start+sc.ce[i],text:sc.captions[i].text},layout=film.captionLayout(g,c,frame.t);
-  if(!layout)return null;
-  return {layout,alpha:Math.min(seg(lt,sc.cs[i],sc.cs[i]+.1),1-seg(lt,sc.ce[i]-.1,sc.ce[i]))};
-}
-function drawCaptionBackground(g,frame) {
-  const c=captionState(g,frame);if(!c)return;
-  const lines=c.layout.lines,w=Math.max(...lines.map(l=>l.width))+76,top=lines[0].y-74,h=(lines.length-1)*68+108;
-  g.globalAlpha*=c.alpha;panel(g,(W-w)/2,top,w,h,{fill:C.paper,r:24,shadow:true});
-}
-function drawCaption(g,layout,frame) {
-  if(frame.sc.title||frame.t>=layout.caption.t1)return;
-  // 引擎默认在 t1 后淡出；本片改为区间内淡出，确保任意时刻只出现一句。
-  g.globalAlpha=Math.min(seg(frame.t,layout.caption.t0,layout.caption.t0+.1),1-seg(frame.t,layout.caption.t1-.1,layout.caption.t1));
-  for(const l of layout.lines){let x=l.x;
-    for(const s of l.segments){const width=tw(g,s.s,layout.font);
-      if(s.c===C.amber){panel(g,x-2,l.y+4,width+4,9,{fill:tint(C.amber,.35),lw:0,r:3});}
-      txt(g,s.s,x,l.y,{...layout.font,c:s.c||C.ink});x+=width;}
+/* 外框：左上章节、右上进度、演绎/缩放标记 */
+const CH_SHORT = ['开场', '', '第一章 · 接通，原来这么麻烦', '第二章 · 取消，掉进了缝里', '第三章 · 状态机，背不了这锅', '第四章 · 先排队，别抢跑', '第五章 · 这回，终于接住了', '总结 · 这次记住四件事', '结尾 · 把那条取消接住', ''];
+function drawChrome(g, { sc, lt }) {
+  CAMZ = 1;
+  if (sc.title) return;
+  const a = sc.card ? eo(seg(lt, 1.6, 2.1)) : 1;
+  g.save(); g.globalAlpha *= a;
+  const lab = CH_SHORT[sc.chapter];
+  if (lab) {
+    const w = textW(g, lab, { s: 26, w: 700 }) + 64;
+    card(g, 52, 40, w, 52, { r: 26, fill: rgba('#ffffff', .9), lw: 2.5, sb: 12, so: 4, sa: .1 });
+    const cc = (CARD[sc.chapter] || [0, 0, 0, C.ink])[3]; dot(g, 80, 66, 8, cc === C.ink ? C.amber : cc);
+    text(g, lab, 98, 67, { s: 26, w: 700, a: 'left' });
   }
-}
-/* ---------------- 章节卡与共用布局 ---------------- */
-// 章节卡占本幕上方的固定条带；不增时，不遮挡字幕和 +0.4 s 起的叙事事件。
-function chapterCard(g,t,n) {
-  const [zh,en]=CHAPTERS[n],title=zh.split('｜').pop();
-  panel(g,100,160,1720,110,{fill:C.blue,shadow:true,r:24});
-  label(g,String(n-1).padStart(2,'0'),138,242,{f:'disp',s:70,w:900,c:C.paper,a:'left'});
-  label(g,title,275,229,{s:42,w:900,c:C.paper,a:'left'});
-  label(g,en,1778,224,{s:24,f:'disp',w:800,c:C.paper,a:'right'});
-}
-function beforeScene(g,{sc,lt}) {
-  // Opening, title and the two closing scenes own their explicitly scripted transitions.
-  if(!['s01','s02','s28','s29'].includes(sc.id))g.globalAlpha*=Math.min(seg(lt,0,.3),1-seg(lt,sc.d-.3,sc.d));
-}
-function trio(g,t,o={}) {
-  const y=o.y??335,scale=o.scale??1.5;
-  screen(g,t,{x:340,y,role:'A',uiText:o.a||'主叫',button:o.aButton,pressedAt:o.pressedAt,scale});
-  gateway(g,t,{x:960,y,active:o.active,scale});
-  screen(g,t,{x:1580,y,role:'B',uiText:o.b||'被叫',ringing:o.ringing,ringAt:o.ringAt,scale});
-}
-function states(g,t,a,b,o={}) {
-  stateLabel(g,t,{x:340,y:o.y??500,state:a,tone:a.startsWith('ENDED')?'coral':'blue',emphasis:o.emphasis});
-  stateLabel(g,t,{x:1580,y:o.y??500,state:b,tone:b.startsWith('ENDED')?'green':'amber',emphasis:o.emphasis});
-}
-function legend(g,t,o={}) {
-  // Three complete device groups: [184,454], [471,637], [654,839].
-  // Group gaps exceed 16 px, including antennae, shadows and label descenders.
-  panel(g,100,165,350,687,{fill:C.paper,r:24});
-  screen(g,t,{x:275,y:252,role:'A',roleLabel:false,uiText:o.cancel?'已取消':'呼叫中',scale:.94});
-  label(g,'主叫屏 A',275,360,{s:26,c:C.blue});
-  if(o.travel){}
-  else if(o.cancel)stateLabel(g,t,{x:275,y:412,width:320,height:80,fontSize:24,lineHeight:33,state:'ENDED.SELF_TERMINATED',tone:'coral'});
-  else label(g,'CALLING',275,420,{s:28,f:'mono',c:C.blue});
-  gateway(g,t,{x:275,y:539,scale:.8,label:false,active:o.active});label(g,'网关',275,630,{s:26,c:C.purple});
-  screen(g,t,{x:275,y:722,scale:.94,role:'B',roleLabel:false,uiText:o.b||'创建中',ringing:false});
-  label(g,'被叫屏 B',275,832,{s:26,c:C.amber});
-}
-function logSlot(g,t,o={}) {
-  const w=o.width??450;
-  panel(g,o.x-w/2,o.y-75,w,150,{fill:tint(C.ink,.08),stroke:tint(C.ink,.4),r:20});
-  label(g,o.empty&&!o.receiving?'日志槽（空）':'未匹配会话：忽略',o.x,o.y-29,{s:26,c:tint(C.ink,.75)});
-  if(!o.empty)message(g,t,{...MSG.terminate,x:o.x,y:o.y+30,compact:true,width:300,opacity:.25,shadow:false});
-}
-function clockFace(g,t,o={}) {
-  const r=o.r??100,p=clamp(o.remaining??1);
-  dot(g,o.x,o.y,r,C.paper);g.save();g.strokeStyle=C.ink;g.lineWidth=5;g.stroke();
-  g.strokeStyle=tone(o.tone||'amber');g.lineWidth=12;g.beginPath();g.arc(o.x,o.y,r-14,-TAU/4,-TAU/4+TAU*p);g.stroke();g.restore();
-  label(g,o.text||'60 s',o.x,o.y+15,{f:'disp',s:o.size??46,w:900});
-}
-function media(g,t,start=0,reverse=false,y=805) {
-  const path=reverse?[[1580,y],[960,y],[340,y]]:[[340,y],[960,y],[1580,y]];
-  line(g,path,{c:tint(C.green,.3),w:6});
-  for(let i=0;i<2;i++){const dt=t-start-i*2;if(dt>=0&&dt<1.2){const p=pathAt(path,dt/1.2);dot(g,p.x,p.y,10,C.green);}}
-}
-function networkBranch(g,t,start=1,o={}) {
-  if(o.local){
-    // A small signal follows B → gateway → A beside the device column. The full
-    // capsule has its own top-right band, so it never flies across screen text.
-    const path=[[410,722],[480,722],[480,539],[350,539],[480,539],[480,252],[410,252]];
-    if(t<start+1.2){
-      arrow(g,t,{points:path,tone:'blue',opacity:.35,lineWidth:3});
-      const p=pathAt(path,seg(t,start,start+1.2));dot(g,p.x,p.y,8,C.blue);
-      message(g,t,{...MSG.ring,x:1640,y:310,shadow:false});
-    }else tag(g,'102 RING · 经网关，后续不展开',1510,304,{s:24,c:C.blue});
-    return;
+  for (let k = 2; k <= 7; k++) { // 章节进度
+    const on = sc.chapter >= k, cur = sc.chapter === k, x = 1590 + (k - 2) * 46;
+    rr(g, x, 60, cur ? 36 : 22, 12, 6); g.fillStyle = cur ? (CARD[k][3] === C.ink ? C.amber : CARD[k][3]) : on ? rgba(C.ink, .45) : rgba(C.ink, .14); g.fill();
   }
-  const path=[[1580,590],[960,590],[340,590]];
-  arrow(g,t,{points:path,tone:'blue',opacity:.35});
-  flight(g,t,{...MSG.ring,points:path,start,end:start+1.2,hold:0});
-  if(t>=start+1.2)tag(g,'102 RING · 经网关，后续不展开',960,591,{s:24,c:C.blue});
+  let xr = 1560;
+  if (sc.demo) xr -= tagSmall(g, '⚠ 机制演绎', xr, 66, C.amber) + 12;
+  if (sc.scaled) tagSmall(g, '时间已放慢', xr, 66, C.purple);
+  g.restore();
 }
-function drawOpening(g,t) {
-  const close=eio(seg(t,14.7,15)),drop=30*eo(seg(t,3.6,3.96));
-  trio(g,t,{y:lerp(350,690,close),scale:1.5,a:'已取消',b:'还在响',ringing:true,ringAt:t<4?.4:4});
-  fade(g,1-seg(t,14.55,14.7),()=>{
-    states(g,t,'ENDED.SELF_TERMINATED','RINGING',{y:515});
-    arrow(g,t,{points:[[340,610],[960,650],[1170,650]],dashed:true,blocked:true,opacity:.5});
-    arrow(g,t,{points:[[1410,650],[1580,650]],dashed:true,opacity:.5});
-    message(g,t,{...MSG.terminate,x:960,y:640+drop});
-    if(t>=7.2)timerBar(g,t,{x:1270,y:792,width:700,height:84,fill:.2,label:'创建会话：约 50 ms',opacity:eo(seg(t,7.2,7.7))});
-    if(t>=11)symbol(g,t,{x:1230,y:655,kind:'question',tone:'coral',enterAt:11});
-  });
+function tagSmall(g, s, xr, y, c) {
+  const w = textW(g, s, { s: 24, w: 700 }) + 36;
+  card(g, xr - w, y - 22, w, 44, { r: 22, fill: rgba('#ffffff', .92), lw: 2.5, stroke: c, sb: 10, so: 3, sa: .08 });
+  text(g, s, xr - w / 2, y + 1, { s: 24, w: 700, c });
+  return w;
 }
-function drawTitle(g,t) {
-  const second=eio(seg(t,4.8,5.2)),lift=eio(seg(t,6.7,7)),yy=lerp(690,335,lift);
-  label(g,SCRIPT.s02.captions[0].text,960,lerp(395,200,second)+24*(1-eo(seg(t,0,.4))),{s:lerp(82,48,second),w:900,al:1-seg(t,6.4,6.7)});
-  if(t>=4.8)label(g,SCRIPT.s02.captions[1].text,960,465,{s:94,w:900,c:C.blue,al:seg(t,5.05,5.2)*(1-seg(t,6.4,6.7))});
-  arrow(g,t,{points:[[340,yy],[960,yy+25],[1580,yy]],reveal:seg(t,.4,1.2),opacity:.55});
-  trio(g,t,{y:yy,scale:1.5});
+
+/* 字幕：白色圆角底板 + 墨色字，重点词着色；琥珀色加荧光笔底 */
+function capState(g, frame) {
+  const { sc, lt } = frame; if (sc.title || sc.noCaption || !sc.captions?.length) return null;
+  const i = sc.cs.findIndex((s, k) => lt >= s && lt < sc.ce[k]); if (i < 0) return null;
+  const c = { t0: sc.start + sc.cs[i], t1: sc.start + sc.ce[i], text: sc.captions[i].text }, layout = film.captionLayout(g, c, frame.t);
+  if (!layout) return null;
+  return { layout, alpha: Math.min(seg(lt, sc.cs[i], sc.cs[i] + .12), 1 - seg(lt, sc.ce[i] - .12, sc.ce[i])) };
 }
-function drawRoute(g,t) {
-  chapterCard(g,t,2);
-  const path=[[340,625],[960,625],[1580,625]];
-  arrow(g,t,{points:path,reveal:seg(t,.4,1.4),opacity:.6});
-  trio(g,t,{y:475,scale:1.5,a:'自己的状态',b:'自己的状态',active:t>=4.6&&t<4.8});
-  if(t>=4&&t<5.2){const p=pathAt(path,seg(t,4,5.2));panel(g,p.x-28,p.y-19,56,38,{fill:tint(C.blue,.2),r:8});line(g,[[p.x-26,p.y-17],[p.x,p.y+3],[p.x+26,p.y-17]],{w:3});}
-  [340,960,1580].forEach((x,i)=>boxText(g,i===1?'转送字节':'通话状态',x,730,390,120,{s:36,stroke:t>=8&&i!==1?C.blue:C.ink}));
-  tag(g,'自研协议 · 借鉴 SIP 信令思想 · 图中编号为本方案消息码',960,824,{s:24,c:C.purple});
+function drawCaptionBackground(g, frame) {
+  CAMZ = 1; const c = capState(g, frame); if (!c) return;
+  const L = c.layout.lines, w = Math.max(...L.map(l => l.width)) + 80, top = L[0].y - 50, h = (L.length - 1) * 64 + 98;
+  const k = eo(seg(frame.t, c.layout.caption.t0, c.layout.caption.t0 + .25));
+  g.save(); g.globalAlpha *= c.alpha;
+  card(g, (W - w) / 2, top + (1 - k) * 10, w, h, { r: 28, fill: rgba('#ffffff', .96), lw: 3, sb: 26, so: 10, sa: .16 });
+  g.restore();
 }
-function drawHandshake(g,t) {
-  const calling=t>=.5,aRing=t>=5.6,bRing=t>=4;
-  lanes(g,t);tag(g,'正常路径',960,500,{s:28,c:C.blue});
-  trio(g,t,{a:aRing?'响铃中':calling?'呼叫中':'空闲',b:bRing?'响铃中':t>=2.2?'创建中':'空闲',aButton:'call',pressedAt:.5,ringing:bRing,ringAt:4});
-  states(g,t,aRing?'RINGING':calling?'CALLING':'IDLE',bRing?'RINGING':'IDLE');
-  if(t>=1)arrow(g,t,{points:T.outgoing,reveal:seg(t,1,2.2),tone:'blue',opacity:.4});
-  if(t>=4.4)arrow(g,t,{points:T.incoming,reveal:seg(t,4.4,5.6),tone:'blue',opacity:.5,lineWidth:t>=8.6?6:4});
-  flight(g,t,{...MSG.invite,points:T.outgoing,start:1,end:2.2,hold:.4});
-  flight(g,t,{...MSG.ring,points:T.incoming,start:4.4,end:5.6,hold:.4});
-  if(t>=2.6)tag(g,'101 INVITE',960,602,{f:'mono',s:30,c:C.blue});
-  if(t>=6)tag(g,'102 RING',960,778,{f:'mono',s:30,c:C.blue});
-  if(t>=2.2&&t<4)timerBar(g,t,{x:1480,y:784,width:510,height:62,fill:seg(t,2.2,4),label:'创建，时间已缩放',fontSize:26});
-  if(t>=.5&&t<5.95)retry(g,t,{x:430,y:680,running:t<5.6,opacity:1-seg(t,5.6,5.95)});
-}
-function drawAccept(g,t) {
-  const accepted=t>=.4,chat=t>=4.4;
-  const path=[[1580,585],[960,615],[340,645]];
-  lanes(g,t);trio(g,t,{a:chat?'通话中':'响铃中',b:accepted?'准备中':'响铃中'});
-  stateLabel(g,t,{x:340,y:500,state:chat?'CHATTING':'RINGING'});
-  stateLabel(g,t,{x:1580,y:500,state:accepted?'PREPARE':'RINGING',tone:'amber',emphasis:t>=9});
-  if(!accepted)boxText(g,'接听',1580,625,180,72,{fill:tint(C.green,.14)});
-  if(t>=3.2)arrow(g,t,{points:path,reveal:seg(t,3.2,4.4),tone:'green',opacity:.4});
-  if(t<4.4)flight(g,t,{...MSG.accept,points:path,start:3.2,end:4.4,hold:0});
-  if(chat){
-    const p={x:340,y:705};
-    message(g,t,{...MSG.confirm,x:p.x,y:p.y});
-    media(g,Math.min(t,4.6),4.4,false,809);tag(g,'300 VOICE_DATA · 媒体轨道',1200,810,{s:26,f:'mono',c:C.green});
-  }
-  if(t>=4.6)tag(g,'网关只转发',960,502,{s:28,c:C.purple});
-}
-function drawConfirm(g,t) {
-  const chat=t>=1.5,card=t>=8.4;
-  if(card){
-    const p=eio(seg(t,8.4,9.2));
-    boxText(g,'主叫屏 A',460,350,500,100,{s:40,fill:tint(C.blue,.15)});
-    boxText(g,'被叫屏 B',1460,350,500,100,{s:40,fill:tint(C.amber,.15)});
-    stateNode(g,t,{x:460,y:565,width:500,height:180,label:'CHATTING',current:true,tone:'blue'});
-    stateNode(g,t,{x:1460,y:565,width:500,height:180,label:'CHATTING',current:true,tone:'amber'});
-    arrow(g,t,{points:[[730,565],[1190,565]],tone:'green',reveal:p});tag(g,'消息经网关',960,533,{s:28,c:C.purple});
-    tag(g,'两块屏，各有自己的状态',960,770,{s:38,c:C.blue});return;
-  }
-  trio(g,t,{a:'通话中',b:chat?'通话中':'准备中'});states(g,t,'CHATTING',chat?'CHATTING':'PREPARE');
-  const path=[[340,705],[960,705],[1580,705]];
-  arrow(g,t,{points:path,reveal:seg(t,.3,1.5),tone:'green',opacity:.4});
-  if(t<.3)message(g,t,{...MSG.confirm,x:340,y:705});
-  flight(g,t,{...MSG.confirm,points:path,start:.3,end:1.5,hold:.5});
-  if(t>=2)tag(g,'201 PREPARE_CONFIRM',960,615,{s:30,f:'mono',c:C.green});
-  media(g,t,4,false,744);if(chat)media(g,t,t<4?1.5:4,true,817);
-  tag(g,'300 VOICE_DATA · 双向媒体',960,788,{s:26,f:'mono',c:C.green});
-}
-function drawRewind(g,t) {
-  if(t>=8){drawGap(g,0);return;}
-  chapterCard(g,t,3);trio(g,t,{y:495,a:'呼叫中',b:t>=4?'创建中':'等待邀请'});
-  if(t<2.8||t>=3.3)stateLabel(g,t,{x:340,y:655,state:'CALLING'});
-  if(t>=4)sessionCard(g,t,{x:1580,y:705,ready:false});
-  const path=[[340,680],[960,680],[1580,680]];
-  if(t<4)flight(g,t,{...MSG.invite,sid:'S1',points:path,start:2.8,end:4,hold:0});
-  if(t>=4)tag(g,'t=0：B 收到邀请',960,700,{s:30,c:C.amber});
-  tag(g,'S1 = 这次通话的编号（sessionId）',960,784,{s:30,c:C.blue});
-  tag(g,'图中为视觉缩写，非真实标识值',960,832,{s:24,c:C.purple});
-}
-function drawGap(g,t) {
-  const p=.2*seg(t,0,4.6),cancel=t>=4.6,flash=t>=9.2&&t<9.8&&Math.floor((t-9.2)*7)%2===0;
-  legend(g,t,{cancel,travel:t>=4.6&&t<5.8,active:t>=5.2&&t<5.35});
-  boundary(g,t,{x:1160,y:520,width:1320,height:600,title:'B 的会话创建窗口'});
-  ruler(g,t,{x:1175,y:365,width:1050,cursor:p});
-  timerBar(g,t,{x:1175,y:475,width:1050,height:84,fill:p,label:'创建会话：约 50 ms'});
-  sessionCard(g,t,{x:1570,y:677,ready:false,warning:flash});
-  if(t>=5.8){line(g,[[860,378],[860,560]],{c:C.coral,w:4});arrow(g,t,{points:[[1040,675],[1370,675]],tone:'coral',blocked:true});}
-  // Label is below the line's endpoint, on opaque backing; it never crosses the red stem.
-  if(t>=5.8)tag(g,'构造的到达点',860,585,{s:26,c:C.coral});
-  const path=[[275,420],[275,479.5],[275,539],[540,539],[860,675]];
-  if(cancel&&t<5.8)flight(g,t,{...MSG.terminate,sid:'S1',points:path,start:4.6,end:5.8,hold:0});
-  if(t>=5.8)message(g,t,{...MSG.terminate,x:860,y:675,sid:'S1'});
-  tag(g,'t=0：B 收到邀请',680,785,{s:24,a:'left'});
-}
-function drawMatchMiss(g,t) {
-  const lost=t>=9.2,p=seg(t,9.2,10),outgoing=pathAt([[580,465],[580,585],[1180,720],[1500,720]],p);
-  const x=lost?outgoing.x:lerp(310,580,seg(t,.4,1.4)),y=lost?outgoing.y:465;
-  arrow(g,t,{points:[[740,450],[1150,450],[1150,325],[1340,325]],tone:'purple',dashed:t>=4.6,blocked:true});
-  arrow(g,t,{points:[[890,540],[890,690],[1270,690]],tone:t>=4.6?'coral':'ink',opacity:t>=4.6?1:.3});
-  boxText(g,'会话匹配器',890,465,370,150,{s:40});
-  sessionCard(g,t,{x:1500,y:325,ready:false});
-  logSlot(g,t,{x:1500,y:690,empty:t<10,receiving:lost});
-  tag(g,'匹配当前会话 → 交给状态机',1030,248,{s:28,c:C.purple});
-  tag(g,'不匹配且非邀请 → 仅记日志',970,824,{s:28,c:C.coral});
-  tag(g,'机制示意，非原始日志',1500,806,{s:24,c:C.purple});
-  if(t<10)message(g,t,{...MSG.terminate,sid:'S1',x,y});
-}
-function drawLate(g,t) {
-  const ready=t>=.8;
-  trio(g,t,{a:'已取消',b:ready?'响铃中':'创建中',ringing:ready,ringAt:t<4.6?.8:t<9.2?4.6:9.2});
-  stateLabel(g,t,{x:340,y:500,state:'ENDED.SELF_TERMINATED',tone:'coral'});
-  if(ready)stateLabel(g,t,{x:1580,y:500,state:'RINGING',tone:'amber'});
-  networkBranch(g,t);
-  sessionCard(g,t,{x:1580,y:744,ready});
-  logSlot(g,t,{x:550,y:744,width:470});
-  clockFace(g,t,{x:1140,y:744,r:76,remaining:1,text:'60 s',size:36});
-  tag(g,ready?'创建完成：约 50 ms':'创建中',960,488,{s:28,c:C.amber});
-  if(t>=9.2)tag(g,'结果没对齐',960,657,{s:32,c:C.coral});
-}
-function drawOwnership(g,t) {
-  chapterCard(g,t,4);
-  arrow(g,t,{points:[[510,490],[665,490]],tone:'blue'});
-  arrow(g,t,{points:[[1115,490],[1300,490]],tone:'green',reveal:seg(t,8,8.8)});
-  boxText(g,'sessionId: S1',320,490,390,200,{s:32,f:'mono',fill:tint(C.blue,.08)});
-  sessionCard(g,t,{x:890,y:490,ready:true,matched:t>=4,width:430,height:200});
-  boxText(g,'状态机',1530,490,430,200,{s:42,fill:t>=8.8?tint(C.green,.14):tint(C.ink,.08),stroke:t>=8.8?C.green:C.ink});
-  tag(g,'消息',320,345,{s:32});tag(g,'会话匹配',890,345,{s:32});tag(g,t>=8.8?'开始状态转移':'尚未收到输入',1530,650,{s:28});
-  sessionKey(g,t,{x:lerp(700,850,eio(seg(t,4,4.4))),y:715,label:false});
-  boxText(g,'会话 S2',1150,723,240,90,{s:28,fill:tint(C.ink,.08)});
-}
-function drawRules(g,t) {
-  const replay=t>=8,aEnded=t>=1.2,bEnded=t>=5.2&&!replay;
-  for(const [x,name,toneName] of [[500,'主叫屏 A','blue'],[1420,'被叫屏 B','amber']]){
-    panel(g,x-400,220,800,610,{fill:C.paper,shadow:true});label(g,name,x,285,{s:34,c:tone(toneName)});
-  }
-  stateArrow(g,t,{points:[[500,425],[500,615]],tone:'blue',reveal:seg(t,.4,1.2)});
-  stateArrow(g,t,{points:[[1420,425],[1420,615]],tone:replay?'ink':'green',opacity:replay?.15:1,reveal:seg(t,4,5.2)});
-  stateNode(g,t,{x:500,y:370,label:'CALLING / RINGING',width:500,current:!aEnded});
-  stateNode(g,t,{x:500,y:680,label:'ENDED.SELF_TERMINATED',width:500,current:aEnded});
-  stateNode(g,t,{x:1420,y:370,label:'RINGING',width:500,current:!bEnded&&!replay,tone:'amber'});
-  stateNode(g,t,{x:1420,y:680,label:'ENDED.OTHER_TERMINATED',width:500,current:bEnded,tone:'green'});
-  tag(g,'用户取消',500,515,{s:28});tag(g,replay?'刚才：消息未到状态机':'收到 402 TERMINATE_END',1420,490,{s:28,c:replay?C.coral:C.green});
-  message(g,t,{...MSG.terminate,x:500,y:783,outlined:true,shadow:false});
-  if(t>=4&&t<5.2)message(g,t,{...MSG.terminate,x:1420,y:lerp(548,575,seg(t,4,5.2)),outlined:true,shadow:false});
-  if(replay){line(g,[[1135,560],[1250,560]],{c:C.coral,dashed:true});line(g,[[1510,560],[1695,560]],{c:C.coral,dashed:true});symbol(g,t,{x:1420,y:568,kind:'cross',tone:'coral',scale:.55});}
-}
-function drawConcurrency(g,t) {
-  boundary(g,t,{x:960,y:520,title:'B 的本地处理区'});
-  ruler(g,t,{x:1030,y:330,width:1260,cursor:.2*seg(t,.4,4)});
-  tag(g,'创建会话',260,432,{s:30});tag(g,'处理取消',260,625,{s:30});
-  if(t>=8)panel(g,660,355,270,340,{fill:tint(C.coral,.12),stroke:C.coral,r:20});
-  timerBar(g,t,{x:1030,y:425,width:1260,height:90,fill:.2*seg(t,.4,4),label:'约 50 ms · 尚未完成'});
-  line(g,[[652,345],[652,535]],{c:C.coral,w:5});
-  tag(g,'t+10 ms · 构造值',652,537,{s:26,c:C.coral});
-  if(t>=4)message(g,t,{...MSG.terminate,sid:'S1',x:770,y:625});
-  sessionCard(g,t,{x:1510,y:625,ready:false});
-  panel(g,530,738,480,85,{fill:tint(C.ink,.08),stroke:tint(C.ink,.4)});label(g,'未匹配 → 仅记日志',770,790,{s:30,c:C.coral});
-  if(t>=4.6)arrow(g,t,{points:[[770,688],[770,735]],tone:'coral'});
-}
-function drawTimeout(g,t) {
-  const expired=t>=4.8,p=1-seg(t,.4,3.8);
-  boundary(g,t,{x:960,y:520,title:'B 本地：响铃超时兜底'});
-  clockFace(g,t,{x:490,y:465,r:175,remaining:p,text:String(Math.ceil(60*p))+' s',size:74});
-  tag(g,'快进',490,695,{s:30,c:C.amber});tag(g,'从 B 开始响铃起',490,755,{s:30});
-  screen(g,t,{x:1500,y:405,scale:1.5,role:'B',uiText:expired?'超时结束':'响铃中',ringing:!expired,ringAt:.4});
-  stateNode(g,t,{x:1390,y:720,width:570,height:150,label:expired?'ENDED.RINGING_TIMEOUT':'RINGING',current:true,tone:expired?'coral':'amber'});
-  const path=[[720,465],[1020,565],[1390,600]];
-  arrow(g,t,{points:path,tone:'purple',reveal:seg(t,4,4.8)});
-  if(t<4.8)flight(g,t,{...MSG.timeout,points:path,start:4,end:4.8,hold:0});
-  if(t>=4.8)tag(g,'404 TIMEOUT_END · 本地产生',1220,595,{s:28,f:'mono',c:C.purple});
-  if(t>=8)tag(g,'等到超时',1410,819,{s:30,c:C.coral});
-}
-/* ---------------- 排队、重放与收束 ---------------- */
-function drawChoice(g,t) {
-  chapterCard(g,t,5);
-  const chosen=t>=7;
-  // Three equal-width candidates keep every noun in the second caption visible.
-  const envelope=(x,y)=>{
-    panel(g,x-29,y-25,58,50,{fill:tint(C.blue,.12),r:9,lw:3});
-    line(g,[[x-23,y-17],[x,y+1],[x+23,y-17]],{c:C.blue,w:3});
-  };
-  for(const x of [100,690])panel(g,x,315,540,515,{fill:chosen?tint(C.ink,.16):C.paper,shadow:true});
-  fade(g,chosen?.38:1,()=>{
-    label(g,'加锁',370,388,{s:36,w:900});
-    panel(g,350,515,240,145,{fill:tint(C.blue,.07),r:20});
-    // The shackle straddles the shared session's top edge; messages wait outside.
-    g.save();g.strokeStyle=C.amber;g.lineWidth=12;rr(g,439,454,62,88,30);g.stroke();g.restore();
-    panel(g,423,500,94,76,{fill:tint(C.amber,.24),stroke:C.amber,r:12});
-    dot(g,470,528,8,C.amber);line(g,[[470,532],[470,548]],{c:C.amber,w:7});
-    label(g,'共享会话',470,623,{s:30});
-    envelope(170,611);envelope(245,611);
-    arrow(g,t,{points:[[288,611],[326,611]],tone:'blue'});
-    tag(g,'等待解锁',220,733,{s:28,c:C.amber});
-    label(g,'Handler 同步屏障',960,388,{s:34,w:900});
-    panel(g,720,486,270,125,{fill:tint(C.blue,.04),stroke:tint(C.ink,.35),r:16});
-    for(let i=0;i<3;i++)envelope(756+i*76,548);
-    // A full-height striped barrier blocks the queue throughout the comparison.
-    panel(g,972,463,22,175,{fill:tint(C.coral,.18),stroke:C.coral,r:5,lw:3});
-    for(let y=478;y<628;y+=28)line(g,[[976,y],[990,y+12]],{c:C.coral,w:5});
-    line(g,[[958,643],[1008,643]],{c:C.coral,w:7});
-    arrow(g,t,{points:[[1014,548],[1045,548]],tone:'blue'});
-    boxText(g,'处理',1130,548,130,120,{s:30,fill:tint(C.blue,.1)});
-    boxText(g,'暂停 / 恢复',960,725,320,84,{s:30});
-  });
-  panel(g,1280,315,540,515,{fill:chosen?tint(C.green,.07):C.paper,stroke:chosen?C.green:C.ink,shadow:true});
-  label(g,'Flow 串行消费',1550,388,{s:36,w:900});
-  for(let i=0;i<3;i++)panel(g,1310+i*76,505,58,86,{fill:i===2?tint(C.blue,.15):C.paper,r:13});
-  arrow(g,t,{points:[[1545,548],[1610,548]],tone:'blue'});boxText(g,'工位',1710,548,150,150,{s:32,fill:tint(C.blue,.1)});
-  if(chosen)symbol(g,t,{x:1760,y:432,kind:'check',scale:.7});
-  if(t>=10.4){boxText(g,'好懂',1425,725,190,84,{s:34,fill:tint(C.green,.1)});boxText(g,'好维护',1660,725,210,84,{s:34,fill:tint(C.green,.1)});}
-}
-function drawQueue(g,t) {
-  boundary(g,t,{x:960,y:520,title:'B 的入站控制消息处理链'});
-  label(g,'SharedFlow',145,334,{s:32,f:'mono',a:'left',c:C.blue});
-  label(g,'collect：逐条完成',1170,282,{s:30,f:'mono'});
-  // Two waiting slots plus the station form the readable three-position queue.
-  queue(g,t,{x:510,y:495,slots:2,slotWidth:310});
-  const busy=t>=2;
-  workstation(g,t,{x:1170,y:495,busy,task:busy?{...MSG.invite,sid:'S1'}:null,completion:busy?.2:0,gateOpen:!busy,highlight:t>=7});
-  sessionCard(g,t,{x:1630,y:495,ready:false});
-  if(t>=.4&&t<1.2)message(g,t,{...MSG.invite,sid:'S1',x:665,y:lerp(420,495,eo(seg(t,.4,.8)))});
-  if(t>=1.2&&t<2)message(g,t,{...MSG.invite,sid:'S1',x:lerp(665,1170,eio(seg(t,1.2,2))),y:lerp(495,453,eio(seg(t,1.2,2)))});
-  if(t>=.8)message(g,t,{...MSG.terminate,sid:'S1',x:lerp(330,665,eio(seg(t,3.6,4))),y:495});
-  if(t>=3.6)tag(g,'等待',665,615,{s:30,c:C.coral});
-  if(t>=7)tag(g,'创建也在本次处理内',1170,693,{s:30,c:C.amber});
-  if(t>=10.4){
-    // A condition connection, not a release: line endpoints and text occupy distinct bands.
-    line(g,[[960,766],[963,660],[963,610]],{c:C.amber,w:6});
-    line(g,[[962,766],[1300,766]],{c:C.amber,w:6});
-    tag(g,'才放行',830,778,{s:30,c:C.amber});tag(g,'创建完成',1420,778,{s:30,c:C.amber});
-  }
-}
-function drawCodeBoundary(g,t) {
-  const focus=t<.4?null:t<4.6?0:t<9.2?2:4;
-  codeCard(g,t,{x:625,y:500,focusLine:focus});
-  const xs=1535,ys=[330,500,720];
-  arrow(g,t,{points:[[xs,379],[xs,440]],tone:'blue'});
-  if(t>=9.2)arrow(g,t,{points:[[xs,559],[xs,659]],tone:'green',reveal:seg(t,9.2,10)});
-  ['取消息','完成处理','取下一条'].forEach((v,i)=>boxText(g,v,xs,ys[i],500,110,{s:38,fill:(t<4.6?i===0:t<9.2?i===1:i===2)?tint(C.blue,.15):C.paper}));
-  if(t>=9.2)tag(g,'下一次迭代',xs,620,{s:26,c:C.green});
-}
-function drawFullBoundary(g,t) {
-  tag(g,'只排启动动作 ≠ 等完整处理结束',960,185,{s:24,c:C.purple});
-  fade(g,t>=7?.35:1,()=>{
-    panel(g,100,230,1720,255,{fill:C.paper,shadow:true});label(g,'只排启动动作',140,284,{s:30,a:'left',c:C.coral});
-    panel(g,700,310,500,135,{fill:tint(C.blue,.06),r:20});
-    timerBar(g,t,{x:950,y:399,width:440,height:52,fill:.2,label:'创建尚未完成',fontSize:26});
-    const p=eio(seg(t,.4,3.6));
-    boxText(g,'创建任务',lerp(950,1550,p),lerp(343,288,p),250,70,{s:28,fill:tint(C.blue,.12)});
-    sessionCard(g,t,{x:1550,y:400,ready:false,width:320,height:128});
-    if(t>=3.6){const q=seg(t,3.6,4.2);message(g,t,{...MSG.terminate,sid:'S1',x:lerp(480,1260,q),y:320});if(t>=4.2)symbol(g,t,{x:1425,y:338,kind:'cross',scale:.6,tone:'coral'});}
-    symbol(g,t,{x:1750,y:285,kind:'cross',tone:'coral',scale:.6});
-  });
-  panel(g,100,535,1720,295,{fill:C.paper,stroke:t>=7?C.green:C.ink,shadow:true});label(g,'等完整处理结束',140,590,{s:30,a:'left',c:C.green});
-  const completed=t>=12,p=seg(t,10.4,12);
-  panel(g,700,620,500,170,{fill:tint(C.blue,.06),r:20});
-  timerBar(g,t,{x:950,y:752,width:440,height:52,fill:p,label:completed?'创建完成':'创建会话 · 直到完成',fontSize:26});
-  line(g,[[670,635],[670,completed?610:795]],{c:completed?C.green:C.coral,w:10});
-  const incoming=pathAt([[460,699],[590,674],[950,674]],seg(t,12,12.6));
-  if(t<12.6)message(g,t,{...MSG.terminate,sid:'S1',x:completed?incoming.x:460,y:completed?incoming.y:699});
-  sessionCard(g,t,{x:1550,y:711,ready:completed,width:320});
-  symbol(g,t,{x:1750,y:590,kind:'check',scale:.6});
-}
-// Replayed local processing uses one consistent layout across scenes 19–21.
-function replayLayout(g,t,o={}) {
-  legend(g,t,{cancel:o.cancel,travel:o.travel,b:o.ended?'已结束':o.ready?'响铃中':'创建中'});
-  boundary(g,t,{x:1160,y:o.chapter?575:535,width:1320,height:o.chapter?550:630,title:o.chapter?false:'B 的入站控制消息处理链'});
-  boxText(g,'等待槽',720,390,330,80,{s:30,fill:o.waiting?tint(C.amber,.15):C.paper});
-  panel(g,555,454,330,112,{fill:C.paper,stroke:o.waiting?C.amber:tint(C.ink,.35),r:20});
-  workstation(g,t,{x:1180,y:520,busy:!o.ended,task:o.task,completion:o.completion??.2,gateOpen:o.gateOpen,label:true,progressLabel:o.ready?'创建完成':'创建被叫会话'});
-  sessionCard(g,t,{x:1640,y:520,ready:o.ready,matched:o.matched,width:300});
-  if(o.waiting)message(g,t,{...MSG.terminate,sid:'S1',x:720,y:510});
-  tag(g,o.time||'t=0：B 收到邀请',1160,819,{s:30,c:C.amber});
-}
-function drawReplayInvite(g,t) {
-  // The chapter card lives above the local panel as a compact card, without hiding the network flight.
-  replayLayout(g,t,{chapter:true,travel:t>=.4&&t<1.6,task:t>=2.6?{...MSG.invite,sid:'S1'}:null,completion:t>=4?.2*seg(t,4,8):0,gateOpen:t<2.6,time:t>=1.6?'t=0：B 收到邀请':'邀请经网关进入 B'});
-  panel(g,500,165,1320,110,{fill:C.blue,shadow:true});
-  label(g,'05',540,247,{s:64,w:900,f:'disp',c:C.paper,a:'left'});
-  label(g,'这回，终于接住了',680,220,{s:40,w:900,c:C.paper,a:'left'});
-  label(g,CHAPTERS[6][1],680,260,{s:24,f:'disp',c:C.paper,a:'left'});
-  const path=[[275,420],[275,539],[720,510]];
-  flight(g,t,{...MSG.invite,sid:'S1',points:path,start:.4,end:1.6,hold:.4});
-  if(t>=2&&t<2.6)message(g,t,{...MSG.invite,sid:'S1',x:lerp(720,1180,seg(t,2,2.6)),y:lerp(510,478,seg(t,2,2.6))});
-  if(t>=8)tag(g,'处理中 · 不取下一条',1180,714,{s:30,c:C.blue});
-}
-function drawReplayWait(g,t) {
-  replayLayout(g,t,{cancel:t>=.4,travel:t>=.6&&t<1.8,waiting:t>=1.8,task:{...MSG.invite,sid:'S1'},time:t>=1.8?'t+10 ms（构造值）':'创建仍在进行中'});
-  const path=[[275,420],[275,539],[720,510]];
-  if(t<1.8)flight(g,t,{...MSG.terminate,sid:'S1',points:path,start:.6,end:1.8,hold:0});
-  tag(g,'日志槽（空）',1650,720,{s:26,c:tint(C.ink,.6)});
-  if(t>=4)tag(g,'先等在这里',720,645,{s:28,c:C.amber});
-  if(t>=8){const x=t<8.4?1180:t<8.8?1640:720;symbol(g,t,{x,y:670,kind:'check',scale:.5,tone:'blue'});}
-}
-function drawReplayFinish(g,t) {
-  const ready=t>=1,taking=t>=4.2,matched=t>=5,ended=t>=8.6;
-  replayLayout(g,t,{cancel:true,travel:t>=1&&t<2.2,ready,ended,matched,waiting:!taking,gateOpen:taking,task:!taking?{...MSG.invite,sid:'S1'}:t>=5?{...MSG.terminate,sid:'S1'}:null,completion:.2+.8*seg(t,.4,1),time:ready?'创建完成后，依次处理':'创建会话：约 50 ms'});
-  if(t>=1)networkBranch(g,t,1,{local:true});
-  if(taking&&t<5)message(g,t,{...MSG.terminate,sid:'S1',x:lerp(720,1180,seg(t,4.2,5)),y:lerp(510,478,seg(t,4.2,5))});
-  if(ready){
-    stateLabel(g,t,{x:1615,y:691,width:360,state:ended?'ENDED.OTHER_TERMINATED':'RINGING',tone:ended?'green':'amber'});
-    if(!ended){clockFace(g,t,{x:720,y:692,r:58,size:30,text:'60 s',remaining:1});tag(g,'响铃计时已启动',1130,747,{s:26,c:C.amber});}
-    else {stateNode(g,t,{x:720,y:692,width:300,height:76,label:'RINGING'});arrow(g,t,{points:[[900,692],[1400,692]],tone:'green',reveal:seg(t,8.6,9)});tag(g,'响铃计时已停止',1130,747,{s:26,c:C.green});}
-  }
-}
-function drawAligned(g,t) {
-  trio(g,t,{a:'已取消',b:'呼叫已结束'});states(g,t,'ENDED.SELF_TERMINATED','ENDED.OTHER_TERMINATED',{emphasis:t>=4.2});
-  const p=seg(t,.4,1.2);line(g,[[lerp(960,340,p),600],[960,600],[lerp(960,1580,p),600]],{c:C.green,w:7});
-  tag(g,'本次呼叫均已结束',960,612,{s:34,c:C.green});
-  const xs=[410,960,1510];
-  arrow(g,t,{points:[[625,758],[745,758]],tone:'green'});arrow(g,t,{points:[[1175,758],[1295,758]],tone:'green'});
-  ['创建完成','处理取消','结束呼叫'].forEach((v,i)=>boxText(g,v,xs[i],758,420,126,{s:36,fill:t>=8.6+i*.7?tint(C.green,.13):C.paper}));
-}
-function drawSeparate(g,t) {
-  arrow(g,t,{points:[[460,250],[960,250],[1460,250]],tone:'purple',opacity:t>=8?1:.4});
-  gateway(g,t,{x:960,y:250,scale:1.1,label:false});tag(g,'消息经过网关',960,363,{s:26,c:C.purple});
-  for(const [x,right] of [[500,false],[1420,true]]){
-    panel(g,x-400,405,800,425,{fill:C.paper,shadow:true});label(g,right?'被叫本地：入站控制消息':'主叫本地：创建会话',x,461,{s:32});
-    screen(g,t,{x:x+(right?140:-140),y:245,role:right?'B':'A',uiText:'独立状态',roleLabel:false,scale:1.15});
-    for(let j=0;j<2;j++)panel(g,x-335+j*155,555,130,110,{fill:C.paper,stroke:tint(C.ink,.4),r:16});
-    panel(g,x+50,530,300,160,{fill:tint(right?C.amber:C.blue,.1)});label(g,'唯一工位',x+200,509,{s:30});
-    const dt=t-(right?.8:4);if(dt>=0&&dt<2.4){const p=seg(dt,0,1.2);boxText(g,'任务',lerp(x-270,x+200,p),610,120,75,{s:28,fill:tint(C.green,.2)});}
-    tag(g,'自己的队列 · 自己的状态',x,781,{s:28,c:right?C.amber:C.blue});
-  }
-}
-const SUMMARY_TITLES=['先认会话','排完整过程','状态机管规则','超时留退路'];
-function dockedSummary(g,i,opacity=1) {
-  fade(g,opacity,()=>{const x=310+430*i;panel(g,x-180,185,360,170,{fill:C.paper,shadow:true});
-    label(g,String(i+1).padStart(2,'0'),x-145,240,{s:38,w:900,f:'disp',a:'left',c:C.blue});
-    label(g,SUMMARY_TITLES[i],x,309,{s:32,w:900});});
-}
-function drawSummary(g,t,index=0) {
-  for(let i=0;i<index;i++)dockedSummary(g,i,index===3?1-seg(t,7.7,8):1);
-  const dock=index===3?eio(seg(t,6,6.6)):eio(seg(t,7.7,8));
-  fade(g,1-dock,()=>{
-    panel(g,120,405,1680,425,{fill:C.paper,shadow:true});
-    panel(g,120,405,160,115,{fill:C.blue,r:24});label(g,String(index+1).padStart(2,'0'),200,489,{s:72,w:900,f:'disp',c:C.paper});
-    label(g,SUMMARY_TITLES[index],960,494,{s:60,w:900});
-    if(index===0){
-      const warning=t>=4&&t<4.65;
-      arrow(g,t,{points:[[410,772],[1470,772]],tone:warning?'coral':'blue',blocked:warning,reveal:warning?.3:1});
-      sessionKey(g,t,{x:warning?450:lerp(450,620,eio(seg(t,.4,1.2))),y:630,label:false});
-      tag(g,'sessionId',450,711,{s:28,f:'mono'});sessionCard(g,t,{x:950,y:645,ready:!warning,matched:t>=1.2&&!warning});
-      stateNode(g,t,{x:1450,y:645,width:400,height:140,label:'状态机',generic:true,current:!warning});
-    }else if(index===1){
-      panel(g,320,565,650,200,{fill:tint(C.blue,.07),stroke:C.blue});
-      timerBar(g,t,{x:645,y:690,width:550,height:70,fill:t<4?seg(t,.4,3.6):1,label:'直到完成',fontSize:32});
-      label(g,t<4?'本次任务':'下一项任务',645,616,{s:30,c:C.blue});
-      message(g,t,{...MSG.terminate,sid:'S1',x:1430,y:655,opacity:t<4?1:1-seg(t,4,4.6)});
-      arrow(g,t,{points:[[1240,655],[1010,655]],tone:'green',reveal:seg(t,4,4.6)});
-    }else if(index===2){
-      arrow(g,t,{points:[[450,655],[610,655]],tone:'blue',reveal:seg(t,.4,1.2)});
-      arrow(g,t,{points:[[945,655],[1115,655]],tone:'green',reveal:seg(t,4,4.8)});
-      boxText(g,'输入消息',310,655,240,110,{s:30});
-      stateNode(g,t,{x:775,y:655,width:320,height:130,label:'当前',generic:true,current:t>=1.2&&t<4.8});
-      stateNode(g,t,{x:1285,y:655,width:320,height:130,label:'下一步',generic:true,current:t>=4.8,tone:'green'});
-      tag(g,'先把消息送到',1625,644,{s:26,c:C.blue});
-      for(let j=0;j<3;j++)panel(g,1535+j*65,685,50,55,{fill:tint(C.blue,.1),r:9,lw:3});
-    }else{
-      clockFace(g,t,{x:535,y:637,r:72,text:'60 s',size:36});
-      boxText(g,'完整处理工位',1355,637,490,120,{s:34,fill:t>=4?tint(C.green,.12):C.paper});
-      arrow(g,t,{points:[[535,719],[535,754]],tone:'amber'});arrow(g,t,{points:[[1355,719],[1355,754]],tone:'green'});
-      tag(g,'退出等待',535,800,{s:32,c:C.amber});tag(g,'接住取消',1355,800,{s:32,c:C.green});
+function drawCaption(g, layout, frame) {
+  if (frame.sc.title || frame.t >= layout.caption.t1) return;
+  const k = eo(seg(frame.t, layout.caption.t0, layout.caption.t0 + .25));
+  g.globalAlpha = Math.min(seg(frame.t, layout.caption.t0, layout.caption.t0 + .12), 1 - seg(frame.t, layout.caption.t1 - .12, layout.caption.t1));
+  for (const l of layout.lines) {
+    let x = l.x;
+    for (const s of l.segments) {
+      const w = textW(g, s.s, { s: 54, w: 700 });
+      if (s.c === C.amber) { rr(g, x - 3, l.y + 6 + (1 - k) * 10, w + 6, 14, 5); g.fillStyle = rgba(C.amber, .42); g.fill(); }
+      text(g, s.s, x, l.y + (1 - k) * 10, { s: 54, w: 700, c: s.c || C.ink, a: 'left', b: 'alphabetic' });
+      x += w;
     }
-  });
-  if(dock>0)dockedSummary(g,index,dock*(index===3?1-seg(t,7.7,8):1));
+  }
 }
-function drawReturn(g,t) {
-  fade(g,1-seg(t,9.6,10),()=>{
-    trio(g,t,{a:'已取消',b:'呼叫已结束'});states(g,t,'ENDED.SELF_TERMINATED','ENDED.OTHER_TERMINATED');
-    if(t>=.4){symbol(g,t,{x:570,y:500,kind:'check',scale:.5});symbol(g,t,{x:1810,y:500,kind:'check',scale:.5});}
-    panel(g,1370,615,410,110,{fill:tint(C.green,.1),stroke:C.green,r:24});
-    tag(g,'完成托盘',1580,600,{s:26,c:C.green});
-    line(g,[[1350,620],[1350,t>=7.2?595:720]],{w:10,c:t>=7.2?C.green:C.coral});
-    message(g,t,{...MSG.terminate,x:lerp(1100,1580,eio(seg(t,7.2,7.8))),y:675});
-    timerBar(g,t,{x:1270,y:792,width:700,height:84,fill:seg(t,4,4.6),label:'创建会话：约 50 ms'});
-  });
-}
-function drawSeries(g,t) {
-  const a=Math.min(seg(t,0,.2),1-seg(t,1.6,2));
-  fade(g,a,()=>{
-    screen(g,t,{x:390,y:560,scale:1.5,role:'A',uiText:'',roleLabel:false});
-    screen(g,t,{x:1530,y:560,scale:1.5,role:'B',uiText:'',roleLabel:false});
-    label(g,SERIES.title,960,530,{s:86,w:900});label(g,SERIES.sub,960,626,{s:40,c:C.blue});
-    if(SERIES.next)label(g,SERIES.next,960,734,{s:30,c:C.purple});
+
+/* ---------------- 场景注册 ---------------- */
+let lastChapter = -1;
+function S(id, o) {
+  const d = SCRIPT[id];
+  if (d.chapter !== lastChapter) { film.chapter(d.chapter, ...CHAPTERS[d.chapter]); lastChapter = d.chapter; }
+  return film.addScene({
+    ...o, id, chapter: d.chapter, dur: d.dur, pre: 0, post: 0,
+    captions: d.caps.map(([t, end, text]) => ({ t, end, text })),
+    cues: (o.cues || []).map(([t, type, v]) => ({ t, type, v: v ?? 1 })),
+    draw: (g, lt, sc) => o.draw(g, lt, sc),
   });
 }
-function drawCover(g,frame) {
-  drawBackground(g,frame);
-  // The whole story fits inside x=200..1720: safe for a centered 16:10 crop of 1920×1080.
-  label(g,'取消去哪了',960,300,{s:146,w:900});label(g,'约50毫秒的会话竞态',960,395,{s:48,c:C.coral});
-  screen(g,0,{x:480,y:590,scale:1.65,role:'A',uiText:'已取消',roleLabel:false});
-  screen(g,0,{x:1440,y:590,scale:1.65,role:'B',uiText:'还在响',roleLabel:false,ringing:true});
-  gateway(g,0,{x:960,y:580,scale:1.4,label:false});
-  arrow(g,0,{points:[[480,795],[960,795],[1100,795]],dashed:true,blocked:true,tone:'coral'});
-  sessionCard(g,0,{x:1390,y:820,ready:false,width:320});
-  message(g,0,{...MSG.terminate,x:870,y:805});symbol(g,0,{x:1150,y:810,kind:'question',tone:'coral'});
-  demoBadge(g,0,{x:1590,y:92,label:'机制演绎',width:280});
+
+/* ---------------- 舞台：A —— 网关 —— B ---------------- */
+function link(g, lt, al = 1, p = 1) {
+  const a1 = [P.A[0] + 178, P.A[1] - 10], g1 = [P.G[0] - 124, P.G[1] + 5], g2 = [P.G[0] + 124, P.G[1] + 5], b1 = [P.B[0] - 178, P.B[1] - 10];
+  path(g, partial([a1, g1], p), { c: rgba(C.ink, .35), w: 5, dash: [3, 15], off: -lt * 40, al });
+  path(g, partial([g2, b1], p), { c: rgba(C.ink, .35), w: 5, dash: [3, 15], off: -lt * 40, al });
 }
-const DRAW=[drawOpening,drawTitle,drawRoute,drawHandshake,drawAccept,drawConfirm,drawRewind,drawGap,drawMatchMiss,drawLate,
-  drawOwnership,drawRules,drawConcurrency,drawTimeout,drawChoice,drawQueue,drawCodeBoundary,drawFullBoundary,
-  drawReplayInvite,drawReplayWait,drawReplayFinish,drawAligned,drawSeparate,
-  (g,t)=>drawSummary(g,t,0),(g,t)=>drawSummary(g,t,1),(g,t)=>drawSummary(g,t,2),(g,t)=>drawSummary(g,t,3),drawReturn,drawSeries];
-let lastChapter=-1;
-Object.entries(SCRIPT).forEach(([id,scene],i)=>{
-  if(scene.chapter!==lastChapter){film.chapter(scene.chapter,...CHAPTERS[scene.chapter]);lastChapter=scene.chapter;}
-  film.addScene({id,...scene,draw:(g,t)=>DRAW[i](g,Math.round(t*1e9)/1e9)});
+const CHIP_Y = 672;
+function stage(g, lt, o = {}) {
+  const e = o.enter, sA = e ? pop(seg(lt, e, e + .55)) : 1, sG = e ? pop(seg(lt, e + .15, e + .7)) : 1, sB = e ? pop(seg(lt, e + .3, e + .85)) : 1;
+  if (o.link !== false) link(g, lt, o.linkAl ?? 1, o.linkP ?? 1);
+  gateway(g, P.G[0], P.G[1], sG, lt, { busy: o.busy || 0 });
+  device(g, 'A', P.A[0], P.A[1], sA, o.a, lt);
+  device(g, 'B', P.B[0], P.B[1], sB, o.b, lt);
+  if (o.ca) chip(g, P.A[0], CHIP_Y, lt, ...o.ca);
+  if (o.cb) chip(g, P.B[0], CHIP_Y, lt, ...o.cb);
+}
+function tap(g, x, y, lt, t0) { // 手指点按：圆点按下 + 涟漪
+  const k = lt - t0; if (k < -.35 || k > .8) return;
+  const press = k < 0 ? 1 - eo(-k / .35) : 1;
+  dot(g, x, y, 22 * (k < .1 ? 1 - .25 * press : .75 + .25 * eo((k - .1) / .3)), rgba(C.ink, .28), k < .5 ? 1 : 1 - (k - .5) / .3);
+  ripple(g, x, y, k, C.ink, 16, 60, .5);
+}
+/* 创建会话 ≈ 50 ms 的进度条：loop 时进度循环播放，done 时变绿打勾 */
+function ribbon50(g, x, y, lt, p, o = {}) {
+  if (p <= 0) return;
+  at(g, x, y, pop(p), () => {
+    card(g, -275, -38, 550, 76, { r: 22, fill: '#fff', lw: 3 });
+    text(g, '建会话', -218, 1, { s: 26, w: 900 });
+    const bw = 290, k = o.loop ? (lt * .35) % 1 : 1;
+    hatch(g, -165, -15, bw * k, 30, o.done ? C.green : C.orange, lt * 40, 10);
+    card(g, -165, -15, bw, 30, { r: 10, fill: 'transparent', lw: 2.5, shadow: false });
+    text(g, '≈ 50 ms', 200, 1, { f: 'mono', s: 26, w: 700, c: C.purple });
+    if (o.done) badge(g, 275, -38, 26, C.green, 'check', o.doneP ?? 1);
+  });
+}
+/* 中途悬停的取消胶囊（开场/结尾的构图） */
+const HANG = [1240, 212];
+
+/* ---------------- B 的内部：时间轴 / 会话槽 ---------------- */
+const RX0 = 340, RX1 = 1500, RY = 290;
+const rx = ms => lerp(RX0, RX1, clamp(ms / 50));
+function ruler(g, ms, o = {}) {
+  path(g, [[RX0, RY], [RX1, RY]], { c: C.ink, w: 3 });
+  for (let m = 0; m <= 50; m += 5) { const x = rx(m), big = m % 10 === 0; path(g, [[x, RY - (big ? 14 : 8)], [x, RY]], { c: C.ink, w: big ? 3 : 2 }); if (big) text(g, m + (m === 50 ? ' ms' : ''), x, RY - 34, { f: 'mono', s: 22, w: 700, c: C.ink2 }); }
+  if (o.mark != null) { // 取消到达的红色标记
+    const k = o.markK ?? 1, x = rx(o.mark);
+    path(g, [[x, RY + 10], [x, RY + 10 + 300 * eo(k)]], { c: C.coral, w: 4, dash: [10, 8] });
+    at(g, x + 130, RY + 150, pop(k), () => { card(g, -90, -22, 180, 44, { r: 22, fill: C.coral, lw: 2.5, sb: 10, so: 4 }); text(g, '取消到达', 0, 1, { s: 24, w: 900, c: '#fff' }); });
+  }
+  if (ms != null) { const x = rx(ms); path(g, [[x, RY - 4], [x, RY + 210]], { c: C.purple, w: 4 }); dot(g, x, RY, 9, C.purple); }
+}
+function createLane(g, ms, y = 360, label = '创建会话 S1', lt = 0) {
+  text(g, label, RX0 - 24, y + 25, { s: 26, w: 900, a: 'right' });
+  card(g, RX0, y, RX1 - RX0, 50, { r: 14, fill: '#fff', lw: 3, shadow: false });
+  hatch(g, RX0 + 3, y + 3, (RX1 - RX0 - 6) * clamp(ms / 50), 44, C.orange, lt * 40, 12);
+}
+function bigMs(g, ms, x = 1665, y = 330) {
+  text(g, '已过', x, y - 62, { s: 24, w: 700, c: C.ink2 });
+  text(g, Math.min(50, Math.floor(ms)).toString(), x - 18, y, { f: 'disp', w: 900, s: 96, c: ms >= 50 ? C.green : C.purple, a: 'right' });
+  text(g, 'ms', x - 10, y + 16, { f: 'disp', w: 800, s: 40, c: C.ink2, a: 'left' });
+}
+/* 会话槽：按进度一块块搭起来，完成后合成一张绿色卡 */
+function sessionSlot(g, x, y, prog, lt, o = {}) {
+  const done = o.doneAt != null ? seg(lt, o.doneAt, o.doneAt + .35) : (prog >= 1 ? 1 : 0), w = 300, h = 170;
+  if (done < 1) {
+    g.save(); g.globalAlpha *= 1 - done;
+    card(g, x - w / 2, y - h / 2, w, h, { r: 22, fill: rgba('#ffffff', .7), lw: 3, dash: [12, 9], stroke: C.purple, shadow: false });
+    for (let i = 0; i < 6; i++) {
+      const kk = clamp(prog * 6 - i), bx = x - 105 + (i % 3) * 70, by = y - 10 + Math.floor(i / 3) * 52 - (1 - eo(kk)) * 60;
+      if (kk > 0) card(g, bx - 30, by - 20, 60, 42, { r: 8, fill: C.purpleL, lw: 2.5, al: eo(kk), sb: 8, so: 3 });
+    }
+    text(g, o.label || '会话 S1 · 建造中', x, y - h / 2 + 26, { s: 24, w: 900, c: C.purple });
+    g.restore();
+  }
+  if (done > 0) {
+    at(g, x, y, pop(done), () => {
+      card(g, -w / 2, -h / 2, w, h, { r: 22, fill: C.greenL, lw: 3.5, stroke: C.green, sb: 22, so: 8 });
+      text(g, '会话 S1', 0, -24, { s: 40, w: 900, c: C.green });
+      text(g, o.doneLabel || '已就绪', 0, 30, { s: 28, w: 700, c: C.ink });
+    });
+    burst(g, x, y, lt - (o.doneAt ?? -9), C.green, 14, 170);
+  }
+}
+const SLOT = [1450, 650];
+/* s08–s10 共用的 50ms 时间：会话创建从 s08 的 0.4 秒开始，到 s10 约 1 秒完成 */
+const MS_RATE = 1.75, msS08 = lt => Math.max(0, (lt - .4) * MS_RATE), msS09 = lt => (14 - .4) * MS_RATE + lt * MS_RATE, msS10 = lt => (28 - .4) * MS_RATE + lt * MS_RATE;
+const ARRIVE = .4 + 10 / MS_RATE; // 取消到达（t+10 ms）的局部时间
+
+/* ---------------- 传送带与工位（第四、五章） ---------------- */
+const BELT = { x0: 250, x1: 1010, y: 610 }, STATION = [1225, 560];
+function belt(g, lt, o = {}) {
+  const { x0, x1, y } = BELT, run = o.run ?? 1;
+  card(g, x0 - 30, y, x1 - x0 + 60, 54, { r: 27, fill: '#3A3F52', lw: 3, sb: 18, so: 8 });
+  g.save(); rr(g, x0 - 26, y + 4, x1 - x0 + 52, 46, 23); g.clip();
+  for (let x = x0 - 60 + (lt * 70 * run) % 40; x < x1 + 40; x += 40) path(g, [[x, y + 4], [x - 14, y + 50]], { c: rgba('#ffffff', .18), w: 6 });
+  g.restore();
+  for (let i = 0; i < 6; i++) { const rx2 = x0 + i * (x1 - x0) / 5; dot(g, rx2, y + 27, 14, '#5B6176'); ring(g, rx2, y + 27, 14, C.ink, 2.5);
+    const a = -lt * 4 * run; path(g, [[rx2 - Math.cos(a) * 10, y + 27 - Math.sin(a) * 10], [rx2 + Math.cos(a) * 10, y + 27 + Math.sin(a) * 10]], { c: '#fff', w: 3 }); }
+  text(g, o.label || '入站消息队列', (x0 + x1) / 2, y + 96, { s: 26, w: 900, c: C.ink2 });
+}
+function barrier(g, x, y, down, lt, o = {}) { // 拦截杆：down=1 落下
+  card(g, x - 14, y - 150, 28, 160, { r: 8, fill: C.ink2, lw: 2.5, sb: 8, so: 4 });
+  g.save(); g.translate(x, y - 132); g.rotate(Math.PI * (1 - down));
+  rr(g, -8, 0, 16, 150, 8); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 3; g.strokeStyle = C.ink; g.stroke();
+  for (let i = 0; i < 4; i++) { rr(g, -8, 10 + i * 36, 16, 18, 4); g.fillStyle = C.coral; g.fill(); }
+  g.restore();
+  if (o.stop && down > .5) at(g, x, y - 200, pop(o.stop) * (1 + .06 * Math.sin(lt * 8)), () => { dot(g, 0, 0, 36, C.coral); ring(g, 0, 0, 36, C.ink, 3); text(g, '停', 0, 2, { s: 36, w: 900, c: '#fff' }); });
+}
+function station(g, lt, o = {}) {
+  const [x, y] = STATION, w = 300, h = 250;
+  card(g, x - w / 2, y - h / 2, w, h, { r: 28, fill: '#fff', lw: 3.5, sb: 26, so: 10 });
+  card(g, x - w / 2, y - h / 2, w, 62, { r: 28, fill: C.blueL, lw: 0, shadow: false });
+  path(g, [[x - w / 2, y - h / 2 + 62], [x + w / 2, y - h / 2 + 62]], { c: C.ink, w: 3 });
+  text(g, '唯一工位 · collect', x, y - h / 2 + 32, { s: 26, w: 900, c: C.blue });
+  if (o.item) capsule(g, x, y - 18, o.item, { s: .68, tag: o.tag });
+  if (o.prog != null) {
+    text(g, o.progLabel || '创建会话', x, y + 52, { s: 24, w: 700, c: C.ink2 });
+    card(g, x - 110, y + 74, 220, 26, { r: 13, fill: '#fff', lw: 2.5, shadow: false });
+    hatch(g, x - 108, y + 76, 216 * clamp(o.prog), 22, o.prog >= 1 ? C.green : C.orange, lt * 40, 11);
+  }
+  if (o.check) badge(g, x + w / 2 - 6, y - h / 2 + 6, 26, C.green, 'check', o.check);
+}
+/* 胶囊沿传送带移动：到 xEnd 停下；enterAt 后滑进工位 */
+function onBelt(g, lt, kind, x, o = {}) { capsule(g, x, BELT.y - 34 + (o.dy || 0), kind, { s: .72, tag: o.tag, rot: o.rot, al: o.al }); }
+function drop(lt, t0, x, y) { const k = seg(lt, t0, t0 + .55); return [x, lerp(y - 260, y, k < 1 ? eo(k) : 1) - (k >= 1 ? 0 : Math.abs(Math.sin(k * Math.PI * 2)) * 30 * (1 - k))]; }
+
+/* ---------------- 状态机节点 ---------------- */
+function node(g, x, y, s, o = {}) {
+  const c = o.c || stateTone(s), w = Math.max(220, textW(g, s, { f: 'mono', s: 28, w: 700 }) + 70), h = 76, on = o.on ?? 0;
+  at(g, x, y, o.s ?? 1, () => {
+    if (o.pulse) for (let k = 0; k < 2; k++) { const ph = (o.t * .9 + k / 2) % 1; g.save(); g.globalAlpha *= (1 - ph) * .5; rr(g, -w / 2 - ph * 30, -h / 2 - ph * 30, w + ph * 60, h + ph * 60, 38 + ph * 30); g.strokeStyle = c; g.lineWidth = 4; g.stroke(); g.restore(); }
+    card(g, -w / 2, -h / 2, w, h, { r: 38, fill: on ? c : '#fff', lw: 3.5, stroke: o.dim ? C.grey : C.ink, al: o.dim ? .45 : 1, sb: 20, so: 8 });
+    text(g, s, 0, 2, { f: 'mono', s: 28, w: 700, c: on ? '#fff' : o.dim ? C.grey : C.ink, al: o.dim ? .6 : 1 });
+  }, { al: o.al });
+}
+
+/* =====================================================================
+ * 开场与片名
+ * ===================================================================== */
+S('s01', {
+  demo: true, fi: .5,
+  cam: [[0, 1480, 525, 1.6], [3.2, 1480, 525, 1.6], [5.2, 960, 470, 1], [7.0, 960, 470, 1], [8.4, 1060, 470, 1.05], [10.8, 1060, 470, 1.05], [12.2, 1360, 420, 1.3], [14.1, 1360, 420, 1.3], [15, 960, 500, .96]],
+  cues: [[.3, 'ring'], [1.9, 'ring'], [3.3, 'whoosh'], [4.0, 'error'], [7.5, 'tick'], [11.2, 'latch']],
+  draw(g, lt) {
+    link(g, lt, 1);
+    gateway(g, P.G[0], P.G[1], 1, lt);
+    device(g, 'A', P.A[0], P.A[1], 1, { mode: 'cancelled' }, lt);
+    device(g, 'B', P.B[0], P.B[1], 1, { mode: 'ringing' }, lt);
+    chip(g, P.A[0], CHIP_Y, lt, 'ENDED.SELF_TERMINATED');
+    chip(g, P.B[0], CHIP_Y, lt, 'RINGING');
+    // 悬在半路的取消消息
+    const k = seg(lt, 3.8, 4.4);
+    if (k > 0) {
+      path(g, [[P.G[0] + 70, P.G[1] - 140], [HANG[0] - 150, HANG[1] + 4]], { c: C.coral, w: 5, dash: [14, 10], al: eo(k) });
+      path(g, [[HANG[0] + 150, HANG[1] + 10], [P.B[0] - 130, P.B[1] - 110]], { c: C.coral, w: 5, dash: [4, 14], al: .35 * eo(k) });
+      capsule(g, HANG[0], HANG[1] + wob(lt, .5, 7), 'cancel', { s: pop(k), glow: .5 + .3 * Math.sin(lt * 4) });
+    }
+    if (lt > 11) at(g, HANG[0] + 190, HANG[1] - 92, pop(seg(lt, 11.1, 11.6)), () => badge(g, 0, 0, 40, C.coral, '?'), { rot: wob(lt, .7, .12) });
+    // 创建会话 ≈ 50 ms 的进度条
+    ribbon50(g, P.B[0], 775, lt, seg(lt, 7.3, 7.8) * (1 - seg(lt, 10.8, 11.2)), { loop: true });
+  },
 });
+
+S('s02', {
+  title: true, fi: .3,
+  cues: [[.15, 'whoosh'], [2.0, 'send'], [3.3, 'latch'], [4.8, 'latch']],
+  draw(g, lt) {
+    const title = 'Kotlin 实现 SIP 通信协议', o = { s: 112, w: 900 };
+    const chars = Array.from(title), total = textW(g, title, o);
+    let x = 960 - total / 2;
+    chars.forEach((ch, i) => {
+      const w = textW(g, ch, o), p = seg(lt, .15 + i * .04, .65 + i * .04);
+      at(g, x + w / 2, 400 + (1 - eo(p)) * 70, .6 + .4 * pop(p), () => text(g, ch, 0, 0, { ...o, c: ch === 'S' || ch === 'I' || ch === 'P' ? C.blue : C.ink }), { al: eo(p) });
+      x += w;
+    });
+    const u = eio(seg(lt, 1.1, 1.8));
+    rr(g, 960 - total / 2, 478, total * u, 12, 6); g.fillStyle = C.amber; g.fill();
+    const sp = seg(lt, 4.8, 5.3);
+    at(g, 960, 575, pop(sp), () => text(g, '先排队，再开口', 0, 0, { s: 72, w: 900, c: C.blue }), { al: sp > 0 ? 1 : 0 });
+    // 迷你舞台
+    const mA = [600, 790], mG = [960, 780], mB = [1320, 790];
+    path(g, partial([[mA[0] + 70, mA[1]], [mG[0] - 50, mG[1]]], eo(seg(lt, 1.0, 1.6))), { c: rgba(C.ink, .35), w: 4, dash: [3, 12] });
+    path(g, partial([[mG[0] + 50, mG[1]], [mB[0] - 70, mB[1]]], eo(seg(lt, 1.3, 1.9))), { c: rgba(C.ink, .35), w: 4, dash: [3, 12] });
+    device(g, 'A', mA[0], mA[1], .5 * pop(seg(lt, .5, 1.0)), { mode: 'calling' }, lt, { label: false });
+    gateway(g, mG[0], mG[1], .46 * pop(seg(lt, .65, 1.15)), lt, { label: false, busy: gwBusy(lt, 2.0, .6) });
+    device(g, 'B', mB[0], mB[1], .5 * pop(seg(lt, .8, 1.3)), { mode: 'ringing', from: 'idle', at: 3.3 }, lt, { label: false });
+    if (lt < 2.6) fly(g, lt, 2.0, .6, [mA[0], mA[1] - 60], [mG[0], mG[1] - 70], 'invite', { lift: 60, s: .45, ripple: false });
+    else fly(g, lt, 2.6, .7, [mG[0], mG[1] - 70], [mB[0], mB[1] - 60], 'invite', { lift: 60, s: .45 });
+  },
+});
+
+/* =====================================================================
+ * 第一章：接通，原来这么麻烦
+ * ===================================================================== */
+S('s03', {
+  card: 2,
+  cam: [[0, 960, 470, 1.05], [12, 960, 480, 1]],
+  cues: [[0, 'whoosh'], [1.75, 'latch', .6], [1.9, 'latch', .6], [2.05, 'latch', .6], [4.4, 'send', .6], [6.6, 'whoosh', .7], [8.8, 'latch']],
+  draw(g, lt) {
+    const lk = eo(seg(lt, 4.2, 5.0)), busy = lt > 5 ? .45 : 0;
+    stage(g, lt, { enter: 1.6, linkP: lk, busy, a: { mode: 'app' }, b: { mode: 'app' },
+      ca: lt > 9 ? ['状态 ?', null, 0, { c: C.grey, al: eo(seg(lt, 9.0, 9.4)) }] : null,
+      cb: lt > 9.2 ? ['状态 ?', null, 0, { c: C.grey, al: eo(seg(lt, 9.2, 9.6)) }] : null });
+    // 数据包在线上来回流动
+    if (lt > 5) for (let i = 0; i < 10; i++) {
+      const ph = ((lt - 5) * .55 + i / 10) % 1, ab = i % 2 === 0;
+      const segPts = ph < .5 ? [[P.A[0] + 178, P.A[1] - 10], [P.G[0] - 124, P.G[1] + 5]] : [[P.G[0] + 124, P.G[1] + 5], [P.B[0] - 178, P.B[1] - 10]];
+      const u = ab ? (ph % .5) * 2 : 1 - (ph % .5) * 2, pts = ab ? segPts : segPts;
+      const p = [lerp(pts[0][0], pts[1][0], u), lerp(pts[0][1], pts[1][1], u)];
+      rr(g, p[0] - 8, p[1] - 8 + (ab ? -14 : 14), 16, 16, 4); g.fillStyle = ab ? C.blue : C.orange; g.globalAlpha = eo(seg(lt, 5, 5.6)); g.fill(); g.globalAlpha = 1;
+    }
+    // “SIP 代理服务器” → 网关来当
+    const t1 = seg(lt, 5.1, 5.6), strike = eo(seg(lt, 6.3, 6.7)), t2 = seg(lt, 6.6, 7.1), outA = 1 - eo(seg(lt, 8.0, 8.4));
+    if (t1 > 0 && outA > 0) {
+      at(g, P.G[0], 215, pop(t1), () => {
+        card(g, -170, -32, 340, 64, { r: 32, fill: C.greyL, lw: 3 }); text(g, 'SIP 代理服务器', 0, 1, { s: 30, w: 900, c: C.ink2 });
+        path(g, partial([[-150, 4], [150, -2]], strike), { c: C.coral, w: 6 });
+      }, { al: outA * (1 - .4 * strike) });
+      if (t2 > 0) tag(g, '网关来当', P.G[0] + 250, 195, C.purple, t2, { rot: -.06, al: outA });
+    }
+    // 自研的通话协议
+    const bp = seg(lt, 8.6, 9.1);
+    if (bp > 0) at(g, P.G[0], 205, pop(bp), () => {
+      card(g, -300, -46, 600, 92, { r: 24, fill: C.blueL, lw: 3, stroke: C.blue, dash: [12, 8] });
+      text(g, '通话怎么建立？', -60, 1, { s: 34, w: 900, c: C.blue });
+      tag(g, '自己实现', 190, 0, C.blue, seg(lt, 9.6, 10.0), { fs: 26 });
+    });
+  },
+});
+
+S('s04', {
+  cues: [[.6, 'send'], [1.4, 'send', .3], [2.2, 'ring'], [2.4, 'send', .3], [3.4, 'send', .3], [4.4, 'send'], [6.0, 'success']],
+  draw(g, lt) {
+    stage(g, lt, { busy: Math.max(gwBusy(lt, .6), gwBusy(lt, 4.4)),
+      a: lt < 6 ? { mode: 'calling', from: 'app', at: .3 } : { mode: 'calling', label: '对方响铃中', from: 'calling', at: 6.0 },
+      b: { mode: 'ringing', from: 'app', at: 2.2 },
+      ca: lt < 6 ? ['CALLING', 'IDLE', .3] : ['RINGING', 'CALLING', 6.0], cb: ['RINGING', 'IDLE', 2.2] });
+    // 每秒重发的影子
+    for (const t0 of [1.4, 2.4, 3.4, 4.4, 5.4]) {
+      const k = (lt - t0) / .9; if (k < 0 || k > 1 || t0 >= 6) continue;
+      capsule(g, P.A[0] + 40 * k, P.A[1] - 175 - 70 * eo(k), 'invite', { s: .6, al: .45 * (1 - k) });
+    }
+    // 重发开关
+    const rp = seg(lt, 1.0, 1.4), stop = seg(lt, 6.0, 6.3);
+    if (rp > 0) at(g, P.A[0] - 230, P.A[1] - 170, pop(rp), () => {
+      dot(g, 0, 0, 40, stop > 0 ? C.green : '#fff'); ring(g, 0, 0, 40, C.ink, 3);
+      if (stop < 1) { const a = -lt * 5; ring(g, 0, 0, 22, C.blue, 6, 1 - stop, a, a + 4.6); arrowHead(g, Math.cos(a + 4.6) * 22, Math.sin(a + 4.6) * 22, a + 4.6 + Math.PI / 2, C.blue, 14, 1 - stop); }
+      if (stop > 0) icCheck(g, 0, 2, 40, '#fff', eo(stop), 7);
+      text(g, stop > 0 ? '停止重发' : '每秒重发', 0, 66, { s: 24, w: 900, c: stop > 0 ? C.green : C.blue });
+    });
+    relay(g, lt, .6, 'invite', 'AB');
+    relay(g, lt, 4.4, 'ring', 'BA');
+  },
+});
+
+S('s05', {
+  cam: [[0, 960, 470, 1], [9.0, 960, 470, 1], [10.6, 1150, 490, 1.08], [14, 1150, 490, 1.08]],
+  cues: [[.6, 'tick'], [1.0, 'send'], [2.6, 'latch'], [4.6, 'success'], [9.6, 'latch', .5]],
+  draw(g, lt) {
+    stage(g, lt, { busy: gwBusy(lt, 1.0),
+      a: lt < 4.4 ? { mode: 'calling', label: '对方响铃中' } : { mode: 'chat', from: 'calling', fromOpt: { label: '对方响铃中' }, at: 4.4 },
+      b: lt < 1.0 ? { mode: 'ringing' } : { mode: 'prepare', from: 'ringing', at: 1.0 },
+      ca: ['CHATTING', 'RINGING', 4.4], cb: ['PREPARE', 'RINGING', 1.0] });
+    tap(g, P.B[0] + 6, P.B[1] + 20, lt, .6);
+    relay(g, lt, 1.0, 'accept', 'BA');
+    if (lt > 9.4) tag(g, '还在准备…', P.B[0] + 210, CHIP_Y - 60, C.amber, seg(lt, 9.5, 9.9), { rot: .05, tc: C.ink });
+  },
+});
+
+S('s06', {
+  cam: [[0, 1150, 490, 1.08], [1.4, 960, 470, 1], [13, 960, 480, 1]],
+  cues: [[.5, 'send'], [2.1, 'latch'], [4.2, 'success'], [8.8, 'latch']],
+  draw(g, lt) {
+    stage(g, lt, { busy: gwBusy(lt, .5),
+      a: { mode: 'chat' }, b: lt < 4.0 ? { mode: 'prepare' } : { mode: 'chat', from: 'prepare', at: 4.0 },
+      ca: ['CHATTING', null, 0, { glow: lt > 8.6 ? eo(seg(lt, 8.6, 9.2)) : 0 }], cb: ['CHATTING', 'PREPARE', 4.0, { glow: lt > 8.6 ? eo(seg(lt, 8.6, 9.2)) : 0 }] });
+    relay(g, lt, .5, 'confirm', 'AB');
+    // 语音数据双向流动
+    if (lt > 4.4) for (let i = 0; i < 14; i++) {
+      const ph = ((lt - 4.4) * .45 + i / 14) % 1, ab = i % 2 === 0, u = ab ? ph : 1 - ph;
+      const x = lerp(P.A[0] + 178, P.B[0] - 178, u), y = P.A[1] - 10 - Math.sin(u * Math.PI) * 30 + (ab ? -16 : 16);
+      dot(g, x, y, 7, ab ? C.blue : C.orange, eo(seg(lt, 4.4, 5)) * (.5 + .5 * Math.sin(u * Math.PI)));
+    }
+    // 状态对齐的括号
+    const bk = eo(seg(lt, 8.4, 9.2));
+    if (bk > 0) {
+      path(g, partial([[P.A[0], CHIP_Y + 30], [P.A[0], 790], [P.B[0], 790], [P.B[0], CHIP_Y + 30]], bk), { c: C.green, w: 6 });
+      tag(g, '状态对齐', 960, 790, C.green, seg(lt, 9.0, 9.4));
+    }
+  },
+});
+
+/* =====================================================================
+ * 第二章：取消，掉进了缝里
+ * ===================================================================== */
+S('s07', {
+  card: 3, demo: true,
+  cam: [[0, 960, 470, 1], [8.6, 960, 470, 1], [11.3, P.B[0], P.B[1] - 6, 6.2], [12, P.B[0], P.B[1] - 6, 6.2]],
+  cues: [[0, 'whoosh'], [2.2, 'whoosh', .8], [4.4, 'send'], [6.0, 'tick'], [6.4, 'send'], [8.8, 'whoosh']],
+  draw(g, lt) {
+    const back = lt >= 2.7;
+    stage(g, lt, { busy: Math.max(gwBusy(lt, 4.4), gwBusy(lt, 6.4)),
+      a: !back ? { mode: 'chat' } : lt < 6.0 ? { mode: 'calling', from: lt < 3.2 ? 'chat' : null, at: 2.7 } : { mode: 'cancelled', from: 'calling', at: 6.0 },
+      b: !back ? { mode: 'chat' } : lt < 6.0 ? { mode: 'idle', from: lt < 3.2 ? 'chat' : null, at: 2.7 } : { mode: 'creating', from: 'idle', at: 6.0 },
+      ca: !back ? ['CHATTING'] : lt < 6.0 ? ['CALLING', 'CHATTING', 2.7] : ['ENDED.SELF_TERMINATED', 'CALLING', 6.0],
+      cb: !back ? ['CHATTING'] : ['IDLE', 'CHATTING', 2.7] });
+    // 倒带
+    const rw = win(lt, 2.0, 3.7, .2, .35);
+    if (rw > 0) {
+      g.save(); g.globalAlpha *= rw;
+      for (let i = 0; i < 9; i++) { const y = 150 + i * 90 + hash(i) * 30, x = ((-lt * 2600 + hash(i * 5) * 3000) % 2600 + 2600) % 2600 - 300; path(g, [[x, y], [x + 260 + hash(i * 2) * 200, y]], { c: rgba(C.ink, .12), w: 6 }); }
+      at(g, 960, 215, 1 + .08 * Math.sin(lt * 10), () => { card(g, -96, -62, 192, 124, { r: 30, fill: C.ink, lw: 0 });
+        for (const dx of [-30, 18]) { g.beginPath(); g.moveTo(dx + 26, -30); g.lineTo(dx - 22, 0); g.lineTo(dx + 26, 30); g.closePath(); g.fillStyle = '#fff'; g.fill(); } });
+      g.restore();
+    }
+    if (lt > 4.0 && lt < 9.0) relay(g, lt, 4.4, 'invite', 'AB');
+    tap(g, P.A[0] + 6, P.A[1] + 20, lt, 6.0);
+    // 取消消息：A → 网关 → 停在 B 门口
+    if (lt >= 6.4) {
+      if (lt < 7.2) fly(g, lt, 6.4, .8, [P.A[0], P.A[1] - 40], [P.G[0], P.G[1] - 60], 'cancel', { lift: 80, ripple: false });
+      else fly(g, lt, 7.2, .8, [P.G[0], P.G[1] - 60], [P.B[0] - 120, P.B[1] - 200], 'cancel', { lift: 60, hold: true, holdDy: wob(lt, .5, 6) });
+    }
+    if (lt > 8.4) tag(g, '建会话中', P.B[0] + 200, P.B[1] - 120, C.orange, seg(lt, 8.4, 8.8), { fs: 24, rot: .05 });
+    // 推进到 B 的屏幕里
+    const bi = eo(seg(lt, 10.6, 12));
+    if (bi > 0) screenSpace(g, () => { g.save(); g.globalAlpha *= bi; g.fillStyle = C.bg; g.fillRect(0, 0, W, H); g.restore(); board(g, '被叫屏 B · 内部处理', bi, { right: '会话还没建好' }); });
+  },
+});
+
+S('s08', {
+  demo: true, scaled: true,
+  cues: [[.4, 'tick'], [ARRIVE - .7, 'send'], [ARRIVE, 'latch'], [9.6, 'error', .5]],
+  draw(g, lt) {
+    const ms = msS08(lt);
+    board(g, '被叫屏 B · 内部处理', 1, { right: '' });
+    ruler(g, ms, { mark: lt > ARRIVE - .05 ? 10 : null, markK: seg(lt, ARRIVE - .05, ARRIVE + .4) });
+    createLane(g, ms, 360, '创建会话 S1', lt); bigMs(g, ms);
+    sessionSlot(g, SLOT[0], SLOT[1], ms / 50, lt);
+    // 入口
+    text(g, '入站消息', 230, 560, { s: 26, w: 900, c: C.ink2 });
+    path(g, [[160, 650], [300, 650]], { c: rgba(C.ink, .3), w: 5, dash: [3, 13], off: -lt * 30 });
+    if (lt > ARRIVE - .8) {
+      const k = clamp((lt - (ARRIVE - .8)) / .8), x = lerp(60, 640, eo(k));
+      capsule(g, x, 650, 'cancel', { s: .9, tag: 'S1', sx: 1 + .12 * Math.sin(k * Math.PI), glow: k < 1 ? .5 : 0 });
+      ripple(g, 640, 650, lt - ARRIVE, C.coral, 40, 150);
+    }
+    // 消息到了，会话还没建好
+    const q = eo(seg(lt, 9.4, 10.2));
+    if (q > 0) {
+      path(g, partial([[820, 650], [SLOT[0] - 160, SLOT[1]]], q), { c: C.coral, w: 5, dash: [12, 10] });
+      badge(g, (820 + SLOT[0] - 160) / 2, 650, 34, C.coral, '?', seg(lt, 9.9, 10.3));
+      tag(g, '未就绪', SLOT[0], SLOT[1] + 130, C.coral, seg(lt, 10.0, 10.4), { fs: 26 });
+    }
+  },
+});
+
+S('s09', {
+  demo: true, scaled: true,
+  cues: [[.4, 'send'], [1.6, 'tick', .5], [4.8, 'error'], [6.4, 'error', .6], [9.6, 'tick', .6], [10.0, 'tick', .6], [10.9, 'latch']],
+  draw(g, lt) {
+    const ms = msS09(lt);
+    board(g, '被叫屏 B · 内部处理', 1);
+    ruler(g, ms, { mark: 10 }); createLane(g, ms, 360, '创建会话 S1', lt); bigMs(g, ms);
+    sessionSlot(g, SLOT[0], SLOT[1], ms / 50, lt);
+    // 会话匹配器
+    const MX = 900, MY = 650, shake = lt > 4.8 && lt < 5.3 ? Math.sin(lt * 70) * 10 * (1 - (lt - 4.8) / .5) : 0;
+    at(g, MX + shake, MY, 1, () => {
+      card(g, -150, -95, 300, 190, { r: 26, fill: '#fff', lw: 3.5 });
+      card(g, -150, -95, 300, 56, { r: 26, fill: C.purpleL, lw: 0, shadow: false }); path(g, [[-150, -39], [150, -39]], { c: C.ink, w: 3 });
+      text(g, '会话匹配器', 0, -66, { s: 26, w: 900, c: C.purple });
+      card(g, -120, -20, 240, 46, { r: 12, fill: C.greyL, lw: 2.5, shadow: false });
+      text(g, lt < 1.6 ? '当前会话：—' : lt < 4.8 ? '查找 S1 …' : '没有 S1', 0, 4, { f: 'mono', s: 24, w: 700, c: lt < 4.8 ? C.ink : C.coral });
+      if (lt > 1.4 && lt < 4.8) { const sx = -110 + ((lt - 1.4) * 260) % 220; path(g, [[sx, -20], [sx, 26]], { c: C.purple, w: 4, al: .8 }); }
+      text(g, lt > 5.6 ? '是邀请吗？' : '', 0, 60, { s: 24, w: 900, c: C.ink2 });
+    });
+    if (lt > 4.8) badge(g, MX + 150, MY - 95, 30, C.coral, 'cross', seg(lt, 4.8, 5.1));
+    if (lt > 6.4) badge(g, MX + 110, MY + 60, 24, C.coral, 'cross', seg(lt, 6.4, 6.7));
+    // 胶囊走进匹配器
+    const ink = eo(seg(lt, .4, 1.4)), out = seg(lt, 9.2, 9.6);
+    if (out < 1) capsule(g, lerp(640, MX - 270, ink), 650 - 60 * ink, 'cancel', { s: lerp(.9, .62, ink), tag: 'S1', al: 1 - out });
+    // 打印日志
+    const pr = seg(lt, 9.6, 10.8), fall = seg(lt, 10.8, 11.1);
+    card(g, MX - 140, 790, 280, 52, { r: 14, fill: C.greyL, lw: 3 }); text(g, '日志', MX - 160, 816, { s: 26, w: 900, c: C.ink2, a: 'right' });
+    if (pr > 0) {
+      const y = lerp(MY + 95, 760 + 30 * eo(fall), eo(pr));
+      g.save(); g.beginPath(); g.rect(MX - 160, MY + 95, 320, 400); g.clip();
+      card(g, MX - 120, y - 24, 240, 48, { r: 6, fill: '#fff', lw: 2.5, sb: 10, so: 3 });
+      text(g, '未匹配 · 已忽略', MX, y + 1, { f: 'mono', s: 22, w: 700, c: C.coral });
+      g.restore();
+    }
+  },
+});
+
+S('s10', {
+  demo: true,
+  cam: [[0, P.B[0], P.B[1] - 6, 6.2], [4.6, P.B[0], P.B[1] - 6, 6.2], [6.5, 960, 470, 1], [14, 960, 480, 1]],
+  cues: [[.97, 'success'], [4.7, 'whoosh'], [6.5, 'ring'], [8.0, 'ring', .7], [9.7, 'error', .6]],
+  draw(g, lt) {
+    const fadeB = 1 - eo(seg(lt, 4.4, 5.1));
+    if (lt > 4.3) {
+      stage(g, lt, { a: { mode: 'cancelled' }, b: { mode: 'ringing', from: 'creating', at: 4.8 },
+        ca: ['ENDED.SELF_TERMINATED'], cb: ['RINGING', 'IDLE', 4.8] });
+      const dk = seg(lt, 9.6, 10.2);
+      if (dk > 0) {
+        path(g, partial([[P.A[0] + 170, CHIP_Y], [P.B[0] - 120, CHIP_Y]], eo(dk)), { c: C.coral, w: 5, dash: [14, 10] });
+        tag(g, '两端不一致', 960, CHIP_Y, C.coral, seg(lt, 10.0, 10.4));
+        countdown(g, P.B[0] + 250, CHIP_Y - 70, 40, 1 - (lt - 9.6) / 60 * 6, Math.ceil(60 - (lt - 9.6) * 1.2) + 's', C.orange, { fs: 26 });
+      }
+    }
+    if (fadeB > 0) screenSpace(g, () => {
+      const ms = Math.min(50, msS10(lt));
+      g.save(); g.globalAlpha *= fadeB;
+      if (lt < 4.4) { g.fillStyle = C.bg; g.fillRect(0, 0, W, H); }
+      board(g, '被叫屏 B · 内部处理', 1); ruler(g, ms, { mark: 10 }); createLane(g, ms, 360, '创建会话 S1', lt); bigMs(g, ms);
+      sessionSlot(g, SLOT[0], SLOT[1], ms / 50, lt, { doneAt: .97 });
+      card(g, 900 - 140, 790, 280, 52, { r: 14, fill: C.greyL, lw: 3 }); text(g, '日志', 740, 816, { s: 26, w: 900, c: C.ink2, a: 'right' });
+      card(g, 900 - 120, 762, 240, 48, { r: 6, fill: '#fff', lw: 2.5, sb: 10, so: 3 }); text(g, '未匹配 · 已忽略', 900, 787, { f: 'mono', s: 22, w: 700, c: C.coral });
+      g.restore();
+    });
+  },
+});
+
+/* =====================================================================
+ * 第三章：状态机，背不了这锅
+ * ===================================================================== */
+function gateArch(g, x, y, open, lt, o = {}) { // 会话关卡：门框 + 锁
+  const c = open > .5 ? C.green : C.purple;
+  card(g, x - 130, y - 170, 40, 300, { r: 12, fill: rgba(c, .25), lw: 3 }); card(g, x + 90, y - 170, 40, 300, { r: 12, fill: rgba(c, .25), lw: 3 });
+  card(g, x - 150, y - 200, 300, 54, { r: 16, fill: c === C.green ? C.greenL : C.purpleL, lw: 3 });
+  text(g, '会话关卡', x, y - 172, { s: 28, w: 900, c });
+  lockIcon(g, x, y - 20 - open * 70, .95, open > .5 ? C.green : C.amber, open);
+  if (o.glow) { g.save(); g.globalAlpha *= o.glow; ring(g, x, y, 170, C.green, 6, .5); g.restore(); }
+}
+function machine(g, x, y, lit, lt, o = {}) { // 状态机小卡
+  card(g, x - 170, y - 130, 340, 260, { r: 30, fill: '#fff', lw: 3.5, al: o.al });
+  text(g, '状态机', x, y - 92, { s: 30, w: 900, al: o.al });
+  const pts = [[x - 95, y + 10], [x + 95, y + 10], [x, y + 85]];
+  path(g, [pts[0], pts[1]], { c: C.ink, w: 3, al: .4 }); path(g, [pts[1], pts[2]], { c: C.ink, w: 3, al: .4 }); path(g, [pts[2], pts[0]], { c: C.ink, w: 3, al: .4 });
+  pts.forEach((p, i) => { const on = lit > i; dot(g, p[0], p[1], 26, on ? [C.orange, C.green, C.purple][i] : '#fff'); ring(g, p[0], p[1], 26, C.ink, 3); });
+}
+S('s11', {
+  card: 4,
+  cues: [[0, 'whoosh'], [2.0, 'send', .5], [3.0, 'error', .5], [4.3, 'send'], [5.5, 'latch'], [8.3, 'send'], [9.4, 'success']],
+  draw(g, lt) {
+    const e = t0 => pop(seg(lt, t0, t0 + .5));
+    const CX = 420, GX = 960, MX = 1520, Y = 520;
+    at(g, GX, Y, e(1.8), () => gateArch(g, 0, 0, eo(seg(lt, 5.4, 5.9)), lt, { glow: seg(lt, 5.6, 6) * (1 - seg(lt, 7.5, 8)) }));
+    at(g, MX, Y, e(2.0), () => machine(g, 0, 0, lt > 9.4 ? 1 + Math.floor((lt - 9.4) / .3) : 0, lt));
+    // 直接丢给状态机：画出来再划掉
+    const d = eo(seg(lt, 2.0, 2.8)), dOut = 1 - eo(seg(lt, 3.5, 3.9));
+    if (d > 0 && dOut > 0) { arrow(g, [[CX + 140, Y - 110], [GX, Y - 260], [MX - 180, Y - 110]], { p: d, c: C.coral, w: 5, dash: [14, 10], al: dOut }); icCross(g, GX, Y - 240, 60, C.coral, eo(seg(lt, 3.0, 3.4)), 10); }
+    // 胶囊：走到关卡 → 插钥匙 → 穿过 → 进状态机
+    let x = CX, s = 1;
+    if (lt > 4.2) x = lerp(CX, GX - 240, eo(seg(lt, 4.2, 5.0)));
+    if (lt > 8.2) x = lerp(GX - 240, MX - 40, eio(seg(lt, 8.2, 9.3)));
+    if (lt > 9.0) s = 1 - eo(seg(lt, 9.0, 9.4));
+    at(g, x, Y, e(1.6) * s, () => capsule(g, 0, 0, 'cancel', { s: .8, tag: 'S1' }));
+    if (lt > 5.0 && lt < 8.2) keyIcon(g, GX - 90 + 50 * eo(seg(lt, 5.0, 5.4)), Y - 20, .9, C.purple);
+    if (lt > 5.7) tag(g, 'sessionId 匹配', GX, Y + 220, C.green, seg(lt, 5.7, 6.1), { fs: 26 });
+  },
+});
+
+S('s12', {
+  cues: [[.5, 'latch', .6], [4.4, 'send'], [5.8, 'success'], [8.4, 'error'], [9.0, 'latch', .6]],
+  draw(g, lt) {
+    const e = t0 => seg(lt, t0, t0 + .5), R = [520, 470], O = [1430, 470], Pp = [975, 250], T = [975, 720];
+    const reset = lt > 8.0;
+    // 次要边
+    arrow(g, [[R[0] + 60, R[1] - 50], [Pp[0] - 160, Pp[1] + 20]], { p: eo(e(.9)), c: C.grey, w: 4, al: .6 });
+    arrow(g, [[R[0] + 60, R[1] + 50], [T[0] - 160, T[1] - 20]], { p: eo(e(1.1)), c: C.grey, w: 4, al: .6 });
+    if (e(1.0) > 0) { text(g, '点接听', 650, 320, { s: 24, w: 700, c: C.grey }); text(g, '60 s 超时', 660, 640, { s: 24, w: 700, c: C.grey }); }
+    // 主边：收到 402
+    const main = eo(e(1.4)), lit = lt > 5.8 && !reset;
+    arrow(g, [[R[0] + 150, R[1]], [O[0] - 230, O[1]]], { p: main, c: reset ? C.grey : C.coral, w: 7 });
+    if (main > .5) tag(g, '收到 402 取消', 975, R[1] - 52, reset ? C.grey : C.coral, e(1.9), { fs: 26 });
+    node(g, ...Pp, 'PREPARE', { dim: true, s: pop(e(.6)) });
+    node(g, ...T, 'ENDED.RINGING_TIMEOUT', { dim: true, s: pop(e(.7)) });
+    node(g, ...R, 'RINGING', { s: pop(e(.3)), pulse: !lit, t: lt, on: 0 });
+    node(g, ...O, 'ENDED.OTHER_TERMINATED', { s: pop(e(.5)), on: lit ? 1 : 0, c: C.green });
+    if (lit) burst(g, O[0], O[1], lt - 5.8, C.green);
+    if (lt > 4.4 && lt < 5.9) capsule(g, lerp(R[0] + 160, O[0] - 240, eio(seg(lt, 4.4, 5.8))), R[1] - 4, 'cancel', { s: .6 });
+    // 可刚才：消息被挡在门外
+    if (reset) {
+      const gx = 260; card(g, gx - 16, R[1] - 90, 32, 180, { r: 10, fill: C.purpleL, lw: 3 });
+      const b = seg(lt, 8.2, 9.0), x = b < .5 ? lerp(110, gx - 70, eo(b * 2)) : lerp(gx - 70, 140, eo((b - .5) * 2)), y = R[1] + (b > .5 ? 120 * eo((b - .5) * 2) : 0);
+      capsule(g, x, y, 'cancel', { s: .55, rot: b > .5 ? -.5 * (b - .5) : 0, al: 1 - seg(lt, 9.4, 9.9) });
+      tag(g, '没进来', R[0], R[1] + 150, C.coral, seg(lt, 8.6, 9.0), { rot: -.08, fs: 34 });
+    }
+  },
+});
+
+S('s13', {
+  scaled: true,
+  cues: [[.4, 'tick', .5], [4.75, 'latch'], [5.0, 'error', .5], [8.4, 'error']],
+  draw(g, lt) {
+    const ms = Math.max(0, (lt - .4) * 2.3);
+    board(g, '被叫屏 B · 内部（两件事同时在跑）', 1);
+    ruler(g, ms);
+    createLane(g, ms, 360, '① 创建会话', lt);
+    // ② 处理取消
+    text(g, '② 处理取消', RX0 - 24, 520 + 25, { s: 26, w: 900, a: 'right' });
+    card(g, RX0, 520, RX1 - RX0, 50, { r: 14, fill: '#fff', lw: 3, shadow: false });
+    const k = seg(lt, 4.55, 4.85);
+    if (k > 0) {
+      at(g, rx(10) + 60, 545 - (1 - eo(k)) * 160, 1, () => card(g, -62, -22, 124, 44, { r: 12, fill: C.coral, lw: 2.5 }));
+      text(g, '402', rx(10) + 60, 545, { f: 'mono', s: 22, w: 700, c: '#fff', al: eo(k) });
+      // 重叠区：闪红
+      const fl = .25 + .2 * Math.sin(lt * 9);
+      g.save(); g.globalAlpha *= fl * eo(seg(lt, 4.8, 5.2)); rr(g, rx(10) - 10, 340, 150, 250, 18); g.fillStyle = C.coral; g.fill(); g.restore();
+      tag(g, '还没建完', rx(10) + 60, 470, C.coral, seg(lt, 5.0, 5.4), { fs: 24 });
+    }
+    // 期望 vs 实际
+    const ex = seg(lt, 8.2, 8.6), ac = seg(lt, 8.6, 9.0);
+    if (ex > 0) at(g, 960, 690, pop(ex), () => { card(g, -560, -34, 1120, 68, { r: 22, fill: C.greenL, lw: 3 }); text(g, '应该：① 建完会话  →  ② 再处理取消', 0, 1, { s: 30, w: 900, c: C.green }); });
+    if (ac > 0) at(g, 960, 780, pop(ac), () => { card(g, -560, -34, 1120, 68, { r: 22, fill: C.coralL, lw: 3 }); text(g, '实际：② 插进了 ① 的半路', 0, 1, { s: 30, w: 900, c: C.coral }); });
+  },
+});
+
+S('s14', {
+  cues: [[1.0, 'tick', .5], [1.6, 'tick', .5], [2.2, 'tick', .5], [2.8, 'tick', .5], [3.4, 'tick', .5], [4.0, 'tick', .6], [4.4, 'send'], [5.4, 'latch'], [8.6, 'error', .6]],
+  draw(g, lt) {
+    const BX = 600, BY = 450;
+    device(g, 'B', BX, BY, 1.05, lt < 5.4 ? { mode: 'ringing' } : { mode: 'timeout', from: 'ringing', at: 5.4 }, lt);
+    chip(g, BX, BY + 230, lt, 'ENDED.RINGING_TIMEOUT', 'RINGING', 5.4);
+    const left = clamp(1 - (lt - .6) / 3.4), cAl = 1 - eo(seg(lt, 7.6, 8.0));
+    if (cAl > 0) at(g, 1320, 450, pop(seg(lt, .2, .7)), () => {
+      countdown(g, 0, 0, 160, left, Math.ceil(60 * left) + ' s', C.orange, { fs: 92 });
+      tag(g, '快进 ▶▶', 0, 220, C.ink, seg(lt, .6, 1.0), { fs: 26 });
+    }, { al: cAl });
+    // 本地产生超时消息（不上网线）
+    if (lt > 4.3) {
+      const k = seg(lt, 4.4, 5.4);
+      if (k < 1) { const p = bez([BX + 120, BY - 140], [BX + 330, BY - 340], [BX - 60, BY - 150], eio(k)); capsule(g, p[0], p[1], 'timeout', { s: .7, glow: .5 }); }
+      if (lt > 5.2) tag(g, '本地产生 · 不发网络', BX, BY - 220, C.purple, seg(lt, 5.4, 5.8), { fs: 26 });
+    }
+    // 但救不了丢掉的取消
+    const lg = seg(lt, 8.0, 8.6);
+    if (lg > 0) at(g, 1320, 470, pop(lg), () => {
+      card(g, -260, -150, 520, 300, { r: 30, fill: '#fff', lw: 3.5 });
+      text(g, '日志', 0, -108, { s: 30, w: 900, c: C.ink2 });
+      g.save(); g.rotate(-.05); card(g, -170, -40, 340, 70, { r: 8, fill: C.coralL, lw: 3, stroke: C.coral }); text(g, '402 · 未匹配 · 已忽略', 0, -4, { f: 'mono', s: 24, w: 700, c: C.coral }); g.restore();
+      text(g, '取消，依然丢了', 0, 92, { s: 32, w: 900, c: C.coral });
+    });
+  },
+});
+
+/* =====================================================================
+ * 第四章：先排队，别抢跑
+ * ===================================================================== */
+function optCard(g, x, y, title, kind, lt, o = {}) {
+  at(g, x, y, o.s ?? 1, () => {
+    card(g, -190, -170, 380, 340, { r: 32, fill: o.pick ? C.greenL : '#fff', lw: 3.5, stroke: o.pick ? C.green : C.ink, sb: 30, so: 12 });
+    text(g, title, 0, -120, { s: 34, w: 900 });
+    if (kind === 'lock') { lockIcon(g, 40, 30, 1.3, C.amber); capsule(g, -110, 90, 'invite', { s: .42 }); capsule(g, -110, 30, 'cancel', { s: .42 }); text(g, '等待解锁', 0, 140, { s: 24, w: 700, c: C.ink2 }); }
+    if (kind === 'barrier') { at(g, 40, 120, .72, () => barrier(g, 0, 0, .5 + .5 * Math.sin(lt * 2), lt)); capsule(g, -100, 80, 'cancel', { s: .42 }); text(g, '暂停 / 恢复', 0, 140, { s: 24, w: 700, c: C.ink2 }); }
+    if (kind === 'flow') {
+      for (let i = 0; i < 3; i++) card(g, -150 + i * 62, 0, 50, 50, { r: 12, fill: i === 2 ? C.blueL : '#fff', lw: 3, sb: 8, so: 3 });
+      arrow(g, [[46, 25], [92, 25]], { c: C.blue, w: 5, hs: 14 });
+      card(g, 100, -15, 90, 80, { r: 16, fill: C.blueL, lw: 3 }); text(g, '工位', 145, 25, { s: 24, w: 900, c: C.blue });
+      text(g, '一次只做一件', 0, 140, { s: 24, w: 700, c: C.ink2 });
+    }
+  }, { al: o.al, rot: o.rot });
+  if (o.pick) badge(g, x + 170 * (o.s ?? 1), y - 160 * (o.s ?? 1), 32, C.green, 'check', o.pickP);
+}
+S('s15', {
+  card: 5,
+  cues: [[0, 'whoosh'], [2.1, 'error', .4], [3.0, 'latch'], [3.7, 'latch'], [4.0, 'latch'], [4.3, 'latch'], [7.4, 'success'], [10.6, 'latch'], [11.0, 'latch']],
+  draw(g, lt) {
+    // 先：两条消息挤在门口 → 排成一列
+    const jA = win(lt, 1.6, 3.7, .3, .3);
+    if (jA > 0) {
+      const lined = eio(seg(lt, 2.8, 3.2)), jit = (1 - lined) * Math.sin(lt * 26) * 16;
+      g.save(); g.globalAlpha *= jA;
+      card(g, 1180, 360, 60, 320, { r: 20, fill: C.orangeL, lw: 3 }); text(g, '被叫屏 B', 1210, 330, { s: 26, w: 900, c: C.orange });
+      capsule(g, lerp(1020, 920, lined) + jit, lerp(490, 520, lined), 'invite', { s: .8, rot: (1 - lined) * .2 });
+      capsule(g, lerp(1040, 520, lined) - jit, lerp(560, 520, lined), 'cancel', { s: .8, rot: -(1 - lined) * .25 });
+      g.restore();
+    }
+    const pick = lt > 7.0, mv = eio(seg(lt, 7.0, 7.8));
+    const xs = [480, 960, 1440], kinds = ['lock', 'barrier', 'flow'], names = ['加锁', 'Handler 同步屏障', 'Flow 串行消费'];
+    kinds.forEach((k, i) => {
+      const p = seg(lt, 3.7 + i * .3, 4.2 + i * .3); if (p <= 0) return;
+      if (k === 'flow') optCard(g, lerp(xs[i], 960, mv), lerp(480, 470, mv), names[i], k, lt, { s: pop(p) * lerp(1, 1.18, mv), pick, pickP: seg(lt, 7.4, 7.8) });
+      else optCard(g, lerp(xs[i], i === 0 ? 300 : 1620, mv), lerp(480, 520, mv), names[i], k, lt, { s: pop(p) * lerp(1, .78, mv), al: 1 - .6 * mv, rot: mv * (i === 0 ? -.08 : .08) });
+    });
+    if (lt > 10.4) { tag(g, '好懂', 860, 740, C.blue, seg(lt, 10.6, 11.0)); tag(g, '好维护', 1060, 740, C.green, seg(lt, 11.0, 11.4)); }
+  },
+});
+
+/* 第四、五章的传送带布置；cfg 给出各时刻 */
+function conveyor(g, lt, cfg) {
+  board(g, cfg.title || '被叫屏 B · 内部处理', 1, { right: cfg.right || '' });
+  g.save(); g.translate(980, 560); g.scale(1.1, 1.1); g.translate(-980, -548);
+  belt(g, lt, { run: cfg.run ?? 1 });
+  const done = cfg.doneAt != null && lt >= cfg.doneAt;
+  station(g, lt, { item: cfg.item?.(lt), tag: 'S1', prog: cfg.prog?.(lt), progLabel: cfg.progLabel, check: cfg.check?.(lt) });
+  sessionSlot(g, 1575, 560, cfg.slot ? cfg.slot(lt) : 0, lt, { doneAt: cfg.doneAt, label: '会话 S1 · 建造中' });
+  if (cfg.bar != null) barrier(g, 1040, BELT.y, cfg.bar(lt), lt, { stop: cfg.stop?.(lt) });
+  cfg.extra?.(g, lt, done);
+  g.restore();
+}
+S('s16', {
+  cues: [[.9, 'latch'], [1.5, 'latch'], [3.8, 'send'], [4.2, 'latch'], [10.8, 'success'], [11.0, 'whoosh'], [11.6, 'send']],
+  draw(g, lt) {
+    conveyor(g, lt, {
+      run: lt < 4.2 || (lt > 11.0 && lt < 12.2) ? 1 : .15,
+      item: t => t > 3.9 && t < 11.6 ? 'invite' : t >= 12.2 ? 'cancel' : null,
+      prog: t => t > 3.9 ? (t < 7 ? .05 : t < 11.6 ? clamp((t - 7) / 3.8) : 0) : null,
+      slot: t => clamp((t - 7) / 3.8), doneAt: 10.8,
+      bar: t => t < 11.0 ? 1 : 1 - eo(seg(t, 11.0, 11.4)),
+      check: t => t > 10.8 && t < 11.6 ? seg(t, 10.8, 11.1) : 0,
+      extra(g, t) {
+        // 101 掉上传送带 → 进工位；402 掉上来 → 停在拦截杆前
+        if (t < 3.9) { const [x0, y0] = drop(t, .5, 580, BELT.y - 34); const x = t < 1.1 ? x0 : lerp(580, 1000, eio(seg(t, 1.1, 3.8))); capsule(g, x, y0, 'invite', { s: .72, tag: 'S1' }); }
+        if (t < 12.2) { const [x0, y0] = drop(t, 1.1, 300, BELT.y - 34); const x = t < 1.7 ? x0 : t < 11.0 ? lerp(300, 820, eio(seg(t, 1.7, 4.2))) : lerp(820, 1100, eio(seg(t, 11.0, 12.2))); capsule(g, x, y0, 'cancel', { s: .72, tag: 'S1' });
+          if (t > 4.2 && t < 11.0) tag(g, '等待', 820, BELT.y - 110, C.amber, seg(t, 4.2, 4.6), { tc: C.ink, fs: 24 }); }
+      },
+    });
+  },
+});
+
+S('s17', {
+  cues: [[.4, 'tick', .5], [1.2, 'latch'], [5.0, 'success'], [9.4, 'latch']],
+  draw(g, lt) {
+    // 代码卡
+    const x0 = 140, y0 = 230, cw2 = 900, chh = 520;
+    card(g, x0, y0, cw2, chh, { r: 30, fill: '#1F2433', lw: 3.5, sb: 34, so: 14 });
+    for (const [i, c] of [[0, C.coral], [1, C.amber], [2, C.green]]) dot(g, x0 + 36 + i * 30, y0 + 34, 9, c);
+    text(g, '重新写过的示意代码', x0 + cw2 - 30, y0 + 35, { s: 22, w: 700, c: rgba('#ffffff', .55), a: 'right' });
+    const hl = lt < 9.2 ? 2 : 4, hk = eo(seg(lt, lt < 9.2 ? .9 : 9.2, lt < 9.2 ? 1.3 : 9.6));
+    rr(g, x0 + 20, y0 + 92 + hl * 56 - 26, (cw2 - 40) * hk, 50, 10); g.fillStyle = rgba(hl === 2 ? C.amber : C.blue, .22); g.fill();
+    const typed = clamp((lt - .3) / 2.6);
+    CODE.forEach((ln, i) => {
+      const n = Math.round(ln.length * clamp(typed * CODE.length - i)); if (n <= 0) return;
+      const s = ln.slice(0, n);
+      // 简单着色：关键字、函数名
+      let x = x0 + 44; const y = y0 + 94 + i * 56;
+      const parts = s.split(/(\bif\b|\belse\b|createCalleeAndWait|routeBySession|isNewInvite|collect)/);
+      for (const p of parts) {
+        if (!p) continue;
+        const c = p === 'if' || p === 'else' ? '#FF8FA3' : p === 'createCalleeAndWait' ? C.amber : p === 'routeBySession' ? '#8FB4FF' : p === 'isNewInvite' || p === 'collect' ? '#7FE0C0' : '#E8EAF2';
+        text(g, p, x, y, { f: 'mono', s: 30, w: 700, c, a: 'left' }); x += textW(g, p, { f: 'mono', s: 30, w: 700 });
+      }
+    });
+    if (lt > 1.0 && lt < 9.2) { const ux = x0 + 44 + textW(g, '        createCallee', { f: 'mono', s: 30, w: 700 }), uw = textW(g, 'AndWait', { f: 'mono', s: 30, w: 700 });
+      rr(g, ux, y0 + 94 + 2 * 56 + 18, uw * eo(seg(lt, 1.2, 1.7)), 6, 3); g.fillStyle = C.amber; g.fill(); }
+    // 循环示意
+    const CX = 1490, CY = 490, R = 200, nodes = [['取消息', -Math.PI / 2], ['完成处理', Math.PI / 6], ['取下一条', Math.PI * 5 / 6]];
+    const cur = lt < 4.6 ? 0 : lt < 9.2 ? 1 : 2;
+    ring(g, CX, CY, R, rgba(C.ink, .25), 6);
+    const a = -Math.PI / 2 + ((lt * .9) % 1) * TAU; dot(g, CX + Math.cos(a) * R, CY + Math.sin(a) * R, 12, C.blue);
+    nodes.forEach(([s, ang], i) => {
+      const x = CX + Math.cos(ang) * R, y = CY + Math.sin(ang) * R, on = i === cur;
+      at(g, x, y, (on ? 1.12 : 1) * pop(seg(lt, .6 + i * .2, 1.1 + i * .2)), () => {
+        card(g, -100, -36, 200, 72, { r: 36, fill: on ? C.blue : '#fff', lw: 3 }); text(g, s, 0, 2, { s: 30, w: 900, c: on ? '#fff' : C.ink });
+      });
+    });
+    if (lt > 4.8) tag(g, '会话建好 ✓', CX + Math.cos(Math.PI / 6) * R, CY + Math.sin(Math.PI / 6) * R + 80, C.green, seg(lt, 4.9, 5.3), { fs: 24 });
+  },
+});
+
+function miniLane(g, y, lt, mode, al = 1) { // s18 的两条对照车道
+  const good = mode === 'good';
+  g.save(); g.globalAlpha *= al;
+  card(g, 150, y - 125, 1620, 250, { r: 30, fill: good ? rgba(C.greenL, .7) : rgba(C.coralL, .7), lw: 3 });
+  text(g, good ? '等整个处理结束，再取下一条' : '只把“启动创建”放进队列', 190, y - 88, { s: 28, w: 900, a: 'left', c: good ? C.green : C.coral });
+  badge(g, 1720, y - 85, 26, good ? C.green : C.coral, good ? 'check' : 'cross', 1);
+  const doneAt = 9.8, done = lt >= doneAt;
+  // 402
+  if (good) {
+    const x = lt < doneAt + .6 ? 600 : lerp(600, 1180, eio(seg(lt, doneAt + .6, doneAt + 1.4)));
+    capsule(g, x, y + 20, 'cancel', { s: .74, tag: 'S1' });
+    if (lt < doneAt + .6) barrier(g, 770, y + 70, 1, lt);
+    if (lt > doneAt + 1.4) badge(g, 1180, y - 30, 22, C.green, 'check', seg(lt, doneAt + 1.4, doneAt + 1.7));
+  } else {
+    if (lt > 3.8 && lt < 5.0) tag(g, '创建任务 →', 1180, y - 60 - 30 * eo(seg(lt, 3.8, 4.6)), C.orange, seg(lt, 3.8, 4.1), { fs: 22 });
+    const k = seg(lt, 4.6, 5.6), x = lerp(600, 1330, eio(k));
+    if (k < 1) capsule(g, x, y + 20, 'cancel', { s: .74, tag: 'S1' });
+    else { const c = lt - 5.6; burst(g, 1340, y + 10, c, C.coral, 14, 140); capsule(g, 1300, y + 40 + 20 * eo(clamp(c * 2)), 'cancel', { s: .62, rot: .4, al: 1 - seg(lt, 6.4, 7) }); if (c < .4) { g.save(); g.globalAlpha *= 1 - c / .4; dot(g, 1340, y + 10, 70, C.coral, .35); g.restore(); } }
+  }
+  // 工位与会话槽
+  card(g, 820, y - 50, 220, 130, { r: 22, fill: '#fff', lw: 3 }); text(g, '工位', 930, y - 18, { s: 26, w: 900, c: C.blue });
+  const prog = good ? clamp((lt - 3.8) / 6) : clamp((lt - 3.8) / 6);
+  card(g, 850, y + 22, 160, 22, { r: 11, fill: '#fff', lw: 2.5, shadow: false }); hatch(g, 852, y + 24, 156 * prog, 18, prog >= 1 ? C.green : C.orange, lt * 40, 9);
+  if (good) { if (done) at(g, 1450, y + 10, pop(seg(lt, doneAt, doneAt + .35)), () => { card(g, -120, -55, 240, 110, { r: 20, fill: C.greenL, lw: 3, stroke: C.green }); text(g, '会话 S1 ✓', 0, 2, { s: 30, w: 900, c: C.green }); });
+    else { card(g, 1330, y - 45, 240, 110, { r: 20, fill: rgba('#fff', .7), lw: 3, dash: [10, 8], stroke: C.purple, shadow: false }); text(g, '建造中…', 1450, y + 10, { s: 26, w: 900, c: C.purple }); } }
+  else { card(g, 1330, y - 45, 240, 110, { r: 20, fill: rgba('#fff', .7), lw: 3, dash: [10, 8], stroke: C.purple, shadow: false }); text(g, '建造中…', 1450, y + 10, { s: 26, w: 900, c: C.purple }); }
+  g.restore();
+}
+S('s18', {
+  cues: [[3.8, 'send', .5], [4.6, 'send'], [5.6, 'error'], [9.8, 'success'], [11.2, 'latch']],
+  draw(g, lt) {
+    miniLane(g, 330, lt, 'bad', 1 - .55 * eo(seg(lt, 10.4, 11)));
+    miniLane(g, 640, lt, 'good', eo(seg(lt, .2, .6)));
+    if (lt < 3.6) tag(g, '注意：是“处理完”', 960, 815, C.ink, seg(lt, .6, 1.0), { fs: 30 });
+  },
+});
+
+/* =====================================================================
+ * 第五章：这回，终于接住了
+ * ===================================================================== */
+const REPLAY_DONE = 12 + .6; // 会话在 s21 的 0.6 秒建好（以 s19 开头为 0 的连续时间）
+function replay(g, T, o = {}) { // T：从 s19 开头算起的连续时间
+  conveyor(g, T, {
+    run: T < 4.4 ? 1 : .15,
+    item: t => t > 4.5 && t < 28.6 ? 'invite' : t >= 28.6 ? 'cancel' : null,
+    prog: t => t > 4.5 && t < 28.6 ? clamp((t - 4.6) / (REPLAY_DONE + 12 - 4.6)) : t >= 28.6 ? 1 : null,
+    progLabel: T >= 28.6 ? '处理取消' : '创建会话',
+    slot: t => clamp((t - 4.6) / (REPLAY_DONE + 12 - 4.6)), doneAt: REPLAY_DONE + 12,
+    bar: t => t < 28.2 ? (t < 8.0 ? eo(seg(t, 4.6, 5.0)) : 1) : 1 - eo(seg(t, 28.2, 28.6)),
+    stop: t => t > 8.2 && t < 28.2 ? seg(t, 8.2, 8.6) : 0,
+    check: t => t > 30.0 ? seg(t, 30.0, 30.3) : 0,
+    extra(g, t) {
+      if (t < 4.6) { const [x0, y0] = drop(t, 1.9, 580, BELT.y - 34); capsule(g, t < 2.5 ? x0 : lerp(580, 1000, eio(seg(t, 2.5, 4.5))), y0, 'invite', { s: .72, tag: 'S1', al: seg(t, 1.9, 2.1) }); }
+      if (t < 28.6) {
+        const [x0, y0] = drop(t, 2.3, 300, BELT.y - 34);
+        const jig = t > 12 && t < 28 ? Math.sin(t * 12) * 4 : 0;
+        capsule(g, (t < 2.9 ? x0 : lerp(300, 880, eio(seg(t, 2.9, 5.2)))) + jig, y0 - Math.abs(jig), 'cancel', { s: .72, tag: 'S1', al: seg(t, 2.3, 2.5), rot: jig * .01 });
+        if (t > 12.2 && t < 28.2) { // 等待气泡
+          at(g, 880, BELT.y - 130, pop(seg(t, 12.2, 12.6)), () => { card(g, -70, -30, 140, 60, { r: 30, fill: '#fff', lw: 3 }); for (let i = 0; i < 3; i++) dot(g, -26 + i * 26, 0, 7, C.amber, .3 + .7 * ((Math.floor(t * 3) % 3) === i ? 1 : 0)); });
+        }
+      } else capsule(g, lerp(1100, STATION[0], eio(seg(t, 28.2, 28.6))), BELT.y - 34, 'cancel', { s: .72, tag: 'S1', al: 1 - seg(t, 28.5, 28.6) });
+      o.extra?.(g, t);
+    },
+  });
+}
+S('s19', {
+  card: 6, scaled: true,
+  cues: [[0, 'whoosh'], [1.7, 'whoosh', .6], [2.2, 'latch'], [2.6, 'latch'], [4.6, 'send'], [8.3, 'latch']],
+  draw(g, lt) {
+    replay(g, lt);
+    const rw = win(lt, 1.6, 3.4, .2, .4);
+    if (rw > 0) at(g, 960, 320, pop(seg(lt, 1.6, 2.0)), () => { card(g, -150, -50, 300, 100, { r: 50, fill: C.ink, lw: 0 });
+      for (const dx of [-90, -52]) { g.beginPath(); g.moveTo(dx + 20, -24); g.lineTo(dx - 16, 0); g.lineTo(dx + 20, 24); g.closePath(); g.fillStyle = '#fff'; g.fill(); }
+      text(g, '再放一遍', 46, 2, { s: 30, w: 900, c: '#fff' }); }, { al: rw });
+  },
+});
+S('s20', {
+  scaled: true,
+  cues: [[1.0, 'tick', .4], [8.4, 'error', .4], [9.6, 'success', .7]],
+  draw(g, lt) {
+    replay(g, 12 + lt, { extra(g, t) {
+      const k = win(lt, 8.0, 11.4, .3, .4);
+      if (k > 0) { g.save(); g.globalAlpha *= k * .55; capsule(g, 1545, 610, 'cancel', { s: .62, rot: .35 }); burst(g, 1575, 610, ((lt - 8.0) % 1.2), C.coral, 10, 100); g.restore();
+        badge(g, 1700, 600, 26, C.coral, 'cross', seg(lt, 8.3, 8.6) * k); }
+      if (lt > 9.6) tag(g, '没撞上半成品 ✓', 1600, 760, C.green, seg(lt, 9.6, 10.0), { fs: 26 });
+    } });
+  },
+});
+S('s21', {
+  cues: [[.6, 'success'], [1.4, 'ring', .7], [4.3, 'whoosh'], [4.8, 'send'], [6.0, 'latch'], [8.9, 'success']],
+  draw(g, lt) {
+    replay(g, 24 + lt, { extra(g, t) {
+      // 匹配成功与状态切换
+      if (lt > 5.9) tag(g, '找到 S1 ✓', STATION[0], STATION[1] - 175, C.green, seg(lt, 5.9, 6.3), { fs: 26 });
+      if (lt > 8.6) chip(g, 1530, 700, lt, 'ENDED.OTHER_TERMINATED', 'RINGING', 8.8, { glow: eo(seg(lt, 8.9, 9.4)) });
+      else if (lt > .6) chip(g, 1530, 700, lt, 'RINGING', null, 0, { al: eo(seg(lt, .8, 1.2)) });
+      if (lt > 8.8) burst(g, 1530, 700, lt - 8.9, C.green);
+    } });
+  },
+});
+S('s22', {
+  cam: [[0, P.B[0], P.B[1] - 6, 6.2], [1.8, 960, 470, 1], [13, 960, 480, 1]],
+  cues: [[.2, 'whoosh'], [4.6, 'success'], [8.8, 'latch']],
+  draw(g, lt) {
+    stage(g, lt, { a: { mode: 'cancelled' }, b: { mode: 'ended', from: 'ringing', at: .6 },
+      ca: ['ENDED.SELF_TERMINATED', null, 0, { glow: eo(seg(lt, 4.4, 4.9)) }], cb: ['ENDED.OTHER_TERMINATED', 'RINGING', .6, { glow: eo(seg(lt, 4.4, 4.9)) }] });
+    const bk = eo(seg(lt, 4.3, 5.0));
+    if (bk > 0) { path(g, partial([[P.A[0], CHIP_Y + 30], [P.A[0], 780], [P.B[0], 780], [P.B[0], CHIP_Y + 30]], bk), { c: C.green, w: 6 }); tag(g, '结果对上了', 960, 780, C.green, seg(lt, 4.8, 5.2)); }
+    if (lt > 8.6) at(g, P.B[0], 215, pop(seg(lt, 8.7, 9.1)), () => { card(g, -250, -42, 500, 84, { r: 26, fill: C.blueL, lw: 3, stroke: C.blue });
+      for (let i = 0; i < 3; i++) card(g, -220 + i * 44, -18, 34, 34, { r: 8, fill: '#fff', lw: 2.5, shadow: false });
+      text(g, '补上：本地处理顺序', 50, 1, { s: 30, w: 900, c: C.blue }); });
+    const bo = 1 - eo(seg(lt, 0, .7));
+    if (bo > 0) screenSpace(g, () => { g.save(); g.globalAlpha *= bo; g.fillStyle = C.bg; g.fillRect(0, 0, W, H); board(g, '被叫屏 B · 内部处理', 1); g.restore(); });
+  },
+});
+S('s23', {
+  cues: [[.5, 'latch', .6], [4.4, 'latch', .6], [8.4, 'success', .7]],
+  draw(g, lt) {
+    // 上：缩小的舞台
+    const yy = 290, s = .62;
+    path(g, [[640, yy], [880, yy]], { c: rgba(C.ink, .35), w: 4, dash: [3, 12], off: -lt * 30 }); path(g, [[1040, yy], [1280, yy]], { c: rgba(C.ink, .35), w: 4, dash: [3, 12], off: -lt * 30 });
+    device(g, 'A', 500, yy, s, { mode: 'cancelled' }, lt, { label: false });
+    gateway(g, 960, yy - 10, .55, lt, { label: false });
+    device(g, 'B', 1420, yy, s, { mode: 'ended' }, lt, { label: false });
+    tag(g, '网关只转发', 960, yy + 95, C.purple, seg(lt, .3, .7), { fs: 24 });
+    // 下：两边各自的本地串行队列
+    const panel = (x, title, c, cl, on, items) => {
+      at(g, x, 640, 1, () => {
+        card(g, -380, -150, 760, 300, { r: 32, fill: on ? cl : '#fff', lw: on ? 4 : 3, stroke: on ? c : C.ink });
+        text(g, title, 0, -105, { s: 30, w: 900, c });
+        for (let i = 0; i < 3; i++) card(g, -300 + i * 92, -20, 76, 76, { r: 16, fill: i === 2 ? '#fff' : rgba('#fff', .8), lw: 3, sb: 10, so: 4 });
+        items.forEach((k, i) => { const [code, , cc] = MSG[k]; rr(g, -296 + i * 92, -16, 68, 68, 14); g.fillStyle = cc; g.fill(); text(g, code, -262 + i * 92, 19, { f: 'mono', s: 26, w: 700, c: '#fff' }); });
+        arrow(g, [[-20, 18], [70, 18]], { c, w: 6, hs: 16 });
+        card(g, 90, -40, 220, 116, { r: 22, fill: '#fff', lw: 3 }); text(g, '唯一工位', 200, -5, { s: 26, w: 900, c });
+        const a = lt * 4; ring(g, 200, 38, 18, c, 5, 1, a, a + 4.4);
+        text(g, '自己的队列 · 自己的状态', 0, 118, { s: 24, w: 700, c: C.ink2 });
+      }, { s: 1 });
+    };
+    const onB = lt < 4 || lt > 8, onA = lt >= 4;
+    panel(500, '主叫本地：建会话（串行）', C.blue, C.blueL, onA, ['invite', 'invite']);
+    panel(1420, '被叫本地：入站消息（串行）', C.orange, C.orangeL, onB, ['invite', 'cancel']);
+    path(g, [[500, 390], [500, 488]], { c: C.blue, w: 4, dash: [6, 8] }); path(g, [[1420, 390], [1420, 488]], { c: C.orange, w: 4, dash: [6, 8] });
+    if (lt > 8.2) tag(g, '各管各的状态', 960, 846, C.ink, seg(lt, 8.3, 8.7), { fs: 30 });
+  },
+});
+
+/* =====================================================================
+ * 总结：这次记住四件事
+ * ===================================================================== */
+const RULES = [['01', '先认会话', C.purple], ['02', '排完整过程', C.blue], ['03', '状态机管规则', C.orange], ['04', '超时留退路', C.green]];
+function ruleCard(g, i, lt) {
+  const [num, title, c] = RULES[i], p = seg(lt, 0, .55);
+  // 已讲过的规则缩到顶部一排
+  for (let j = 0; j < i; j++) at(g, 330 + j * 420, 190, 1, () => { card(g, -190, -44, 380, 88, { r: 26, fill: '#fff', lw: 3 }); text(g, RULES[j][0], -140, 2, { f: 'disp', w: 900, s: 40, c: RULES[j][2] }); text(g, RULES[j][1], 30, 2, { s: 30, w: 900 }); });
+  at(g, 960 + (1 - eo(p)) * 700, 540, 1, () => {
+    card(g, -520, -250, 1040, 500, { r: 40, fill: '#fff', lw: 4, sb: 40, so: 16 });
+    card(g, -520, -250, 200, 500, { r: 40, fill: c, lw: 0, shadow: false }); rr(g, -360, -250, 40, 500, 0); g.fillStyle = c; g.fill();
+    path(g, [[-320, -250], [-320, 250]], { c: C.ink, w: 4 }); rr(g, -520, -250, 1040, 500, 40); g.lineWidth = 4; g.strokeStyle = C.ink; g.stroke();
+    text(g, num, -420, 0, { f: 'disp', w: 900, s: 120, c: '#fff' });
+    text(g, title, -260, -170, { s: 56, w: 900, a: 'left' });
+  }, { al: eo(p) });
+  return [960 + (1 - eo(p)) * 700 + 110, 580];
+}
+S('s24', {
+  card: 7,
+  cues: [[0, 'whoosh'], [2.2, 'latch'], [4.6, 'error', .5]],
+  draw(g, lt) {
+    const [x, y] = ruleCard(g, 0, lt - 1.6 < 0 ? 0 : lt - 1.6);
+    if (lt < 1.6) return;
+    keyIcon(g, x - 250 + 80 * eo(seg(lt, 1.8, 2.2)), y, 1.4, C.purple); lockIcon(g, x - 20, y, 1.4, lt > 2.2 ? C.green : C.amber, eo(seg(lt, 2.2, 2.6)));
+    sessionSlot(g, x + 250, y, 1, lt, { doneAt: 2.4 });
+    if (lt > 4.4) { const k = seg(lt, 4.4, 5.4); capsule(g, x - 200, y + 120 + 120 * eo(k), 'cancel', { s: .5, rot: k * .6, al: 1 - seg(lt, 5.6, 6.2) }); tag(g, '会话没好 → 可能丢', x + 150, y + 160, C.coral, seg(lt, 4.6, 5.0), { fs: 26 }); }
+  },
+});
+S('s25', {
+  cues: [[.6, 'whoosh', .6], [3.4, 'success', .6], [5.0, 'latch']],
+  draw(g, lt) {
+    const [x, y] = ruleCard(g, 1, lt);
+    const p = clamp((lt - .8) / 2.6);
+    card(g, x - 300, y - 20, 600, 40, { r: 20, fill: '#fff', lw: 3, shadow: false }); hatch(g, x - 297, y - 17, 594 * p, 34, p >= 1 ? C.green : C.blue, lt * 40, 17);
+    text(g, p >= 1 ? '这一条处理完了' : '处理中…', x, y - 60, { s: 28, w: 900, c: p >= 1 ? C.green : C.blue });
+    const nx = lt < 4.8 ? x - 300 : lerp(x - 300, x - 80, eio(seg(lt, 4.8, 5.4)));
+    capsule(g, nx, y + 100, 'cancel', { s: .55 }); if (lt < 4.8) tag(g, '下一条 · 等', x + 100, y + 100, C.amber, seg(lt, 1.0, 1.4), { fs: 24, tc: C.ink });
+  },
+});
+S('s26', {
+  cues: [[.6, 'whoosh', .6], [1.2, 'latch'], [4.6, 'success']],
+  draw(g, lt) {
+    const [x, y] = ruleCard(g, 2, lt);
+    const n1 = [x - 260, y], n2 = [x + 40, y], n3 = [x + 300, y];
+    arrow(g, [[x - 410, y], [n1[0] - 70, y]], { p: eo(seg(lt, 1.0, 1.5)), c: C.blue, w: 6 }); text(g, '按顺序', x - 370, y - 40, { s: 24, w: 900, c: C.blue, al: seg(lt, 1.2, 1.6) });
+    arrow(g, [[n1[0] + 70, y], [n2[0] - 70, y]], { p: eo(seg(lt, 4.4, 4.8)), c: C.orange, w: 6 }); arrow(g, [[n2[0] + 70, y], [n3[0] - 70, y]], { p: eo(seg(lt, 4.8, 5.2)), c: C.orange, w: 6 });
+    [n1, n2, n3].forEach((n, i) => { const on = lt > 4.4 + i * .4; dot(g, n[0], n[1], 52, on ? [C.blue, C.orange, C.green][i] : '#fff'); ring(g, n[0], n[1], 52, C.ink, 3.5); if (on && i === 2) icCheck(g, n[0], n[1] + 4, 52, '#fff', 1, 9); });
+  },
+});
+S('s27', {
+  cues: [[.6, 'whoosh', .6], [2.4, 'latch'], [4.6, 'error', .4]],
+  draw(g, lt) {
+    const [x, y] = ruleCard(g, 3, lt);
+    const left = clamp(1 - (lt - .8) / 1.6);
+    countdown(g, x - 230, y, 90, left, Math.ceil(60 * left) + 's', C.green, { fs: 48 });
+    // 出口
+    at(g, x + 40, y, pop(seg(lt, 2.2, 2.6)), () => { card(g, -60, -95, 120, 190, { r: 14, fill: C.greenL, lw: 3.5 }); dot(g, 30, 0, 9, C.ink); text(g, '退出', 0, 130, { s: 26, w: 900, c: C.green }); });
+    if (lt > 4.4) at(g, x + 250, y, pop(seg(lt, 4.5, 4.9)), () => { card(g, -135, -60, 270, 120, { r: 24, fill: C.coralL, lw: 3, stroke: C.coral }); text(g, '≠ 修复顺序', 0, 2, { s: 32, w: 900, c: C.coral }); });
+  },
+});
+
+/* =====================================================================
+ * 结尾与片尾
+ * ===================================================================== */
+S('s28', {
+  demo: true,
+  cam: [[0, 960, 470, 1], [10, 960, 480, .93]],
+  cues: [[.4, 'send'], [2.0, 'latch'], [2.4, 'success'], [7.4, 'success']],
+  draw(g, lt) {
+    stage(g, lt, { busy: gwBusy(lt, .4), a: { mode: 'cancelled' }, b: lt < 2.0 ? { mode: 'ringing' } : { mode: 'ended', from: 'ringing', at: 2.0 },
+      ca: ['ENDED.SELF_TERMINATED'], cb: ['ENDED.OTHER_TERMINATED', 'RINGING', 2.0] });
+    relay(g, lt, .4, 'cancel', 'AB', { hold: lt < 2.6 });
+    if (lt > 2.0 && lt < 3.4) burst(g, P.B[0], P.B[1] - 40, lt - 2.0, C.green, 16, 180);
+    ribbon50(g, P.B[0], 790, lt, seg(lt, 3.8, 4.3), { done: lt > 7.2, doneP: seg(lt, 7.3, 7.6) });
+    if (lt > 4.4 && lt < 7.2) tag(g, '不用变快', P.B[0] - 380, 790, C.amber, seg(lt, 4.5, 4.9), { tc: C.ink, fs: 26 });
+    if (lt > 7.4) tag(g, '只要让它做完', P.B[0] - 410, 790, C.green, seg(lt, 7.5, 7.9), { fs: 26 });
+  },
+});
+S('s29', {
+  title: true, fi: .2, fo: .4,
+  draw(g, lt) {
+    const a = eo(seg(lt, 0, .3));
+    device(g, 'A', 560, 520, .55, { mode: 'ended' }, lt, { label: false, al: a });
+    device(g, 'B', 1360, 520, .55, { mode: 'ended' }, lt, { label: false, al: a });
+    text(g, SERIES.title, 960, 490, { s: 110, w: 900, al: a });
+    text(g, SERIES.sub, 960, 590, { s: 40, w: 700, c: C.blue, al: eo(seg(lt, .2, .5)) });
+  },
+});
+
+/* ---------------- 封面 ---------------- */
+function drawCover(g, frame) {
+  SCX = frame.scaleX; CAMZ = 1;
+  drawBackground(g, { ...frame, t: 3 });
+  g.save(); g.translate(960, 700); g.scale(1.12, 1.12); g.translate(-960, -470);
+  link(g, 0, 1);
+  gateway(g, P.G[0], P.G[1], 1, 0, { label: false });
+  device(g, 'A', P.A[0], P.A[1], 1.05, { mode: 'cancelled' }, 0, { label: false, still: true });
+  device(g, 'B', P.B[0], P.B[1], 1.05, { mode: 'ringing' }, .2, { label: false, still: true });
+  capsule(g, HANG[0], HANG[1] + 20, 'cancel', { s: 1.05, glow: .7 });
+  badge(g, HANG[0] + 245, HANG[1] + 20, 44, C.coral, '?', 1);
+  g.restore();
+  text(g, '取消去哪了', 960, 165, { s: 150, w: 900 });
+  text(g, '约 50 毫秒的会话竞态 · Kotlin 实现 SIP 通信协议', 960, 280, { s: 44, w: 900, c: C.coral });
+  tagSmall(g, '⚠ 机制演绎', 1800, 92, C.amber);
+  postFX(g, { ...frame, t: 0 });
+}
+
 film.finish();
-root.FILM_STYLE=Object.freeze({theme,fonts,fontsNeeded,ui:UI,script:SCRIPT,messages:MSG,layout:T,code:CODE,series:SERIES,chapters:CHAPTERS,
-  primitives:Object.freeze({drawItems,screen,gateway,actionButton,bell,message,flight,pathAt,lanes,stateLabel,stateNode,stateArrow,
-    arrow,retry,boundary,timerBar,ruler,sessionCard,sessionKey,queue,workstation,codeCard,compareCard,summaryCard,symbol,demoBadge,tag,clockFace}),
-  hooks:Object.freeze({prepareStyle,drawBackground,drawChrome,drawCaptionBackground,drawCaption,drawCover}),chapterCard});
-})(typeof window!=='undefined'?window:globalThis);
