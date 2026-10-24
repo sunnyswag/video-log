@@ -82,7 +82,7 @@ ffconcat 明确写入每段 `frames/fps` 时长，避免 MP4 毫秒级容器时�
 抽帧和时间线导出都不探测、不启动 FFmpeg。
 
 ```bash
-export CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
+export CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
 node tools/render/render_local.mjs 2026-10-16-32bit-ms-timer/work/film.html \
   --frames captions --out-dir /tmp/video-captions --scale 1
 python3 tools/preview/sheet.py /tmp/video-captions /tmp/video-captions-sheet
@@ -126,7 +126,7 @@ node tools/render/ci/concat.mjs /tmp/plan.json /tmp/render-parts /tmp/joined.mp4
 
 ```bash
 node tools/render/ci/plan_segments.test.mjs
-export CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
+export CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
 RENDER_NO_SANDBOX=1 bash tools/render/ci/verify_local.sh /tmp/video-render-reference
 ```
 

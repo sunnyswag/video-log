@@ -8,11 +8,11 @@
 执行过以下两条命令，均退出 1：
 
 ```bash
-CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome \
+CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome \
 node tools/render/render_local.mjs 2026-10-16-32bit-ms-timer/work/film.html \
   --frames captions --out-dir /tmp/video-render-ci-check/captions --scale 1
 
-CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome \
+CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome \
 node tools/render/render_local.mjs 2026-10-16-32bit-ms-timer/work/film.html \
   --frames captions --out-dir /tmp/video-render-ci-check/captions --scale 1 --no-sandbox
 ```
@@ -32,7 +32,7 @@ setsockopt: Operation not permitted (1)
 在沙箱外，从仓库根目录执行：
 
 ```bash
-export CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
+export CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
 RENDER_NO_SANDBOX=1 bash tools/render/ci/verify_local.sh /tmp/video-render-reference
 ```
 

@@ -54,7 +54,7 @@ INTER_DIR=~/.local/share/fonts/video-log/inter \
 python3 tools/fonts/build_fonts.py 2026-11-01-my-topic/work/film.js 2026-11-01-my-topic/work/fonts.css
 
 # 4) 本地抽帧拼图审阅（须在 AI 沙箱外跑，Chrome 路径见第 6 节）
-export CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
+export CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
 node tools/render/render_local.mjs 2026-11-01-my-topic/work/film.html --frames captions --out-dir /tmp/vc --scale 1
 python3 tools/preview/sheet.py /tmp/vc /tmp/vc-sheet
 
@@ -234,11 +234,11 @@ if __name__ == '__main__':
 ## 6. 本地预览与审阅
 
 - 用 Chrome/Edge 直接打开 `work/film.html`：空格播放/暂停，←/→ 跳 5 秒；预览无声，声音看成片。
-- 本机 Chromium：`/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome`（`--chrome` 参数或 `CHROME_PATH` 环境变量，二者优先于系统安装路径）。
+- 本机 Chromium：`~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome`（`--chrome` 参数或 `CHROME_PATH` 环境变量，二者优先于系统安装路径）。
 - 抽帧拼图（`captions` = 每句字幕中点；也可逗号分隔秒数；时间须在 `[0, duration)` 内；输出目录要用空目录，文件名如 `f_0061.50.jpg`）：
 
 ```bash
-export CHROME_PATH=/home/huiqin123/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
+export CHROME_PATH=~/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome
 node tools/render/render_local.mjs 2026-11-01-my-topic/work/film.html --frames captions --out-dir /tmp/vc --scale 1
 python3 tools/preview/sheet.py /tmp/vc /tmp/vc-sheet        # 每 6 张拼一张，输出 vc-sheet_00.jpg、_01.jpg…
 node tools/render/render_local.mjs 2026-11-01-my-topic/work/film.html --frames 0,61.5,120 --out-dir /tmp/vp --scale 1

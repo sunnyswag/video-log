@@ -110,7 +110,7 @@ try {
     return { duration: window.__duration, gpu, w: document.getElementById('c').width, h: document.getElementById('c').height };
   });
   if (frames === null && outFile.endsWith('.json')) { // 只导出时间线（字幕 / 音效点 / 场景），给 audio_v2.py 用
-    const tl = await first.evaluate(() => ({ duration: FILM.duration, scenes: FILM.scenes, captions: FILM.captions, cues: FILM.cues, chapters: FILM.chapters }));
+    const tl = await first.evaluate(() => ({ duration: FILM.duration, scenes: FILM.scenes, captions: FILM.captions, cues: FILM.cues, chapters: FILM.chapters, ...(FILM.chapterInfo ? { chapterInfo: FILM.chapterInfo } : {}) }));
     fs.writeFileSync(outFile, JSON.stringify(tl, null, 1)); await browser.close();
     console.log('时间线已导出 →', outFile, '时长', tl.duration.toFixed(2), '秒'); process.exit(0);
   }
