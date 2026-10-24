@@ -110,7 +110,7 @@ function capState(g, frame) {
 }
 function drawCaptionBackground(g, frame) {
   CAMZ = 1; const c = capState(g, frame); if (!c) return;
-  const L = c.layout.lines, w = Math.max(...L.map(l => l.width)) + 80, top = L[0].y - 50, h = (L.length - 1) * 64 + 98;
+  const L = c.layout.lines, w = Math.max(...L.map(l => l.width)) + 80, top = L[0].y - 66, h = (L.length - 1) * 64 + 98;
   const k = eo(seg(frame.t, c.layout.caption.t0, c.layout.caption.t0 + .25));
   g.save(); g.globalAlpha *= c.alpha;
   card(g, (W - w) / 2, top + (1 - k) * 10, w, h, { r: 28, fill: rgba('#ffffff', .96), lw: 3, sb: 26, so: 10, sa: .16 });
