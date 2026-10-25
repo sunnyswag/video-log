@@ -309,7 +309,7 @@ function ide(g, x, y, w, h, lines, o = {}) {
     if (gut) {
       const sign = k === '+' ? '+' : k === '-' ? '−' : '';
       if (sign) text(g, sign, x + gut - 16, base, { f: 'mono', s: 26, w: 700, c: bar2, a: 'right' });
-      else if (k !== '@') text(g, String(num), x + gut - 16, base, { f: 'mono', s: 24, w: 400, c: C.grey, a: 'right' });
+      else if (k !== '@' && o.nums !== false) text(g, String(num), x + gut - 16, base, { f: 'mono', s: 24, w: 400, c: C.grey, a: 'right' });
     }
     if (k !== '-' && k !== '@') num++;
     // 代码文字：按可见比例打字
