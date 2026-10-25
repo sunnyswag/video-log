@@ -459,8 +459,8 @@ S('s04', {
       path(g, [[fx, 450], [fx, 550]], { c: C.ink, w: 10 }); path(g, [[fx, 450], [fx, 550]], { c: bind > 0 ? C.amber : '#fff', w: 5, dash: [8, 8], off: -lt * 30 });
       if (bind > 0) { g.save(); g.globalAlpha *= bind; ring(g, fx, 500, 40 + 8 * Math.sin(lt * 6), C.amber, 5, .7); g.restore(); tag(g, '绑定', fx + 110, 500, C.amber, seg(lt, 6.2, 6.6), { tc: C.ink, fs: 28 }); }
     }
-    at(g, fx, 390, ap(lt, .4), () => { card(g, -180, -60, 360, 120, { r: 24, fill: C.blueL, lw: 3.5, stroke: C.blue }); text(g, '系统 SIP', 0, 2, { s: 36, w: 900, c: C.blue });
-      if (dead > 0) { g.save(); g.globalAlpha *= dead * .55; rr(g, -180, -60, 360, 120, 24); g.fillStyle = C.grey; g.fill(); g.restore(); } });
+    at(g, fx, 390, ap(lt, .4), () => { card(g, -180, -60, 360, 120, { r: 24, fill: C.blueL, lw: 3.5, stroke: C.blue }); text(g, '系统 SIP', 0, 2, { s: 36, w: 900, c: C.blue, al: 1 - .92 * fa(lt, 8.9, .2) });
+      if (dead > 0) { g.save(); g.globalAlpha *= dead * .55; rr(g, -180, -60, 360, 120, 24); g.fillStyle = C.grey; g.fill(); g.restore(); } }, {});
     at(g, fx, 610, ap(lt, .8), () => { card(g, -180, -60, 360, 120, { r: 24, fill: C.greyL, lw: 3.5 }); text(g, '系统 Service', 0, 2, { s: 34, w: 900, c: C.ink }); });
     // 网关与插口
     gateway(g, 1460, 470, .95 * ap(lt, 1.2), lt);
@@ -491,7 +491,7 @@ S('s04', {
 
 const TRAP = { AL: [330, 690], P1: [690, 330], P2: [1230, 330], BO: [1590, 690] };
 function proxyBox(g, x, y, al = 1) {
-  g.save(); g.globalAlpha *= al;
+  g.save(); g.globalAlpha *= clamp(al);
   card(g, x - 115, y - 50, 230, 100, { r: 18, fill: C.greyL, lw: 3.5 });
   for (let i = 0; i < 3; i++) { path(g, [[x - 85, y - 26 + i * 26], [x + 40, y - 26 + i * 26]], { c: C.ink2, w: 4 }); dot(g, x + 74, y - 26 + i * 26, 6, i === 0 ? C.green : C.ink2); }
   text(g, '代理服务器', x, y - 82, { s: 28, w: 900, c: C.ink2 });
@@ -683,7 +683,7 @@ function seqDiagram(g, T, o = {}) {
     const p = ap(all, te, .45); if (p <= 0) return;
     const x = side === 'A' ? 235 : 1685, lx = side === 'A' ? SQ.A : SQ.B, hw = (textW(g, s, { f: 'mono', s: 26, w: 700 }) + 56) / 2;
     path(g, [[side === 'A' ? x + hw : x - hw, y], [lx, y]], { c: stateTone(s), w: 3, al: p });
-    dot(g, lx, y, 8, stateTone(s), p);
+    dot(g, lx, y, 8, stateTone(s), clamp(p));
     stateTag(g, s, x, y, { s: p, glow: o.glow ? o.glow(side, s) : 0 });
   });
   tap(g, SQ.B, 520, all, 8.0);
@@ -764,7 +764,7 @@ S('s10', {
       ghostPill(g, 1240 + 160 * u, 300 - 90 * eo(u), C.blue, .5 * (1 - u));
     }
     resendDial(g, 1620, 330, lt, seg(lt, 3.8, 4.3), stop);
-    if (lt > 8.2) fly(g, lt, 8.2, .8, [1780, 220], [1250, 330], 'ring', { lift: 60, s: .9, hold: lt < 12.0, holdAl: fo(lt, 11.6) });
+    if (lt > 8.2) fly(g, lt, 8.2, .8, [1780, 200], [1250, 268], 'ring', { lift: 60, s: .9, hold: lt < 12.0, holdAl: fo(lt, 11.6) });
     if (lt > 9.4) tag(g, '还在推进', 1200, 740, C.green, seg(lt, 9.4, 9.8), { fs: 28 });
     if (lt > 12.8) { countdown(g, 1620, 600, 50, 1 - (lt - 12.8) / 60, '60 s', C.orange, { fs: 28 }); text(g, '改等接听', 1620, 700, { s: 26, w: 900, c: C.orange, al: fa(lt, 12.8) }); }
     g.restore();
@@ -799,8 +799,8 @@ S('s11', {
       dot(g, x, y, 7, C.orange, (1 - u) * .9);
     }
     // ACCEPT 在网关处碎掉
-    const top = [P.G[0], P.G[1] - 175];
-    if (lt > 8.2 && lt < 9.0) fly(g, lt, 8.2, .8, [P.B[0], P.B[1] - 40], top, 'accept', { lift: 80, ripple: false });
+    const top = [P.G[0], P.G[1] - 150];
+    if (lt > 8.2 && lt < 9.0) fly(g, lt, 8.2, .8, [P.B[0], P.B[1] - 40], top, 'accept', { lift: 40, ripple: false });
     shatter(g, top[0], top[1], lt - 9.0, C.green);
     if (lt > 10.0) tag(g, '毫无反应', P.A[0], CHIP_Y + 70, C.grey, seg(lt, 10.0, 10.4), { fs: 28 });
     if (lt > 12.2) {
@@ -862,12 +862,12 @@ S('s13', {
     voiceStream(g, lt, 'AB', -6, .8); voiceStream(g, lt, 'BA', -6, 11.4);
     // 单程票：飞到网关上方，悬停，然后掉落
     if (lt > 1.0) {
-      const fall = seg(lt, 4.2, 5.2), p = L2([P.A[0] + 60, 300], [P.G[0], 236], eio(seg(lt, 1.0, 2.0)));
+      const fall = seg(lt, 4.2, 5.2), p = L2([P.A[0] + 60, 300], [P.G[0], 218], eio(seg(lt, 1.0, 2.0)));
       const y = p[1] - (lt < 2.0 ? Math.sin(seg(lt, 1.0, 2.0) * Math.PI) * 60 : wob(lt, .6, 6)) + 420 * fall * fall;
-      if (fall < 1) ticket(g, p[0], y, .9, { rot: fall * .7, al: 1 - fall });
+      if (fall < 1) ticket(g, p[0], y, .92, { rot: fall * .7, al: 1 - fall });
     }
-    if (lt > 2.0 && lt < 4.4) tag(g, '不等回复', P.G[0], 140, C.coral, seg(lt, 2.0, 2.4), { fs: 28, al: fo(lt, 4.0) });
-    hypo(g, 'B 没收到', P.G[0], 140, seg(lt, 4.3, 4.7) * fo(lt, 12.0));
+    if (lt > 2.0 && lt < 4.4) tag(g, '不等回复', P.G[0], 136, C.coral, seg(lt, 2.0, 2.4), { fs: 28, al: fo(lt, 4.0) });
+    hypo(g, 'B 没收到', P.G[0], 136, seg(lt, 4.3, 4.7) * fo(lt, 12.0));
     // B 的码率表
     if (lt > 4.6) {
       const ma = ap(lt, 4.6);
@@ -880,8 +880,8 @@ S('s13', {
     }
     if (lt > 8.2) { const left = clamp(1 - (lt - 8.2) / 3); countdown(g, P.B[0] + 210, 222, 42, left, Math.ceil(3 * left) + ' s', C.coral, { fs: 26 }); }
     if (lt > 12.2) {
-      ticket(g, P.G[0], 236, .9 * ap(lt, 12.2));
-      badge(g, P.G[0] + 150, 196, 28, C.green, 'check', seg(lt, 12.6, 13.0));
+      ticket(g, P.G[0], 218, .92 * ap(lt, 12.2));
+      badge(g, P.G[0] + 135, 184, 28, C.green, 'check', seg(lt, 12.6, 13.0));
       tag(g, '单程票：省掉一次确认', 960, 800, C.green, seg(lt, 12.6, 13.0), { fs: 30 });
     }
   },
@@ -913,7 +913,7 @@ S('s14', {
       text(g, name, 382, y - 18, { s: 30, w: 900, a: 'left', al: p });
       text(g, sub, 382, y + 22, { f: 'mono', s: 26, w: 700, a: 'left', c: col, al: p });
       // 吐出 TIMEOUT_END，飞进状态机
-      if (lt > f && lt < f + .9) { const u = eio(seg(lt, f, f + .8)), q = bez([360, y], [700, y - 60], [BOX[0] - 160, BOX[1]], u); capsule(g, q[0], q[1], 'timeout', { s: .9, glow: .5, al: 1 - seg(lt, f + .7, f + .9) }); }
+      if (lt > f && lt < f + .9) { const u = eio(seg(lt, f, f + .8)), q = bez([300, y - 72], [700, y - 120], [BOX[0] - 210, BOX[1]], u); capsule(g, q[0], q[1], 'timeout', { s: .9, glow: .5, al: 1 - seg(lt, f + .55, f + .8) }); }
       // 输出：当前状态 → 对应的超时结束态
       const ot = f + 1.1, op = ap(lt, ot), oy = 300 + i * 200, end = 'ENDED.' + st + '_TIMEOUT', hw = (textW(g, end, { f: 'mono', s: 26, w: 700 }) + 56) / 2;
       if (op > 0) {
@@ -1055,3 +1055,634 @@ S('s17', {
     OUT.forEach(([s, c, x], i) => { if (lt > 9.4 + i * .4) tag(g, s, x, 790, c, seg(lt, 9.4 + i * .4, 9.8 + i * .4), { fs: 28, tc: c === C.amber ? C.ink : '#fff' }); });
   },
 });
+
+/* =====================================================================
+ * 第五章：代码架构
+ * ===================================================================== */
+const CODE = ['object RINGING : SessionStatus {', '  override fun transferStatus(msg: MessageType) =', '    when (msg) {', '      ACCEPT        -> CHATTING',
+  '      TERMINATE_END -> ENDED.OTHER_TERMINATED', '      TIMEOUT_END   -> ENDED.RINGING_TIMEOUT', '      else          -> this', '    }', '}'];
+const CODE_RE = /(\bobject\b|\boverride\b|\bfun\b|\bwhen\b|\belse\b|\bthis\b|ACCEPT|TERMINATE_END|TIMEOUT_END|ENDED\.\w+|CHATTING|RINGING|SessionStatus|MessageType|transferStatus)/;
+function codeColor(p) {
+  if (/^(object|override|fun|when|else|this)$/.test(p)) return '#FF8FA3';
+  if (/^(ACCEPT|TERMINATE_END|TIMEOUT_END)$/.test(p)) return '#8FB4FF';
+  if (/^(ENDED\.\w+|CHATTING|RINGING)$/.test(p)) return '#FFC27A';
+  if (/^(SessionStatus|MessageType)$/.test(p)) return '#7FE0C0';
+  if (p === 'transferStatus') return '#F2E08A';
+  return '#E8EAF2';
+}
+function codeCard(g, x0, y0, w, h, lt, o = {}) {
+  card(g, x0, y0, w, h, { r: 30, fill: '#1F2433', lw: 3.5, sb: 34, so: 14 });
+  for (const [i, c] of [[0, C.coral], [1, C.amber], [2, C.green]]) dot(g, x0 + 36 + i * 30, y0 + 34, 9, c);
+  text(g, '重新写过的示意代码', x0 + w - 30, y0 + 35, { s: 24, w: 700, c: rgba('#ffffff', .6), a: 'right' });
+  if (o.hl) for (const [a, b, c, k] of o.hl) { if (k <= 0) continue; rr(g, x0 + 18, y0 + 76 + a * 50, (w - 36) * k, (b - a + 1) * 50, 10); g.fillStyle = rgba(c, .22); g.fill(); }
+  const typed = o.typed ?? 1, total = CODE.reduce((s, l) => s + l.length, 0); let budget = Math.round(total * typed);
+  CODE.forEach((ln, i) => {
+    if (budget <= 0) return; const s = ln.slice(0, budget); budget -= ln.length;
+    let x = x0 + 40; const y = y0 + 101 + i * 50;
+    for (const p of s.split(CODE_RE)) { if (!p) continue; text(g, p, x, y, { f: 'mono', s: 27, w: 700, c: codeColor(p), a: 'left' }); x += textW(g, p, { f: 'mono', s: 27, w: 700 }); }
+  });
+}
+S('s18', {
+  card: 6,
+  cam: [[0, 960, 500, 1], [16, 960, 500, 1.02]],
+  cues: [[0, 'whoosh'], [2.0, 'tick', .4], [2.4, 'tick', .4], [2.8, 'tick', .4], [3.2, 'tick', .4], [4.4, 'send'], [5.2, 'latch'], [8.4, 'error', .4], [8.8, 'error', .4], [12.4, 'whoosh', .6], [13.4, 'latch']],
+  draw(g, lt) {
+    const cp = ap(lt, 1.6);
+    if (cp > 0) at(g, 560, 500, cp, () => codeCard(g, -450, -280, 900, 560, lt, {
+      typed: clamp((lt - 1.8) / 1.8),
+      hl: [[3, 3, C.amber, eo(seg(lt, 4.2, 4.6)) * fo(lt, 7.8)], [2, 7, C.blue, eo(seg(lt, 8.0, 8.5)) * fo(lt, 12.0)]],
+    }));
+    // 状态盒：进一条消息，出一个状态
+    const BX = [1450, 430], bp = ap(lt, 2.0);
+    if (bp > 0) {
+      at(g, BX[0], BX[1], bp, () => { card(g, -160, -75, 320, 150, { r: 28, fill: C.orangeL, lw: 3.5, stroke: C.orange }); text(g, 'RINGING', 0, 2, { f: 'mono', s: 38, w: 700, c: C.orange }); });
+      tag(g, '单例', BX[0] + 160, BX[1] - 75, C.ink, seg(lt, 2.6, 3.0), { fs: 26 });
+    }
+    if (lt > 4.2 && lt < 5.3) { const k = eio(seg(lt, 4.3, 5.0)); capsule(g, BX[0], lerp(214, 330, k), 'accept', { s: .9 * (1 - .5 * seg(lt, 4.9, 5.2)), al: 1 - seg(lt, 5.0, 5.2) }); }
+    if (lt > 5.0) {
+      arrow(g, [[BX[0], BX[1] + 78], [BX[0], 576]], { p: eo(seg(lt, 5.0, 5.3)), c: C.green, w: 5, hs: 16 });
+      node(g, BX[0], 620, 'CHATTING', { s: ap(lt, 5.2), c: C.green, on: 1 });
+    }
+    // 副作用：不在这里
+    const ICX = 1712, sx = lt > 12.6 ? eio(seg(lt, 12.6, 13.4)) : 0;
+    const swP = L2([ICX, 382], [1528, 772], sx), evP = L2([ICX, 512], [1610, 772], sx);
+    if (lt > 8.0) {
+      stopwatch(g, swP[0], swP[1], .8 * ap(lt, 8.0), C.ink, { a: lt * 2 });
+      envIcon(g, evP[0], evP[1], .9 * ap(lt, 8.3), C.ink);
+      const xs = fo(lt, 12.4);
+      if (xs > 0) { badge(g, ICX + 36, 352, 22, C.coral, 'cross', seg(lt, 8.4, 8.7) * xs); badge(g, ICX + 36, 486, 22, C.coral, 'cross', seg(lt, 8.8, 9.1) * xs);
+        text(g, '停表', ICX, 438, { s: 26, w: 900, c: C.ink2, al: fa(lt, 8.0) * xs }); text(g, '发消息', ICX, 562, { s: 26, w: 900, c: C.ink2, al: fa(lt, 8.3) * xs }); }
+    }
+    if (lt > 12.3) {
+      const ip = ap(lt, 12.3);
+      at(g, BX[0] + 20, 772, ip, () => { card(g, -200, -52, 400, 104, { r: 26, fill: NAVYL, lw: 3.5, stroke: NAVY }); text(g, '拦截器', -110, 1, { s: 34, w: 900, c: NAVY }); });
+      if (lt > 12.6) { stopwatch(g, swP[0], swP[1], .8, C.ink, { a: lt * 2 }); envIcon(g, evP[0], evP[1], .9, C.ink); }
+    }
+  },
+});
+
+/* 收消息三步走：① transferStatus → ② 拦截器表 → ③ 变了才广播 */
+const ITB = { x: 520, y: 300, w: 760, row: 56 };
+const IROWS = [['(RING, RINGING)', '停止重发 · 启动 60 s'], ['(ACCEPT, CHATTING)', '发确认 · 停 60 s'], ['(TIMEOUT_END, CALLING_TIMEOUT)', '补发 TERMINATE_END'], ['(INVITE, RINGING)', '补发 RING']];
+function itable(g, lt, o = {}) {
+  const { x, y, w, row } = ITB, n = IROWS.length + (o.extra || 0 ? 1 : 0), h = 52 + n * row;
+  card(g, x, y, w, 52 + IROWS.length * row + (o.extra || 0) * row, { r: 20, fill: '#fff', lw: 3.5, sb: 24, so: 9 });
+  g.save(); rr(g, x, y, w, 52, 20); g.clip(); g.fillStyle = NAVYL; g.fillRect(x, y, w, 52); g.restore();
+  path(g, [[x, y + 52], [x + w, y + 52]], { c: C.ink, w: 3 }); path(g, [[x + 456, y], [x + 456, y + h - (o.extra ? (1 - o.extra) * row : 0)]], { c: rgba(C.ink, .25), w: 2 });
+  text(g, '（消息, 新状态）', x + 24, y + 27, { s: 26, w: 900, c: NAVY, a: 'left' }); text(g, '副作用', x + 474, y + 27, { s: 26, w: 900, c: NAVY, a: 'left' });
+  IROWS.forEach(([k, v], i) => {
+    const yy = y + 52 + i * row + row / 2, hot = o.hot === i ? o.hotK || 0 : 0;
+    if (hot > 0) { g.save(); g.globalAlpha *= hot; rr(g, x + 8, yy - row / 2 + 5, w - 16, row - 10, 10); g.fillStyle = rgba(C.amber, .35); g.fill(); g.restore(); }
+    if (i) path(g, [[x + 16, yy - row / 2], [x + w - 16, yy - row / 2]], { c: rgba(C.ink, .12), w: 2 });
+    text(g, k, x + 24, yy, { f: 'mono', s: 24, w: 700, a: 'left' }); text(g, v, x + 474, yy, { s: 26, w: 700, a: 'left', c: C.ink });
+  });
+  if (o.extra) { const yy = y + 52 + IROWS.length * row + row / 2;
+    g.save(); g.globalAlpha *= o.extra; rr(g, x + 8, yy - row / 2 + 5, w - 16, row - 10, 10); g.setLineDash([10, 7]); g.lineWidth = 3; g.strokeStyle = C.green; g.stroke(); g.fillStyle = rgba(C.greenL, .8); g.fill(); g.restore();
+    text(g, '(新消息, 新状态)', x + 24, yy, { f: 'mono', s: 24, w: 700, a: 'left', c: C.green, al: o.extra }); text(g, '新的副作用', x + 474, yy, { s: 26, w: 700, a: 'left', c: C.green, al: o.extra }); }
+  text(g, '共 7 个，此处列 4', x + w, y + h + 30 - (o.extra ? (1 - o.extra) * row : 0), { s: 24, w: 700, c: C.ink2, a: 'right' });
+}
+function diamond(g, x, y, r, fill, stroke) { g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r * 1.25, y); g.lineTo(x, y + r); g.lineTo(x - r * 1.25, y); g.closePath(); g.fillStyle = fill; g.fill(); g.lineWidth = 3.5; g.strokeStyle = stroke; g.stroke(); }
+function stepBox(g, x, y, title, sub, p, o = {}) {
+  at(g, x, y, pop(p), () => {
+    if (o.glow) { g.save(); rr(g, -150, -70, 300, 140, 26); g.shadowColor = rgba(C.amber, .8 * o.glow); g.shadowBlur = 34 * SH(); g.fillStyle = C.amber; g.fill(); g.restore(); }
+    card(g, -150, -70, 300, 140, { r: 26, fill: '#fff', lw: 3.5, stroke: o.stroke || C.ink });
+    text(g, title, 0, sub ? -18 : 2, { s: 32, w: 900, c: o.c || C.ink });
+    if (sub) text(g, sub, 0, 30, { f: 'mono', s: 24, w: 700, c: C.ink2 });
+  });
+}
+S('s19', {
+  cues: [[.4, 'latch', .5], [.8, 'latch', .5], [1.2, 'latch', .5], [1.6, 'latch', .5], [4.2, 'send'], [5.2, 'latch'], [8.0, 'whoosh', .5], [9.0, 'latch'], [9.2, 'success', .6], [12.2, 'whoosh', .5], [12.8, 'latch', .6], [13.4, 'success'], [16.4, 'whoosh'], [17.2, 'latch']],
+  draw(g, lt) {
+    const D = [1430, 430], UI = [1720, 430];
+    // 连线
+    if (lt > 1.0) { arrow(g, [[452, 430], [ITB.x - 6, 430]], { p: eo(seg(lt, 1.0, 1.3)), c: C.ink, w: 4, hs: 14 }); arrow(g, [[ITB.x + ITB.w + 6, 430], [D[0] - 118, 430]], { p: eo(seg(lt, 1.4, 1.7)), c: C.ink, w: 4, hs: 14 }); arrow(g, [[D[0] + 118, 430], [UI[0] - 96, 430]], { p: eo(seg(lt, 1.8, 2.1)), c: C.ink, w: 4, hs: 14 }); }
+    stepBox(g, 300, 430, '① 问状态', 'transferStatus', seg(lt, .4, .9), { glow: win(lt, 4.0, 8.0, .3, .4) });
+    const tp = ap(lt, .8);
+    if (tp > 0) { at(g, ITB.x + ITB.w / 2, 430, tp, () => { g.translate(-(ITB.x + ITB.w / 2), -430); itable(g, lt, { hot: 0, hotK: win(lt, 9.0, 12.4, .3, .4), extra: eo(seg(lt, 16.4, 17.2)) }); });
+      text(g, '② 拦截器表', ITB.x + ITB.w / 2, 262, { s: 32, w: 900, c: NAVY, al: tp }); }
+    // ③ 变了吗
+    const dp = ap(lt, 1.2), yes = seg(lt, 12.8, 13.1);
+    if (dp > 0) at(g, D[0], D[1], dp, () => { diamond(g, 0, 0, 84, yes > 0 ? C.greenL : '#fff', yes > 0 ? C.green : C.ink); text(g, '③ 变了吗？', 0, 2, { s: 28, w: 900, c: yes > 0 ? C.green : C.ink }); });
+    if (lt > 12.4) text(g, 'CHATTING 自环也广播', D[0], 560, { s: 24, w: 700, c: C.ink2, al: fa(lt, 12.4) });
+    if (lt > 12.8) text(g, 'CALLING → RINGING', D[0], 308, { f: 'mono', s: 24, w: 700, c: C.green, al: fa(lt, 12.8) });
+    // 界面
+    const up = ap(lt, 1.6);
+    if (up > 0) at(g, UI[0], UI[1], up, () => { card(g, -90, -70, 180, 140, { r: 24, fill: '#fff', lw: 3.5 }); rr(g, -60, -44, 120, 60, 10); g.fillStyle = C.blueL; g.fill(); text(g, '界面', 0, 44, { s: 30, w: 900 }); });
+    if (lt > 13.2) { for (let k = 0; k < 3; k++) { const ph = ((lt - 13.2) * 1.2 + k / 3) % 1; ring(g, D[0] + 118, 430, 20 + ph * 120, C.green, 4, (1 - ph) * .7 * fo(lt, 15.6), -.7, .7); } stateTag(g, 'RINGING', UI[0], UI[1] - 14, { s: ap(lt, 13.4) }); }
+    // 消息与二元组
+    if (lt > 4.2 && lt < 5.3) { const k = eio(seg(lt, 4.2, 4.9)); capsule(g, 300, lerp(220, 340, k), 'ring', { s: .9, al: 1 - seg(lt, 4.9, 5.2) }); }
+    if (lt > 5.2 && lt < 12.9) {
+      const mv = eio(seg(lt, 8.0, 8.8)), mv2 = eio(seg(lt, 12.2, 12.8));
+      let p = L2([300, 580], [ITB.x + 200, 680], mv); p = L2(p, [D[0], D[1]], mv2);
+      at(g, p[0], p[1], ap(lt, 5.2) * (1 - mv2 * .6), () => { const s = '(RING, RINGING)', w = textW(g, s, { f: 'mono', s: 26, w: 700 }) + 40; card(g, -w / 2, -27, w, 54, { r: 27, fill: C.amberL, lw: 3, stroke: C.amber }); text(g, s, 0, 1, { f: 'mono', s: 26, w: 700 }); }, { al: 1 - seg(lt, 12.6, 12.9) });
+    }
+    if (lt > 9.0) burst(g, ITB.x + ITB.w - 60, ITB.y + 52 + 28, lt - 9.0, C.amber, 12, 90);
+    // 新路径：一个分支 + 一个拦截器
+    if (lt > 16.6) { path(g, partial([[300, 500], [300, 560], [380, 560]], eo(seg(lt, 16.6, 17.1))), { c: C.green, w: 5 }); tag(g, '+ 分支', 450, 560, C.green, seg(lt, 16.9, 17.3), { fs: 26 }); }
+    if (lt > 17.4) tag(g, '其余代码不动', 900, 790, C.ink, seg(lt, 17.4, 17.8), { fs: 30 });
+  },
+});
+
+S('s20', {
+  demo: true,
+  cues: [[.4, 'latch', .5], [.8, 'latch', .5], [1.2, 'latch', .5], [1.8, 'success', .6], [3.6, 'whoosh', .5], [4.2, 'send'], [5.0, 'error'], [8.0, 'send'], [9.6, 'latch', .5], [10.4, 'latch'], [12.4, 'ring'], [14.0, 'success']],
+  draw(g, lt) {
+    const ia = fo(lt, 3.4, .4);
+    if (ia > 0) {
+      g.save(); g.globalAlpha *= ia;
+      if (lt > .9) { arrow(g, [[632, 470], [808, 470]], { p: eo(seg(lt, .9, 1.2)), c: C.ink, w: 4, hs: 14 }); arrow(g, [[1112, 470], [1288, 470]], { p: eo(seg(lt, 1.3, 1.6)), c: C.ink, w: 4, hs: 14 }); }
+      stepBox(g, 480, 470, '① 问状态', 'transferStatus', seg(lt, .3, .8));
+      stepBox(g, 960, 470, '② 拦截器', '查表执行', seg(lt, .7, 1.2), { glow: fa(lt, 1.8) * (.7 + .3 * Math.sin(lt * 5)), c: NAVY });
+      stepBox(g, 1440, 470, '③ 变了吗？', '决定广播', seg(lt, 1.1, 1.6));
+      tag(g, '先执行', 960, 600, C.amber, seg(lt, 1.8, 2.2), { tc: C.ink, fs: 28 }); tag(g, '后判断', 1440, 600, C.ink2, seg(lt, 2.2, 2.6), { fs: 28 });
+      g.restore();
+    }
+    const sa = fa(lt, 3.6, .5); if (sa <= 0) return;
+    g.save(); g.globalAlpha *= sa;
+    const okA = lt >= 14.0;
+    stage(g, lt, { busy: Math.max(gwBusy(lt, 8.0), gwBusy(lt, 12.4)), a: okA ? { mode: 'calling', label: '对方响铃中', from: 'calling', at: 14.0 } : { mode: 'calling', label: '呼叫中' },
+      b: { mode: 'ringing' }, ca: ['RINGING', 'CALLING', 14.0], cb: ['RINGING'] });
+    resendDial(g, P.A[0] - 230, P.A[1] - 170, lt, seg(lt, 3.8, 4.2), seg(lt, 14.0, 14.4));
+    const top = [P.G[0], P.G[1] - 175];
+    if (lt > 4.2 && lt < 5.0) fly(g, lt, 4.2, .8, [P.B[0], P.B[1] - 40], top, 'ring', { lift: 80, ripple: false });
+    shatter(g, top[0], top[1], lt - 5.0, C.blue);
+    if (lt > 8.0) relay(g, lt, 8.0, 'invite', 'AB', { hold: lt < 10.4, holdAl: fo(lt, 10.0) });
+    if (lt > 9.8) tag(g, '状态没变', P.B[0], CHIP_Y + 70, C.ink, seg(lt, 9.8, 10.2), { fs: 28 });
+    if (lt > 10.2) at(g, P.B[0] - 20, 178, ap(lt, 10.2), () => {
+      card(g, -240, -32, 480, 64, { r: 18, fill: '#fff', lw: 3, stroke: NAVY });
+      g.save(); g.globalAlpha *= win(lt, 10.4, 13.0, .2, .5); rr(g, -232, -24, 464, 48, 12); g.fillStyle = rgba(C.amber, .35); g.fill(); g.restore();
+      text(g, '(INVITE, RINGING)', -216, 1, { f: 'mono', s: 24, w: 700, a: 'left' }); text(g, '→ 补发 RING', 216, 1, { s: 26, w: 900, c: NAVY, a: 'right' });
+    });
+    if (lt > 12.4) relay(g, lt, 12.4, 'ring', 'BA', { hold: lt < 15.2 });
+    g.restore();
+  },
+});
+
+/* 会话管理器：按 sessionId 路由 */
+const MGR = [760, 470], OUTS = { top: [1340, 250], mid: [1340, 470], bot: [1340, 700] };
+const CHECKS = [['协议允许', 1235, 452], ['媒体可用', 1445, 452], ['对方可达', 1235, 512], ['未在升级', 1445, 512]];
+function routeCap(g, lt, t0, kind, tagS, iy, out) {
+  // 入口排队 → 进管理器（缩小消失）→ 从右侧出来 → 去出口
+  if (lt < t0) { capsule(g, 260, iy, kind, { s: .9, tag: tagS }); return; }
+  const a = seg(lt, t0, t0 + .8), b = seg(lt, t0 + 1.4, t0 + 2.4);
+  if (a < 1) { const p = L2([260, iy], [MGR[0] - 30, MGR[1]], eio(a)); capsule(g, p[0], p[1], kind, { s: .9 * (1 - .8 * seg(a, .6, 1)), tag: tagS }); return; }
+  if (b <= 0 || b >= 1) return;
+  const pts = []; for (let i = 0; i <= 16; i++) pts.push(bez([MGR[0] + 175, MGR[1]], [1050, out[1]], [out[0] - 210, out[1]], i / 16));
+  const p = partial(pts, eio(b)).at(-1); codePill(g, p[0], p[1], kind, tagS, { s: Math.min(1, .3 + b * 5), al: 1 - seg(b, .85, 1) });
+}
+function codePill(g, x, y, kind, tagS, o = {}) { // 只有码和会话标签的小签（运动中的消息）
+  const [code, , col] = MSG[kind];
+  at(g, x, y, o.s ?? 1, () => { rr(g, -40, -22, 80, 44, 22); g.fillStyle = col; g.fill(); g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke(); text(g, code, 0, 1, { f: 'mono', s: 26, w: 700, c: '#fff' });
+    if (tagS) { card(g, 26, -44, 54, 34, { r: 17, fill: C.purple, lw: 2.5, shadow: false }); text(g, tagS, 53, -26, { f: 'mono', s: 24, w: 700, c: '#fff' }); } }, { al: o.al });
+}
+S('s21', {
+  cues: [[.4, 'latch', .5], [1.0, 'latch', .5], [4.2, 'send'], [5.2, 'success', .6], [6.6, 'latch'], [8.6, 'send'], [9.6, 'tick'], [10.8, 'latch'], [12.6, 'tick'], [13.2, 'tick'], [13.8, 'tick'], [14.4, 'tick'], [15.0, 'success'], [16.6, 'send'], [17.4, 'error', .5], [18.4, 'latch']],
+  draw(g, lt) {
+    // 通道
+    for (const [k, o] of Object.entries(OUTS)) {
+      const used = k === 'top' ? win(lt, 5.6, 8.4, .3, .6) : k === 'mid' ? win(lt, 10.0, 16.4, .3, .6) : win(lt, 17.8, 20, .3, .6), pts = [];
+      for (let i = 0; i <= 16; i++) pts.push(bez([MGR[0] + 172, MGR[1]], [1050, o[1]], [o[0] - 202, o[1]], i / 16));
+      path(g, partial(pts, eo(seg(lt, .8, 1.4))), { c: used > 0 ? (k === 'top' ? C.green : k === 'mid' ? C.orange : C.ink2) : rgba(C.ink, .3), w: used > 0 ? 5 : 4, dash: [8, 10], off: -lt * 30 });
+    }
+    // 管理器
+    at(g, MGR[0], MGR[1], ap(lt, .3), () => {
+      card(g, -170, -130, 340, 260, { r: 28, fill: '#fff', lw: 3.5, sb: 28, so: 10 });
+      g.save(); rr(g, -170, -130, 340, 260, 28); g.clip(); g.fillStyle = C.purpleL; g.fillRect(-170, -130, 340, 64); g.restore();
+      path(g, [[-170, -66], [170, -66]], { c: C.ink, w: 3 }); text(g, '会话管理器', 0, -97, { s: 30, w: 900, c: C.purple });
+      text(g, '已有会话：S1', 0, -26, { s: 26, w: 700, c: C.ink2 });
+      card(g, -140, 18, 280, 60, { r: 14, fill: C.greyL, lw: 2.5, shadow: false });
+      const r = lt < 5.0 ? ['等待消息…', C.ink2] : lt < 8.6 ? ['S1 ✓ 找到会话', C.green] : lt < 9.4 ? ['查找 S2 …', C.ink] : lt < 16.6 ? ['S2 ✗ · 是 INVITE', C.orange] : lt < 17.2 ? ['查找 S9 …', C.ink] : ['S9 ✗ · 不是 INVITE', C.coral];
+      text(g, r[0], 0, 49, { s: 26, w: 900, c: r[1] });
+      keyIcon(g, -120, -98, .55, C.purple);
+    });
+    // 出口
+    at(g, OUTS.top[0], OUTS.top[1], ap(lt, .5), () => { card(g, -200, -40, 400, 80, { r: 22, fill: C.greenL, lw: 3, stroke: C.green }); text(g, '会话 S1 → 状态机', 0, 1, { s: 28, w: 900, c: C.green }); });
+    at(g, OUTS.mid[0], OUTS.mid[1], ap(lt, .7), () => { card(g, -200, -95, 400, 190, { r: 22, fill: '#fff', lw: 3, stroke: C.orange }); text(g, '新建被叫会话', 0, -62, { s: 28, w: 900, c: C.orange }); });
+    CHECKS.forEach(([s, x, y], i) => { if (lt < .9) return; const ck = seg(lt, 12.6 + i * .6, 12.9 + i * .6);
+      card(g, x - 92, y - 15, 30, 30, { r: 7, fill: ck > 0 ? C.green : '#fff', lw: 2.5, shadow: false, al: fa(lt, .9) }); if (ck > 0) icCheck(g, x - 77, y + 1, 22, '#fff', eo(ck), 4);
+      text(g, s, x - 52, y + 1, { s: 26, w: 700, a: 'left', al: fa(lt, .9) }); });
+    at(g, OUTS.bot[0], OUTS.bot[1], ap(lt, .9), () => { card(g, -200, -40, 400, 80, { r: 22, fill: C.greyL, lw: 3 }); text(g, '日志', -150, 1, { s: 28, w: 900, c: C.ink2 }); });
+    if (lt > 18.4) { const k = eo(seg(lt, 18.4, 19.0)); g.save(); rr(g, OUTS.bot[0] - 100, OUTS.bot[1] - 32, 290, 64, 10); g.clip();
+      card(g, OUTS.bot[0] - 90, lerp(OUTS.bot[1] - 90, OUTS.bot[1] - 24, k), 270, 48, { r: 6, fill: '#fff', lw: 2.5, sb: 8, so: 3 }); text(g, '未匹配 · 已忽略', OUTS.bot[0] + 45, lerp(OUTS.bot[1] - 66, OUTS.bot[1], k), { s: 26, w: 900, c: C.coral }); g.restore(); }
+    if (lt > 15.0) { at(g, 1690, 470, ap(lt, 15.0), () => { card(g, -80, -50, 160, 100, { r: 22, fill: C.greenL, lw: 3.5, stroke: C.green }); text(g, '会话 S2', 0, 1, { s: 28, w: 900, c: C.green }); }); burst(g, 1690, 470, lt - 15.0, C.green, 12, 110); }
+    if (lt > 6.6) badge(g, OUTS.top[0] + 196, OUTS.top[1] - 36, 22, C.green, 'check', seg(lt, 6.6, 6.9));
+    routeCap(g, lt, 4.2, 'cancel', 'S1', 360, OUTS.top);
+    routeCap(g, lt, 8.6, 'invite', 'S2', 470, OUTS.mid);
+    routeCap(g, lt, 16.6, 'hangup', 'S9', 580, OUTS.bot);
+  },
+});
+
+S('s22', {
+  cues: [[.4, 'send', .4], [1.2, 'error', .4], [5.0, 'success'], [9.4, 'latch'], [9.8, 'latch', .6]],
+  draw(g, lt) {
+    const IN = [70, 490], FK = [400, 490], CT = [[FK[0], FK[1]], [560, 330], [740, 330]], DT = [[FK[0], FK[1]], [560, 650], [800, 650]];
+    // 线路
+    const lp = eo(seg(lt, .2, .9));
+    path(g, partial([IN, FK], lp), { c: rgba(C.ink, .35), w: 5, dash: [6, 10], off: -lt * 40 });
+    path(g, partial([...CT, [1220, 330]], lp), { c: rgba(C.blue, .5), w: 5, dash: [6, 10], off: -lt * 40 });
+    path(g, partial([...DT, [1290, 650]], lp), { c: rgba(C.amber, .7), w: 5, dash: [6, 10], off: -lt * 40 });
+    at(g, FK[0], FK[1], ap(lt, .2), () => { diamond(g, 0, 0, 52, '#fff', C.ink); text(g, '类型？', 0, 2, { s: 26, w: 900 }); });
+    at(g, 880, 330, ap(lt, .4), () => { card(g, -130, -50, 260, 100, { r: 22, fill: C.purpleL, lw: 3.5, stroke: C.purple }); text(g, '会话管理器', 0, 1, { s: 28, w: 900, c: C.purple }); });
+    at(g, 1340, 330, ap(lt, .6), () => { card(g, -120, -50, 240, 100, { r: 22, fill: '#fff', lw: 3.5 }); text(g, '状态机', 0, 1, { s: 30, w: 900 }); });
+    at(g, 960, 650, ap(lt, .8), () => { card(g, -140, -50, 280, 100, { r: 22, fill: C.amberL, lw: 3.5, stroke: C.amber }); text(g, 'Base64 解码', 0, 1, { s: 28, w: 900, c: C.ink }); });
+    if (lt > 1.0) speaker(g, 1380, 650, ap(lt, 1.0), lt, fa(lt, 4.8));
+    // 消息流：控制消息往上走，语音包往下走
+    for (let k = 0; k < 60; k++) {
+      const te = -4 + k * .42, u = (lt - te) / 3.2; if (u < 0 || u > 1) continue;
+      const ctl = k % 4 === 1, pts = ctl ? [IN, ...CT, [1200, 330]] : [IN, ...DT, [1290, 650]], p = partial(pts, u).at(-1);
+      const hide = Math.abs(p[0] - FK[0]) < 110 && Math.abs(p[1] - FK[1]) < 60 || (ctl ? p[0] > 700 && p[0] < 1060 : p[0] > 770 && p[0] < 1150);
+      const al = Math.min(1, u * 8, (1 - u) * 6) * lp * (hide ? 0 : 1); if (al <= 0) continue;
+      if (ctl) { const kind = ['invite', 'ring', 'accept', 'cancel'][Math.floor(k / 4) % 4], [code, , col] = MSG[kind]; g.save(); g.globalAlpha *= al; rr(g, p[0] - 38, p[1] - 20, 76, 40, 20); g.fillStyle = col; g.fill(); g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke(); text(g, code, p[0], p[1] + 1, { f: 'mono', s: 24, w: 700, c: '#fff' }); g.restore(); }
+      else { g.save(); g.globalAlpha *= al; rr(g, p[0] - 34, p[1] - 18, 68, 36, 8); g.fillStyle = C.amber; g.fill(); g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke(); text(g, '300', p[0], p[1] + 1, { f: 'mono', s: 24, w: 700, c: '#fff' }); g.restore(); }
+    }
+    if (lt > 1.2 && lt < 9.0) { tag(g, '300 不进来', 1340, 430, C.coral, seg(lt, 1.2, 1.6), { fs: 26, al: fo(lt, 8.6) }); }
+    if (lt > 5.0) tag(g, '直接播放', 1380, 760, C.amber, seg(lt, 5.0, 5.4), { tc: C.ink, fs: 26 });
+    if (lt > 9.4) {
+      path(g, partial([[560, 490], [1820, 490]], eo(seg(lt, 9.4, 10.0))), { c: C.ink, w: 3, dash: [14, 10] });
+      tag(g, '控制面', 1700, 330, C.blue, seg(lt, 9.6, 10.0), { fs: 30 }); tag(g, '数据面', 1700, 650, C.amber, seg(lt, 9.9, 10.3), { fs: 30, tc: C.ink });
+    }
+  },
+});
+
+/* =====================================================================
+ * 第六章：踩坑：50 毫秒竞态（B 的内部视图沿用 v2 的时间尺 / 会话槽 / 传送带）
+ * ===================================================================== */
+const RX0 = 340, RX1 = 1500, RY = 290;
+const rx = ms => lerp(RX0, RX1, clamp(ms / 50));
+function ruler(g, ms, o = {}) {
+  path(g, [[RX0, RY], [RX1, RY]], { c: C.ink, w: 3 });
+  for (let m = 0; m <= 50; m += 5) { const x = rx(m), big = m % 10 === 0; path(g, [[x, RY - (big ? 14 : 8)], [x, RY]], { c: C.ink, w: big ? 3 : 2 }); if (big) text(g, m + (m === 50 ? ' ms' : ''), x, RY - 36, { f: 'mono', s: 24, w: 700, c: C.ink2 }); }
+  if (o.mark != null) {
+    const k = o.markK ?? 1, x = rx(o.mark);
+    path(g, [[x, RY + 10], [x, RY + 10 + 300 * eo(k)]], { c: C.coral, w: 4, dash: [10, 8] });
+    at(g, x + 130, RY + 150, pop(k), () => { card(g, -96, -24, 192, 48, { r: 24, fill: C.coral, lw: 2.5, sb: 10, so: 4 }); text(g, '取消到达', 0, 1, { s: 26, w: 900, c: '#fff' }); });
+  }
+  if (ms != null) { const x = rx(ms); path(g, [[x, RY - 4], [x, RY + 210]], { c: C.purple, w: 4 }); dot(g, x, RY, 9, C.purple); }
+}
+function createLane(g, ms, y, label, lt) {
+  text(g, label, RX0 - 24, y + 25, { s: 26, w: 900, a: 'right' });
+  card(g, RX0, y, RX1 - RX0, 50, { r: 14, fill: '#fff', lw: 3, shadow: false });
+  hatch(g, RX0 + 3, y + 3, (RX1 - RX0 - 6) * clamp(ms / 50), 44, C.orange, lt * 40, 12);
+}
+function bigMs(g, ms, x = 1665, y = 330) {
+  text(g, '已过', x, y - 64, { s: 26, w: 700, c: C.ink2 });
+  text(g, Math.min(50, Math.floor(ms)).toString(), x - 18, y, { f: 'disp', w: 900, s: 96, c: ms >= 50 ? C.green : C.purple, a: 'right' });
+  text(g, 'ms', x - 10, y + 16, { f: 'disp', w: 800, s: 40, c: C.ink2, a: 'left' });
+}
+function sessionSlot(g, x, y, prog, lt, o = {}) {
+  const done = o.doneAt != null ? seg(lt, o.doneAt, o.doneAt + .35) : (prog >= 1 ? 1 : 0), w = 300, h = 170;
+  if (done < 1) {
+    g.save(); g.globalAlpha *= 1 - done;
+    card(g, x - w / 2, y - h / 2, w, h, { r: 22, fill: rgba('#ffffff', .7), lw: 3, dash: [12, 9], stroke: C.purple, shadow: false });
+    for (let i = 0; i < 6; i++) {
+      const kk = clamp(prog * 6 - i), bx = x - 105 + (i % 3) * 70, by = y - 4 + Math.floor(i / 3) * 50 - (1 - eo(kk)) * 60;
+      if (kk > 0) card(g, bx - 30, by - 19, 60, 40, { r: 8, fill: C.purpleL, lw: 2.5, al: eo(kk), sb: 8, so: 3 });
+    }
+    text(g, o.label || '会话 S1 · 建造中', x, y - h / 2 + 28, { s: 26, w: 900, c: C.purple });
+    g.restore();
+  }
+  if (done > 0) {
+    at(g, x, y, pop(done), () => {
+      card(g, -w / 2, -h / 2, w, h, { r: 22, fill: C.greenL, lw: 3.5, stroke: C.green, sb: 22, so: 8 });
+      text(g, '会话 S1', 0, -24, { s: 40, w: 900, c: C.green }); text(g, o.doneLabel || '已就绪', 0, 30, { s: 28, w: 700, c: C.ink });
+    });
+    burst(g, x, y, lt - (o.doneAt ?? -9), C.green, 14, 170);
+  }
+}
+const SLOT = [1450, 650];
+const ms23 = lt => Math.max(0, (lt - 5.0) * 2.6), ARR23 = 5.0 + 10 / 2.6;   // 取消在第 10 ms（构造值）到达
+const ms24 = lt => Math.min(50, ms23(16) + lt * 5);
+function innerB(g, ms, lt, o = {}) {
+  boardC(g, '被叫屏 B · 内部处理', 1, { right: o.right || '' });
+  ruler(g, ms, { mark: o.mark, markK: o.markK }); createLane(g, ms, 360, '创建会话 S1', lt); bigMs(g, ms);
+  sessionSlot(g, SLOT[0], SLOT[1], ms / 50, lt, { doneAt: o.doneAt });
+}
+S('s23', {
+  card: 7, demo: true, scaled: lt => fa(lt, 4.4),
+  cam: [[0, 960, 470, 1], [3.8, 960, 470, 1], [5.0, P.B[0], P.B[1] - 6, 6.2], [16, P.B[0], P.B[1] - 6, 6.2]],
+  cues: [[0, 'whoosh'], [1.8, 'send'], [3.4, 'latch'], [3.9, 'whoosh'], [5.0, 'tick', .5], [ARR23 - .8, 'send'], [ARR23, 'latch'], [12.4, 'error', .6]],
+  draw(g, lt) {
+    if (lt < 5.0) stage(g, lt, { busy: gwBusy(lt, 1.8), a: { mode: 'calling' }, b: lt < 3.4 ? { mode: 'app' } : { mode: 'creating', from: 'app', at: 3.4 }, ca: ['CALLING'], cb: ['IDLE'] });
+    if (lt > 1.8 && lt < 4.2) relay(g, lt, 1.8, 'invite', 'AB');
+    const bi = eo(seg(lt, 4.3, 5.0)); if (bi <= 0) return;
+    screenSpace(g, () => {
+      g.save(); g.globalAlpha *= bi; g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const ms = ms23(lt);
+      innerB(g, ms, lt, { mark: lt > ARR23 - .05 ? 10 : null, markK: seg(lt, ARR23 - .05, ARR23 + .4) });
+      text(g, '入站消息', 230, 560, { s: 26, w: 900, c: C.ink2 });
+      path(g, [[160, 650], [300, 650]], { c: rgba(C.ink, .3), w: 5, dash: [3, 13], off: -lt * 30 });
+      if (lt > ARR23 - .8) { const k = clamp((lt - (ARR23 - .8)) / .8), x = lerp(60, 640, eo(k)); capsule(g, x, 650, 'cancel', { s: .9, tag: 'S1', sx: 1 + .12 * Math.sin(k * Math.PI), glow: k < 1 ? .5 : 0 }); ripple(g, 640, 650, lt - ARR23, C.coral, 40, 150); }
+      const q = eo(seg(lt, 12.2, 12.9));
+      if (q > 0) { path(g, partial([[800, 650], [SLOT[0] - 160, SLOT[1]]], q), { c: C.coral, w: 5, dash: [12, 10] }); badge(g, (800 + SLOT[0] - 160) / 2, 650, 34, C.coral, '?', seg(lt, 12.6, 13.0)); tag(g, '未就绪', SLOT[0], SLOT[1] + 128, C.coral, seg(lt, 12.8, 13.2), { fs: 28 }); }
+      g.restore();
+    });
+  },
+});
+S('s24', {
+  demo: true, scaled: lt => fo(lt, 4.2),
+  cam: [[0, P.B[0], P.B[1] - 6, 6.2], [4.4, P.B[0], P.B[1] - 6, 6.2], [5.8, 960, 470, 1], [14, 960, 470, 1]],
+  cues: [[.3, 'send', .6], [1.4, 'error'], [2.4, 'error', .6], [2.9, 'latch'], [4.2, 'success', .5], [4.6, 'whoosh'], [5.6, 'ring', .7], [6.6, 'ring', .7], [7.0, 'error', .5], [8.4, 'latch'], [9.2, 'tick', .5], [9.4, 'tick', .5], [9.6, 'tick', .5], [10.6, 'latch', .5], [11.4, 'latch', .5], [12.2, 'latch', .5], [12.6, 'error']],
+  draw(g, lt) {
+    const fb = fo(lt, 4.4, .6), fs = fa(lt, 4.4, .6) * fo(lt, 8.6, .5), ft = fa(lt, 8.8, .5);
+    if (fs > 0 && lt > 4.4) {
+      g.save(); g.globalAlpha *= fs;
+      const bEnd = lt >= 8.4;
+      stage(g, lt, { a: { mode: 'cancelled' }, b: bEnd ? { mode: 'timeout', label: '响铃超时', from: 'ringing', at: 8.4 } : { mode: 'ringing' }, ca: ['ENDED.SELF_TERMINATED'], cb: ['ENDED.RINGING_TIMEOUT', 'RINGING', 8.4] });
+      if (lt > 5.2) { const left = clamp(1 - (lt - 5.4) / 3); countdown(g, P.B[0], 222, 52, left, Math.ceil(60 * left) + ' s', C.orange, { fs: 30 }); tag(g, '快进 ▶▶', P.B[0] - 170, 222, C.ink, seg(lt, 5.2, 5.6), { fs: 26 }); }
+      const dk = seg(lt, 6.8, 7.4);
+      if (dk > 0) { path(g, partial([[P.A[0] + 200, CHIP_Y], [P.B[0] - 200, CHIP_Y]], eo(dk)), { c: C.coral, w: 5, dash: [14, 10] }); tag(g, '两端不一致', 960, CHIP_Y, C.coral, seg(lt, 7.0, 7.4), { fs: 28 }); }
+      g.restore();
+    }
+    if (fb > 0) screenSpace(g, () => {
+      g.save(); g.globalAlpha *= fb; g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+      const ms = ms24(lt); innerB(g, ms, lt, { mark: 10 });
+      const MX = 900, MY = 650, shake = lt > 1.4 && lt < 1.9 ? Math.sin(lt * 70) * 10 * (1 - (lt - 1.4) / .5) : 0;
+      at(g, MX + shake, MY, 1, () => {
+        card(g, -160, -95, 320, 190, { r: 26, fill: '#fff', lw: 3.5 });
+        card(g, -160, -95, 320, 58, { r: 26, fill: C.purpleL, lw: 0, shadow: false }); path(g, [[-160, -37], [160, -37]], { c: C.ink, w: 3 });
+        text(g, '会话匹配', 0, -65, { s: 28, w: 900, c: C.purple });
+        text(g, lt < 1.4 ? '查找 S1 …' : '没有 S1', 0, 4, { s: 28, w: 900, c: lt < 1.4 ? C.ink : C.coral });
+        if (lt > 1.9) text(g, '是 INVITE 吗？', 0, 56, { s: 26, w: 900, c: C.ink2 });
+      });
+      if (lt > 1.4) badge(g, MX + 160, MY - 95, 30, C.coral, 'cross', seg(lt, 1.4, 1.7));
+      if (lt > 2.4) badge(g, MX + 140, MY + 56, 24, C.coral, 'cross', seg(lt, 2.4, 2.7));
+      const ink = eo(seg(lt, .2, 1.0));
+      capsule(g, lerp(640, MX - 300, ink), 650 - 50 * ink, 'cancel', { s: .9, tag: 'S1', al: 1 - seg(lt, 2.6, 3.0) });
+      card(g, MX - 160, 790, 320, 52, { r: 14, fill: C.greyL, lw: 3 }); text(g, '日志', MX - 180, 816, { s: 26, w: 900, c: C.ink2, a: 'right' });
+      if (lt > 2.8) { const pr = eo(seg(lt, 2.8, 3.6)); card(g, MX - 150, lerp(740, 792, pr), 300, 48, { r: 6, fill: '#fff', lw: 2.5, sb: 10, so: 3 }); text(g, '402 · 未匹配 · 已忽略', MX, lerp(764, 816, pr), { s: 26, w: 900, c: C.coral }); }
+      g.restore();
+    });
+    // 孪生症状：同时拨三台，乱序完成
+    if (ft > 0) screenSpace(g, () => {
+      g.save(); g.globalAlpha *= ft; g.fillStyle = C.bg; g.globalAlpha *= 1; g.fillRect(0, 0, W, H);
+      boardC(g, '主叫屏 A · 同时拨三台', 1, { c: C.blue, right: '' });
+      const L = [['先拨 B1', 9.2, 11.4], ['再拨 B2', 9.4, 12.2], ['最后拨 B3', 9.6, 10.6]];
+      let cur = null;
+      L.forEach(([s, t0, t1], i) => {
+        const y = 330 + i * 120, p = clamp((lt - t0) / (t1 - t0));
+        text(g, s, 420, y + 25, { s: 28, w: 900, a: 'right' });
+        card(g, 450, y, 640, 50, { r: 14, fill: '#fff', lw: 3, shadow: false });
+        if (lt > t0) hatch(g, 453, y + 3, 634 * p, 44, p >= 1 ? C.green : C.blue, lt * 40, 12);
+        if (lt >= t1) { badge(g, 1120, y + 25, 22, C.green, 'check', seg(lt, t1, t1 + .3)); }
+      });
+      const order = L.filter(l => lt >= l[2]).sort((a, b) => a[2] - b[2]); if (order.length) cur = order[order.length - 1];
+      const SX = 1480, SY = 450, wrong = lt >= 12.2;
+      card(g, SX - 170, SY - 110, 340, 220, { r: 24, fill: wrong ? C.coralL : '#fff', lw: 3.5, stroke: wrong ? C.coral : C.ink });
+      text(g, '当前会话', SX, SY - 70, { s: 28, w: 900, c: C.ink2 });
+      if (cur) { const f = seg(lt, cur[2], cur[2] + .3); at(g, SX, SY + 20, 1, () => text(g, cur[0].slice(-2), 0, 0, { f: 'disp', w: 900, s: 84, c: wrong ? C.coral : C.blue }), { sy: Math.abs(Math.cos(f * Math.PI)) || .01 }); }
+      if (lt > 12.6) tag(g, '最后拨的是 B3', SX, SY + 170, C.amber, seg(lt, 12.6, 13.0), { tc: C.ink, fs: 28 });
+      g.restore();
+    });
+  },
+});
+
+/* 三个方案 */
+function barrier(g, x, y, down, lt, o = {}) {
+  card(g, x - 14, y - 150, 28, 160, { r: 8, fill: C.ink2, lw: 2.5, sb: 8, so: 4 });
+  g.save(); g.translate(x, y - 132); g.rotate(Math.PI * (1 - down));
+  rr(g, -8, 0, 16, 150, 8); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 3; g.strokeStyle = C.ink; g.stroke();
+  for (let i = 0; i < 4; i++) { rr(g, -8, 10 + i * 36, 16, 18, 4); g.fillStyle = C.coral; g.fill(); }
+  g.restore();
+  if (o.stop && down > .5) at(g, x, y - 200, pop(o.stop) * (1 + .06 * Math.sin(lt * 8)), () => { dot(g, 0, 0, 36, C.coral); ring(g, 0, 0, 36, C.ink, 3); text(g, '停', 0, 2, { s: 36, w: 900, c: '#fff' }); });
+}
+function optCard(g, x, y, title, kind, lt, o = {}) {
+  at(g, x, y, o.s ?? 1, () => {
+    card(g, -190, -170, 380, 340, { r: 32, fill: o.pick ? C.greenL : '#fff', lw: 3.5, stroke: o.pick ? C.green : C.ink, sb: 30, so: 12 });
+    text(g, title, 0, -120, { s: 34, w: 900 });
+    if (o.blank) return;
+    if (kind === 'lock') { lockIcon(g, 0, 30, 1.4, C.amber); text(g, '每处都要锁', 0, 130, { s: 26, w: 700, c: C.ink2 }); }
+    if (kind === 'barrier') { at(g, 0, 90, .8, () => barrier(g, 0, 0, .5 + .5 * Math.sin(lt * 2), lt)); text(g, '暂停 / 恢复', 0, 130, { s: 26, w: 700, c: C.ink2 }); }
+    if (kind === 'flow') {
+      for (let i = 0; i < 3; i++) card(g, -160 + i * 62, -2, 50, 50, { r: 12, fill: [C.blueL, C.coralL, C.greenL][i], lw: 3, sb: 8, so: 3 });
+      arrow(g, [[34, 23], [84, 23]], { c: C.blue, w: 5, hs: 14 });
+      card(g, 92, -17, 96, 80, { r: 16, fill: C.blueL, lw: 3 }); text(g, '工位', 140, 23, { s: 26, w: 900, c: C.blue });
+      text(g, '一次只做一件', 0, 130, { s: 26, w: 700, c: C.ink2 });
+    }
+  }, { al: o.al, rot: o.rot });
+  if (o.pick) badge(g, x + 170 * (o.s ?? 1), y - 160 * (o.s ?? 1), 32, C.green, 'check', o.pickP);
+}
+S('s25', {
+  cues: [[.4, 'latch', .5], [.8, 'latch', .5], [2.4, 'whoosh', .5], [2.8, 'error', .5], [4.2, 'latch'], [4.5, 'latch'], [4.8, 'latch'], [8.0, 'whoosh', .5], [8.6, 'tick'], [8.9, 'tick'], [9.2, 'tick'], [9.8, 'error', .5], [12.4, 'success'], [13.4, 'latch'], [13.8, 'latch']],
+  draw(g, lt) {
+    // 两个症状 → 同一个根子
+    const sa = fo(lt, 3.6, .4);
+    if (sa > 0) {
+      const mg = eio(seg(lt, 2.4, 3.0));
+      const sym = (x, title, fn, p) => at(g, lerp(x, 960, mg), 470, pop(p) * (1 - .6 * mg), () => { card(g, -210, -130, 420, 260, { r: 30, fill: '#fff', lw: 3.5 }); text(g, title, 0, -84, { s: 32, w: 900, c: C.coral }); fn(); }, { al: sa * (1 - mg) });
+      sym(620, '取消丢了', () => { capsule(g, -40, 20, 'cancel', { s: .9 }); badge(g, 150, -10, 26, C.coral, '?', 1); }, seg(lt, .3, .8));
+      sym(1300, '会话错位', () => { text(g, 'B1 B2 B3 → B2', 0, 30, { f: 'mono', s: 34, w: 700, c: C.ink }); }, seg(lt, .7, 1.2));
+      if (lt > 2.8) tag(g, '多线程 · 执行不同步', 960, 470, C.coral, seg(lt, 2.8, 3.2), { fs: 34, al: sa });
+    }
+    const zoomL = eio(seg(lt, 8.0, 8.6)) * (1 - eio(seg(lt, 11.6, 12.2))), mv = eio(seg(lt, 12.0, 12.8)), pick = lt > 12.2;
+    const xs = [480, 960, 1440], kinds = ['lock', 'barrier', 'flow'], names = ['加锁', 'Handler 同步屏障', 'Flow 串行消费'];
+    const order = zoomL > 0 ? [1, 2, 0] : [0, 1, 2];
+    order.forEach(i => {
+      const p = seg(lt, 4.2 + i * .3, 4.7 + i * .3); if (p <= 0) return; const k = kinds[i];
+      if (k === 'lock') optCard(g, lerp(lerp(xs[0], 960, zoomL), 300, mv), lerp(lerp(480, 470, zoomL), 520, mv), names[0], k, lt, { s: pop(p) * lerp(1, 1.3, zoomL) * lerp(1, .78, mv), blank: zoomL > .5, al: 1 - .6 * mv, rot: mv * -.08 });
+      else if (k === 'flow') optCard(g, lerp(xs[2], 960, mv), lerp(480, 470, mv), names[2], k, lt, { s: pop(p) * lerp(1, 1.18, mv), pick, pickP: seg(lt, 12.4, 12.8), al: 1 - .7 * zoomL });
+      else optCard(g, lerp(xs[1], 1620, mv), lerp(480, 520, mv), names[1], k, lt, { s: pop(p) * lerp(1, .78, mv), al: (1 - .7 * zoomL) * (1 - .6 * mv), rot: mv * .08 });
+    });
+    if (zoomL > .5) { // 锁散在多个类里
+      ['类 A', '类 B', '类 C'].forEach((s, i) => { const x = 790 + i * 170, p = ap(lt, 8.6 + i * .3); if (p <= 0) return;
+        at(g, x, 540, p, () => { card(g, -70, -40, 140, 80, { r: 16, fill: '#fff', lw: 3 }); text(g, s, 0, 1, { s: 28, w: 900 }); lockIcon(g, 0, -88, .7, C.amber); }); });
+      if (lt > 9.8) tag(g, '难维护', 960, 650, C.coral, seg(lt, 9.8, 10.2), { fs: 30 });
+    }
+    if (lt > 13.4) { tag(g, '好懂', 860, 750, C.blue, seg(lt, 13.4, 13.8), { fs: 30 }); tag(g, '好维护', 1060, 750, C.green, seg(lt, 13.8, 14.2), { fs: 30 }); }
+  },
+});
+
+/* 传送带：入站消息排成一队（emit → collect） */
+const BELT = { x0: 250, x1: 1010, y: 610 }, STATION = [1225, 560];
+function belt(g, lt, o = {}) {
+  const { x0, x1, y } = BELT, run = o.run ?? 1;
+  card(g, x0 - 30, y, x1 - x0 + 60, 54, { r: 27, fill: '#3A3F52', lw: 3, sb: 18, so: 8 });
+  g.save(); rr(g, x0 - 26, y + 4, x1 - x0 + 52, 46, 23); g.clip();
+  for (let x = x0 - 60 + (lt * 70 * run) % 40; x < x1 + 40; x += 40) path(g, [[x, y + 4], [x - 14, y + 50]], { c: rgba('#ffffff', .18), w: 6 });
+  g.restore();
+  for (let i = 0; i < 6; i++) { const r2 = x0 + i * (x1 - x0) / 5; dot(g, r2, y + 27, 14, '#5B6176'); ring(g, r2, y + 27, 14, C.ink, 2.5);
+    const a = -lt * 4 * run; path(g, [[r2 - Math.cos(a) * 10, y + 27 - Math.sin(a) * 10], [r2 + Math.cos(a) * 10, y + 27 + Math.sin(a) * 10]], { c: '#fff', w: 3 }); }
+  text(g, '同一条流 · 入站控制消息', (x0 + x1) / 2, y + 96, { s: 26, w: 900, c: C.ink2 });
+  tag(g, 'emit', x0 - 10, y - 70, C.blue, 1, { fs: 26 });
+}
+function station(g, lt, o = {}) {
+  const [x, y] = STATION, w = 340, h = 260;
+  card(g, x - w / 2, y - h / 2, w, h, { r: 28, fill: '#fff', lw: 3.5, sb: 26, so: 10 });
+  card(g, x - w / 2, y - h / 2, w, 62, { r: 28, fill: C.blueL, lw: 0, shadow: false });
+  path(g, [[x - w / 2, y - h / 2 + 62], [x + w / 2, y - h / 2 + 62]], { c: C.ink, w: 3 });
+  text(g, '唯一工位 · collect', x, y - h / 2 + 32, { s: 26, w: 900, c: C.blue });
+  if (o.item) capsule(g, x, y - 14, o.item, { s: .9, tag: 'S1' });
+  if (o.prog != null) {
+    text(g, o.progLabel || '创建会话', x, y + 52, { s: 26, w: 700, c: C.ink2 });
+    card(g, x - 120, y + 76, 240, 26, { r: 13, fill: '#fff', lw: 2.5, shadow: false });
+    hatch(g, x - 118, y + 78, 236 * clamp(o.prog), 22, o.prog >= 1 ? C.green : C.orange, lt * 40, 11);
+  }
+  if (o.check) badge(g, x + w / 2 - 6, y - h / 2 + 6, 26, C.green, 'check', o.check);
+}
+function drop(lt, t0, x, y) { const k = seg(lt, t0, t0 + .55); return [x, lerp(y - 260, y, k < 1 ? eo(k) : 1) - (k >= 1 ? 0 : Math.abs(Math.sin(k * Math.PI * 2)) * 30 * (1 - k))]; }
+const DONE26 = 11.2;
+S('s26', {
+  demo: true, scaled: lt => fo(lt, 15.6),
+  cues: [[.6, 'latch'], [1.2, 'latch'], [3.6, 'send'], [4.0, 'latch', .6], [DONE26, 'success'], [11.4, 'whoosh'], [12.4, 'send'], [12.8, 'latch'], [13.8, 'success'], [16.2, 'whoosh', .6], [17.0, 'latch', .6]],
+  draw(g, lt) {
+    const ba = fo(lt, 15.6, .6);
+    if (ba > 0) screenSpace(g, () => {
+      g.save(); g.globalAlpha *= ba;
+      boardC(g, '被叫屏 B · 内部处理', 1, { right: '' });
+      g.save(); g.translate(0, 12);
+      belt(g, lt, { run: lt < 4.0 || (lt > 11.4 && lt < 12.4) ? 1 : .15 });
+      const item = lt > 3.6 && lt < 11.6 ? 'invite' : lt >= 12.4 ? 'cancel' : null;
+      const prog = lt > 3.8 && lt < 12.4 ? clamp((lt - 3.8) / (DONE26 - 3.8)) : lt >= 12.4 ? clamp((lt - 12.4) / .8) : null;
+      station(g, lt, { item, prog, progLabel: lt >= 12.4 ? '处理取消' : '创建会话', check: lt > DONE26 && lt < 12.4 ? seg(lt, DONE26, DONE26 + .3) : 0 });
+      sessionSlot(g, 1590, 560, clamp((lt - 3.8) / (DONE26 - 3.8)), lt, { doneAt: DONE26 });
+      barrier(g, 1040, BELT.y, lt < 11.4 ? (lt < 3.4 ? 0 : eo(seg(lt, 3.4, 3.8))) : 1 - eo(seg(lt, 11.4, 11.8)), lt, { stop: lt > 4.0 && lt < 11.4 ? seg(lt, 4.0, 4.4) : 0 });
+      if (lt < 3.6) { const [x0, y0] = drop(lt, .6, 600, BELT.y - 34); capsule(g, lt < 1.6 ? x0 : lerp(600, 1000, eio(seg(lt, 2.0, 3.6))), y0, 'invite', { s: .9, tag: 'S1', al: seg(lt, .6, .8) }); }
+      if (lt < 12.4) {
+        const [x0, y0] = drop(lt, 1.2, 330, BELT.y - 34), jig = lt > 5 && lt < 11.2 ? Math.sin(lt * 12) * 4 : 0;
+        const x = lt < 1.8 ? x0 : lt < 11.6 ? lerp(330, 830, eio(seg(lt, 1.8, 4.0))) : lerp(830, STATION[0], eio(seg(lt, 11.6, 12.4)));
+        capsule(g, x + jig, y0 - Math.abs(jig), 'cancel', { s: .9, tag: 'S1', al: seg(lt, 1.2, 1.4) * (1 - seg(lt, 12.2, 12.4)), rot: jig * .01 });
+        if (lt > 5.0 && lt < 11.4) at(g, 830, BELT.y - 150, ap(lt, 5.0), () => { card(g, -70, -30, 140, 60, { r: 30, fill: '#fff', lw: 3 }); for (let i = 0; i < 3; i++) dot(g, -26 + i * 26, 0, 7, C.amber, .3 + .7 * ((Math.floor(lt * 3) % 3) === i ? 1 : 0)); });
+      }
+      if (lt > 12.8) tag(g, '找到 S1 ✓', STATION[0], STATION[1] - 180, C.green, seg(lt, 12.8, 13.2), { fs: 28 });
+      if (lt > .8) chip(g, 1590, 740, lt, 'ENDED.OTHER_TERMINATED', 'RINGING', 13.8, { glow: eo(seg(lt, 13.9, 14.4)), al: fa(lt, DONE26) });
+      if (lt > 13.8) burst(g, 1590, 740, lt - 13.9, C.green);
+      g.restore(); g.restore();
+    });
+    // 两块屏各排各的队
+    const pa = fa(lt, 16.0, .5);
+    if (pa > 0) {
+      const panelQ = (x, title, c, cl, items) => at(g, x, 500, pop(seg(lt, 16.0, 16.5)), () => {
+        card(g, -380, -150, 760, 300, { r: 32, fill: cl, lw: 4, stroke: c });
+        text(g, title, 0, -105, { s: 30, w: 900, c });
+        for (let i = 0; i < 3; i++) card(g, -300 + i * 92, -20, 76, 76, { r: 16, fill: rgba('#fff', .8), lw: 3, sb: 10, so: 4 });
+        items.forEach((k, i) => { const [code, , cc] = MSG[k]; rr(g, -296 + i * 92, -16, 68, 68, 14); g.fillStyle = cc; g.fill(); text(g, code, -262 + i * 92, 19, { f: 'mono', s: 26, w: 700, c: '#fff' }); });
+        arrow(g, [[-20, 18], [70, 18]], { c, w: 6, hs: 16 });
+        card(g, 90, -40, 220, 116, { r: 22, fill: '#fff', lw: 3 }); text(g, '唯一工位', 200, -5, { s: 26, w: 900, c });
+        const a = lt * 4; ring(g, 200, 38, 18, c, 5, 1, a, a + 4.4);
+        text(g, '自己的队列 · 自己的状态', 0, 118, { s: 26, w: 700, c: C.ink2 });
+      }, { al: pa });
+      panelQ(500, '主叫本地：建会话也排队', C.blue, C.blueL, ['invite', 'invite']);
+      panelQ(1420, '被叫本地：入站消息排队', C.orange, C.orangeL, ['invite', 'cancel']);
+      if (lt > 17.0) tag(g, '各管各的状态', 960, 760, C.ink, seg(lt, 17.0, 17.4), { fs: 30 });
+    }
+  },
+});
+
+/* =====================================================================
+ * 总结
+ * ===================================================================== */
+function thumb(g, x, y, kind, p, lt) {
+  at(g, x, y, ap(lt, p - .2), () => {
+    card(g, -180, -140, 360, 280, { r: 26, fill: '#fff', lw: 3.5, sb: 24, so: 9 });
+    const k = eo(seg(lt, p, p + 1.2));
+    if (kind === 'seq') {
+      for (const lx of [-110, 0, 110]) path(g, partial([[lx, -110], [lx, 110]], k), { c: rgba(C.ink, .35), w: 3, dash: [6, 6] });
+      [[-110, -80, 110, -60, C.blue], [110, -40, -110, -20, C.blue], [110, 10, -110, 30, C.green], [-110, 50, 110, 70, C.green]].forEach(([a, b, c, d, col], i) => arrow(g, [[a, b], [c, d]], { p: clamp(k * 4 - i), c: col, w: 4, hs: 12 }));
+    }
+    if (kind === 'state') {
+      for (let i = 0; i < 4; i++) { const p2 = clamp(k * 5 - i); dot(g, -120 + i * 80, -60, 20 * pop(p2), [C.grey, C.blue, C.orange, C.green][i]); ring(g, -120 + i * 80, -60, 20 * pop(p2), C.ink, 3); }
+      for (let i = 0; i < 5; i++) { const bx = -128 + i * 64; path(g, partial([[bx + 8, -36], [bx + 8, 52]], clamp(k * 2 - 1)), { c: C.coral, w: 3, al: .7 }); rr(g, bx - 22, 60, 56, 30, 8); g.fillStyle = rgba(C.coral, .3 * clamp(k * 2 - 1)); g.fill(); }
+    }
+    if (kind === 'class') {
+      [['状态', -78, -60], ['会话', 78, -60], ['拦截器', -78, 50], ['管理器', 78, 50]].forEach(([s, bx, by], i) => { const p2 = clamp(k * 5 - i); if (p2 <= 0) return;
+        at(g, bx, by, pop(p2), () => { card(g, -70, -30, 140, 60, { r: 12, fill: [C.orangeL, C.blueL, NAVYL, C.purpleL][i], lw: 3, shadow: false }); text(g, s, 0, 1, { s: 26, w: 900 }); }); });
+      path(g, partial([[-8, -60], [8, -60]], k), { c: C.ink, w: 3 }); path(g, partial([[78, -30], [78, 20]], k), { c: C.ink, w: 3 }); path(g, partial([[0, -40], [-20, 30]], k), { c: C.ink, w: 3, al: .5 });
+    }
+  });
+}
+S('s27', {
+  card: 8,
+  cues: [[0, 'whoosh'], [2.0, 'latch'], [4.8, 'tick', .5], [5.4, 'tick', .5], [6.0, 'tick', .5], [6.6, 'tick', .5], [7.2, 'tick', .5], [7.8, 'tick', .5], [9.8, 'whoosh', .5], [10.2, 'success']],
+  draw(g, lt) {
+    const aa = ap(lt, 1.8) * fo(lt, 4.4);
+    if (aa > 0) at(g, 960, 470, aa, () => {
+      card(g, -460, -150, 920, 300, { r: 30, fill: '#fff', lw: 3.5, sb: 30, so: 12 });
+      text(g, '“', -390, -60, { f: 'disp', w: 900, s: 140, c: C.amber }); text(g, '”', 390, 90, { f: 'disp', w: 900, s: 140, c: C.amber });
+      text(g, '【通信协议】Kotlin 实现 SIP 通信协议', 0, -40, { s: 38, w: 900 });
+      text(g, '2023 · 文末总结', 0, 30, { s: 28, w: 700, c: C.ink2 });
+    });
+    const TH = [[330, 'seq', 4.8, '时序图', '第二章 · 握手'], [760, 'state', 6.0, '状态图', '第四章 · 状态机'], [1190, 'class', 7.2, '类图', '第五章 · 架构']];
+    TH.forEach(([x, kind, p, name, sub]) => {
+      if (lt < p - .3) return;
+      thumb(g, x, 440, kind, p, lt);
+      text(g, name, x, 625, { s: 34, w: 900, al: fa(lt, p) }); text(g, sub, x, 670, { s: 26, w: 700, c: C.ink2, al: fa(lt, p + .2) });
+    });
+    if (lt > 9.8) {
+      arrow(g, [[1385, 440], [1480, 440]], { p: eo(seg(lt, 9.8, 10.1)), c: C.ink, w: 6, hs: 18 });
+      at(g, 1640, 440, ap(lt, 10.0), () => {
+        card(g, -140, -140, 280, 280, { r: 26, fill: '#1F2433', lw: 3.5, sb: 30, so: 12 });
+        [[-90, -80, 120, '#FF8FA3'], [-70, -40, 150, '#8FB4FF'], [-70, 0, 110, '#FFC27A'], [-70, 40, 160, '#8FB4FF'], [-90, 80, 60, '#FF8FA3']].forEach(([x0, y0, w, c], i) => { rr(g, x0, y0 - 8, w * clamp((lt - 10.2) * 3 - i * .3), 16, 8); g.fillStyle = c; g.fill(); });
+      });
+      text(g, '代码', 1640, 625, { s: 34, w: 900, al: fa(lt, 10.2) });
+      burst(g, 1640, 440, lt - 10.2, C.green, 12, 150);
+    }
+  },
+});
+
+const RULES = [['01', '每条消息都有职责', C.orange], ['02', '跳转和副作用分开', NAVY], ['03', '并发消息排成一队', C.coral]];
+function ruleCard(g, i, lt) {
+  const [num, title, c] = RULES[i], p = seg(lt, 0, .55);
+  for (let j = 0; j < i; j++) at(g, 330 + j * 440, 190, 1, () => { card(g, -200, -44, 400, 88, { r: 26, fill: '#fff', lw: 3 }); text(g, RULES[j][0], -150, 2, { f: 'disp', w: 900, s: 40, c: RULES[j][2] }); text(g, RULES[j][1], 30, 2, { s: 30, w: 900 }); });
+  at(g, 960 + (1 - eo(p)) * 700, 545, 1, () => {
+    card(g, -520, -240, 1040, 480, { r: 40, fill: '#fff', lw: 4, sb: 40, so: 16 });
+    card(g, -520, -240, 200, 480, { r: 40, fill: c, lw: 0, shadow: false }); rr(g, -360, -240, 40, 480, 0); g.fillStyle = c; g.fill();
+    path(g, [[-320, -240], [-320, 240]], { c: C.ink, w: 4 }); rr(g, -520, -240, 1040, 480, 40); g.lineWidth = 4; g.strokeStyle = C.ink; g.stroke();
+    text(g, num, -420, 0, { f: 'disp', w: 900, s: 120, c: '#fff' });
+    text(g, title, -260, -160, { s: 56, w: 900, a: 'left' });
+  }, { al: eo(p) });
+  return [960 + (1 - eo(p)) * 700 + 110, 590];
+}
+S('s28', {
+  cues: [[0, 'whoosh', .6], [1.6, 'send', .5], [3.2, 'success', .6], [6.0, 'whoosh', .6], [7.4, 'latch'], [8.2, 'latch'], [12.0, 'whoosh', .6], [13.4, 'latch'], [14.6, 'success', .6]],
+  draw(g, lt) {
+    const i = lt < 6 ? 0 : lt < 12 ? 1 : 2, l = lt - i * 6, [x, y] = ruleCard(g, i, l);
+    if (i === 0) {
+      ticket(g, lerp(x - 300, x - 200, eo(seg(l, .8, 1.6))), y, ap(l, .6));
+      if (l > 1.6) arrow(g, [[x - 36, y], [x + 50, y]], { p: eo(seg(l, 1.6, 1.9)), c: C.ink, w: 5, hs: 14 });
+      if (l > 1.9) at(g, x + 190, y, ap(l, 1.9), () => { card(g, -120, -45, 240, 90, { r: 20, fill: '#fff', lw: 3 }); text(g, '码率兜底', -10, 1, { s: 30, w: 900, c: C.ink }); });
+      if (l > 3.2) { badge(g, x + 300, y - 46, 26, C.green, 'check', seg(l, 3.2, 3.5)); tag(g, '能兜底就省', x, y + 120, C.green, seg(l, 3.3, 3.7), { fs: 30 }); }
+    }
+    if (i === 1) {
+      at(g, x - 170, y, ap(l, 1.2), () => { card(g, -140, -55, 280, 110, { r: 24, fill: C.orangeL, lw: 3.5, stroke: C.orange }); text(g, '状态 · 去哪', 0, 1, { s: 30, w: 900, c: C.orange }); });
+      at(g, x + 170, y, ap(l, 2.0), () => { card(g, -140, -55, 280, 110, { r: 24, fill: NAVYL, lw: 3.5, stroke: NAVY }); text(g, '拦截器 · 做什么', 0, 1, { s: 30, w: 900, c: NAVY }); });
+      if (l > 2.4) path(g, partial([[x, y - 80], [x, y + 80]], eo(seg(l, 2.4, 2.8))), { c: C.ink, w: 4, dash: [10, 8] });
+    }
+    if (i === 2) {
+      card(g, x - 330, y + 10, 480, 44, { r: 22, fill: '#3A3F52', lw: 3, shadow: false });
+      const sq = (k, xx, t0) => { const [code, , cc] = MSG[k], p2 = ap(l, t0); if (p2 <= 0) return; at(g, xx, y - 22, p2, () => { rr(g, -38, -34, 76, 68, 14); g.fillStyle = cc; g.fill(); g.lineWidth = 3; g.strokeStyle = C.ink; g.stroke(); text(g, code, 0, 1, { f: 'mono', s: 28, w: 700, c: '#fff' }); }); };
+      const adv = eio(seg(l, 2.4, 3.2));
+      sq('cancel', x - 260 + 90 * adv, .8); sq('invite', x - 150 + 160 * adv, 1.0);
+      at(g, x + 250, y, ap(l, 1.2), () => { card(g, -90, -60, 180, 120, { r: 22, fill: C.blueL, lw: 3.5, stroke: C.blue }); text(g, '工位', 0, -12, { s: 30, w: 900, c: C.blue }); text(g, '建会话', 0, 28, { s: 26, w: 700, c: C.ink2 }); });
+      if (l > 2.6) tag(g, '一先一后', x - 100, y + 120, C.coral, seg(l, 2.6, 3.0), { fs: 30 });
+    }
+  },
+});
+
+S('s29', {
+  title: true, fi: .2, fo: .4,
+  draw(g, lt) {
+    const a = eo(seg(lt, 0, .3));
+    miniDevice(g, 'A', 560, 520, .55, lt, { al: a, badge: 'check', c: C.green });
+    miniDevice(g, 'B', 1360, 520, .55, lt, { al: a, badge: 'check', c: C.green });
+    text(g, SERIES.title, 960, 490, { s: 110, w: 900, al: a });
+    text(g, SERIES.sub, 960, 590, { s: 40, w: 700, c: C.blue, al: eo(seg(lt, .2, .5)) });
+  },
+});
+
+/* ---------------- 封面 ---------------- */
+function drawCover(g, frame) {
+  SCX = frame.scaleX; CAMZ = 1;
+  drawBackground(g, { ...frame, t: 3 });
+  g.save(); g.translate(960, 740); g.scale(1.08, 1.08); g.translate(-960, -470);
+  link(g, 0, 1);
+  gateway(g, P.G[0], P.G[1], 1, 0, { label: false, busy: .6 });
+  device(g, 'A', P.A[0], P.A[1], 1.02, { mode: 'calling' }, 0, { label: false, still: true });
+  device(g, 'B', P.B[0], P.B[1], 1.02, { mode: 'ringing' }, .2, { label: false, still: true });
+  chipRaw(g, P.A[0], CHIP_Y - 10, 'CALLING'); chipRaw(g, P.B[0], CHIP_Y - 10, 'RINGING');
+  g.restore();
+  [['invite', 470], ['ring', 760], ['accept', 1040], ['confirm', 1390]].forEach(([k, x], i) => capsule(g, x, 430 + (i % 2) * 22, k, { s: .9, rot: (i - 1.5) * .04, glow: .4 }));
+  text(g, '通话协议，自己设计', 960, 168, { s: 140, w: 900 });
+  text(g, '11 种消息 · 两台状态机 · Kotlin 实现 SIP 通信协议', 960, 300, { s: 44, w: 900, c: C.blue });
+  postFX(g, { ...frame, t: 0 });
+}
+
+film.finish();

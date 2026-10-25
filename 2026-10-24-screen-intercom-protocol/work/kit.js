@@ -272,9 +272,9 @@ function capsule(g, x, y, kind, o = {}) {
     text(g, code, -w / 2 + 42, 1, { f: 'mono', s: fs, w: 700, c: '#fff' });
     text(g, name, -w / 2 + 84 + nw / 2, 1, { f: 'mono', s: fs, w: 700 });
     if (o.tag) { // 右上角会话标签（如 S1）
-      const tw2 = textW(g, o.tag, { f: 'mono', s: 26, w: 700 }) + 24;
-      card(g, w / 2 - tw2 + 6, -h / 2 - 26, tw2, 38, { r: 19, fill: C.purple, lw: 2.5, shadow: false });
-      text(g, o.tag, w / 2 - tw2 / 2 + 6, -h / 2 - 7, { f: 'mono', s: 26, w: 700, c: '#fff' });
+      const tw2 = textW(g, o.tag, { f: 'mono', s: 28, w: 700 }) + 24;
+      card(g, w / 2 - tw2 + 6, -h / 2 - 28, tw2, 40, { r: 20, fill: C.purple, lw: 2.5, shadow: false });
+      text(g, o.tag, w / 2 - tw2 / 2 + 6, -h / 2 - 8, { f: 'mono', s: 28, w: 700, c: '#fff' });
     }
   }, { rot: o.rot, sx: o.sx, sy: o.sy, al: o.al });
   return w * (o.s ?? 1);
