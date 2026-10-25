@@ -157,7 +157,7 @@ function balloon(g, x, y, r, s, p = 1, o = {}) {
   if (o.from) { const [fx, fy] = o.from, d = Math.hypot(x - fx, y - fy) || 1; dot(g, fx, fy, 5, o.c || C.ink, eo(seg(p, 0, .3))); path(g, partial([[fx, fy], [x - (x - fx) / d * r, y - (y - fy) / d * r]], eo(seg(p, 0, .6))), { c: o.c || C.ink, w: 2 }); }
   at(g, x, y, pop(seg(p, .4, 1)), () => {
     dot(g, 0, 0, r, o.fill || C.bg1); ring(g, 0, 0, r, o.c || C.ink, 2.5);
-    text(g, s, 0, 1, { f: o.f || 'mono', s: o.fs || r * .78, w: 700, c: o.tc || C.ink });
+    text(g, s, 0, 1, { f: o.f || 'mono', s: o.fs || Math.max(24, r * .78), w: 700, c: o.tc || C.ink });
   }, { al: o.al });
 }
 /* 红笔批注：手绘椭圆圈（略超过一圈），p 画出进度 */
@@ -271,7 +271,10 @@ function rail(g, x0, x1, y, lt, o = {}) {
 /* 整套窗帘：kind 'single' | 'dual'；w 为导轨长，原点在导轨左上；open 0 合拢 → 1 拉开（帘布向电机侧收） */
 function curtain(g, x, y, w, kind, lt, o = {}) {
   const p = o.p ?? 1, open = o.open ?? 0, ms = o.ms ?? .9;
-  if (kind === 'single') {
+  if (kind === 'single' && o.motorLeft) {
+    rail(g, x, x + w, y, lt, { p, h: o.h, panels: [[0, lerp(1, .28, open)]], step: o.step });
+    motor(g, x + 92 * ms, y - 50 * ms, ms, lt, { p: seg(p, .2, 1), flip: true, lit: o.lit, ledC: o.ledC, al: o.mal?.[0] });
+  } else if (kind === 'single') {
     rail(g, x, x + w, y, lt, { p, h: o.h, panels: [[lerp(0, .72, open), 1]], step: o.step });
     motor(g, x + w - 92 * ms, y - 50 * ms, ms, lt, { p: seg(p, .2, 1), lit: o.lit, ledC: o.ledC, al: o.mal?.[0] });
   } else {
@@ -332,7 +335,7 @@ function codeCard(g, x, y, w, lines, o = {}) {
   g.save(); g.globalAlpha *= a;
   path(g, [[x, y + 44], [x + w, y + 44]], { c: rgba(C.ink, .35), w: 1.4 });
   for (let i = 0; i < 3; i++) ring(g, x + 22 + i * 20, y + 22, 5, rgba(C.ink, .6), 1.6);
-  if (o.title) text(g, o.title, x + w - 20, y + 23, { f: 'mono', s: 22, w: 700, a: 'right', c: C.faint });
+  if (o.title) text(g, o.title, x + w - 20, y + 23, { f: 'mono', s: 24, w: 700, a: 'right', c: C.faint });
   const total = lines.reduce((s, l) => s + Array.from(l).length, 0);
   let left = Math.round(total * clamp(p)), cursor = null;
   lines.forEach((line, i) => {
@@ -473,7 +476,7 @@ function drawBackground(g, { cache, t }) {
   // 浮尘
   for (let i = 0; i < 36; i++) {
     const x = (hash(i * 3.3) * W + t * (6 + hash(i) * 12)) % W, y = (hash(i * 9.1) * H - t * (5 + hash(i * 2) * 9) + H * 10) % H;
-    dot(g, x, y, 1.2 + hash(i * 4.4) * 2, C.ink, .05 + .06 * Math.sin(t * .8 + i));
+    dot(g, x, y, 1.2 + hash(i * 4.4) * 2, C.ink, .08 + .05 * Math.sin(t * .8 + i));
   }
 }
 function postFX(g, { cache, t, cw, ch }) {

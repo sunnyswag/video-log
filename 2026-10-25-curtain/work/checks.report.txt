@@ -7,334 +7,40 @@ Node v22.22.3；逻辑画布 1920×1080；采样间隔 0.25 s（包含 0 和片�
 本次输入 SHA-256（方便设计方定位版本）：
   ../../tools/film-kit/engine.js  173053547a05acbefbb39b13820240bc75e09ce254852ad7a60b471c26e99495
   script.js  2a0b1ec5336bde48d9e3293f358152ad6f2f1053168e726125031c9778871fc8
-  kit.js  7bbbe35b0c8408c270533e748dcb033e0b889c358c295a38de4706cfd56403c3
-  film.js  cf23618af412fae16c240afdd00402736b19fc33effd5508f4a66056c881fac1
+  kit.js  fd0f86ed8c83046c25d431d5c2b3730e037c620e62c626d837c697d60d425c07
+  film.js  9bf6e7b30429c24519b7be94b449b2865450db17ced053e5c5050cf771cf16f7
 [通过] 加载：engine.js → script.js → kit.js → film.js，共享一个 vm context；FILM.render 可调用
-[通过] 时长：35.600 s；已注册幕 SCRIPT.dur 之和 35.600 s；误差 0.000 s，容许 ≤0.05 s
-[通过] 场景：已注册 3 / 36 幕；s03 → s09 → s26；id/dur/chapter/顺序/拼接起点差异 0
-  未注册（不算 FAIL）：s01, s02, s04, s05, s06, s07, s08, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s27, s28, s29, s30, s31, s32, s33, s34, s35, s36
-[通过] 字幕一致性：已注册幕期望 8 条，FILM 8 条；文本和起止时间差异 0
+[通过] 时长：451.700 s；已注册幕 SCRIPT.dur 之和 451.700 s；误差 0.000 s，容许 ≤0.05 s
+[通过] 场景：已注册 36 / 36 幕；s01 → s02 → s03 → s04 → s05 → s06 → s07 → s08 → s09 → s10 → s11 → s12 → s13 → s14 → s15 → s16 → s17 → s18 → s19 → s20 → s21 → s22 → s23 → s24 → s25 → s26 → s27 → s28 → s29 → s30 → s31 → s32 → s33 → s34 → s35 → s36；id/dur/chapter/顺序/拼接起点差异 0
+  未注册（不算 FAIL）：无
+[通过] 字幕一致性：已注册幕期望 109 条，FILM 109 条；文本和起止时间差异 0
   时间按已注册幕顺序累计 SCRIPT.dur，不累计跳过的幕；逐项与 FilmKit.finish() 的三位小数导出值比较。
 [通过] 全量字幕规则：SCRIPT 全部 36 幕 / 109 条；违规 0 条次（含未注册幕）
   去掉 {}、[]、^ 后按 Unicode 码点计数：ASCII（含空格/标点）0.5，其余1；≤22；时长≥1.6s且≥字数/4.5；不重叠、幕内、标记配对且不嵌套。
-[通过] cue 类型：共 34；非法 0；{"draw":7,"whoosh":7,"tick":5,"latch":7,"type":1,"error":1,"stamp":3,"blip":1,"success":2}
+[通过] cue 类型：共 264；非法 0；{"draw":53,"tick":42,"whoosh":45,"error":22,"blip":31,"latch":30,"type":11,"stamp":15,"success":14,"snip":1}
   白名单：draw tick blip latch stamp whoosh type success error snip
-[通过] 章节：已登记 3 / CHAPTERS 10 章；编号 1 → 3 → 6；编号严格递增（可跳号），时间从0严格递增，SCRIPT/FILM 场景章号不递减
+[通过] 章节：已登记 10 / CHAPTERS 10 章；编号 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9；编号严格递增（可跳号），时间从0严格递增，SCRIPT/FILM 场景章号不递减
 
 数值健康与几何扫描：
 globalAlpha 超出[0,1]仍记数值 FAIL，但按 Canvas 语义忽略该赋值、保留前值并继续扫描；非有限数/栈错误等仍中断该帧。
-[失败] 数值健康 1920×1080：144/144 帧完成；异常/非有限参数/栈失衡 144 帧（含离屏画布）
-  0.000 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  0.250 s s03：globalAlpha 越界 -0.009814003962495758～-0.002294546344815289（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  0.500 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  0.750 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.000 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.250 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.500 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.750 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.000 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.250 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.500 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.750 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.000 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.250 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.500 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.750 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.000 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.250 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.500 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.750 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.000 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.250 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.500 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.750 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.000 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.250 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.500 s s03：globalAlpha 越界 -0.00984590604721887～-0.003007279343209185（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.750 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.000 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.250 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.500 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.750 s s09：globalAlpha 越界 -0.00984590604721887～-0.006112594911672327（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.000 s s09：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.250 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.500 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.750 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.000 s s09：globalAlpha 越界 -0.00984590604721887～-0.006112594911672327（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.250 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.500 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.750 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.000 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.250 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.500 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.750 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.000 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.250 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.500 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.750 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.000 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.250 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.500 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.750 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.000 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.250 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.500 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.750 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.000 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.250 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.500 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.750 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.000 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.250 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.500 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.750 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.000 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.250 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.500 s s09：globalAlpha 越界 -0.00984590604721887～-0.0028070658621197134（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.750 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.000 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.250 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.500 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.750 s s09：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.000 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.250 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.500 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.750 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.000 s s09：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.250 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.500 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.750 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.000 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.250 s s09：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.500 s s09：globalAlpha 越界 -0.009996031975528223～-0.0009981427527595704（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.750 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.000 s s26：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.250 s s26：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.500 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.750 s s26：globalAlpha 越界 -0.009996031975528223～-0.0009981427527595704（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.000 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.250 s s26：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.500 s s26：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.750 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.000 s s26：globalAlpha 越界 -0.009996031975528223～-0.0009981427527595704（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.250 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.500 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.750 s s26：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.000 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.250 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.500 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.750 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.000 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.250 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.500 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.750 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.000 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.250 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.500 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.750 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.000 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.250 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.500 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.750 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.000 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.250 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.500 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.750 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.000 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.250 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.500 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.750 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.000 s s26：globalAlpha 越界 -0.009985310401517185～-0.004334701720397426（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.250 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.500 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.750 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.000 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.250 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.500 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.750 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.000 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.250 s s26：globalAlpha 越界 -0.009938908296816963～-0.0037349714412861987（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.500 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.750 s s26：globalAlpha 越界 -0.009888196955962221～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.000 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.250 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.500 s s26：globalAlpha 越界 -0.009938908296816963～-0.0014950907797490615（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.750 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.000 s s26：globalAlpha 越界 -0.009888196955962221～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.250 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.500 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.750 s s26：globalAlpha 越界 -0.009938908296816963～-0.0014950907797490615（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.000 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.250 s s26：globalAlpha 越界 -0.009888196955962221～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.500 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.600 s s26：globalAlpha 越界 -0.009859290916179937～-0.0025936052516420255（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-[失败] 数值健康 3840×2160：144/144 帧完成；异常/非有限参数/栈失衡 144 帧（含离屏画布）
-  0.000 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  0.250 s s03：globalAlpha 越界 -0.009814003962495758～-0.002294546344815289（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  0.500 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  0.750 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.000 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.250 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.500 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  1.750 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.000 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.250 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.500 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  2.750 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.000 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.250 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.500 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  3.750 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.000 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.250 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.500 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  4.750 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.000 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.250 s s03：globalAlpha 越界 -0.00984590604721887～-0.002294546344815289（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.500 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  5.750 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.000 s s03：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.250 s s03：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.500 s s03：globalAlpha 越界 -0.00984590604721887～-0.003007279343209185（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  6.750 s s03：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.000 s s03：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.250 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.500 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  7.750 s s09：globalAlpha 越界 -0.00984590604721887～-0.006112594911672327（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.000 s s09：globalAlpha 越界 -0.009559562828237986～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.250 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.500 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  8.750 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.000 s s09：globalAlpha 越界 -0.00984590604721887～-0.006112594911672327（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.250 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.500 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  9.750 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.000 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.250 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.500 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  10.750 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.000 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.250 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.500 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  11.750 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.000 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.250 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.500 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  12.750 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.000 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.250 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.500 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  13.750 s s09：globalAlpha 越界 -0.009999412393042202～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.000 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.250 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.500 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  14.750 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.000 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.250 s s09：globalAlpha 越界 -0.00984590604721887～-0.00611259491167241（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.500 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  15.750 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.000 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.250 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.500 s s09：globalAlpha 越界 -0.00984590604721887～-0.0028070658621197134（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  16.750 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.000 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.250 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.500 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  17.750 s s09：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.000 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.250 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.500 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  18.750 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.000 s s09：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.250 s s09：globalAlpha 越界 -0.009996031975528216～-0.0009981427527596815（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.500 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  19.750 s s09：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.000 s s09：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.250 s s09：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.500 s s09：globalAlpha 越界 -0.009996031975528223～-0.0009981427527595704（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  20.750 s s09：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.000 s s26：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.250 s s26：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.500 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  21.750 s s26：globalAlpha 越界 -0.009996031975528223～-0.0009981427527595704（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.000 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.250 s s26：globalAlpha 越界 -0.009938908296816963～-0.002032130769134874（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.500 s s26：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  22.750 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.000 s s26：globalAlpha 越界 -0.009996031975528223～-0.0009981427527595704（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.250 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.500 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  23.750 s s26：globalAlpha 越界 -0.00950673120658694～-0.0007732242505102335（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.000 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.250 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.500 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  24.750 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.000 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.250 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.500 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  25.750 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.000 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.250 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.500 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  26.750 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.000 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.250 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.500 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  27.750 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.000 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.250 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.500 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  28.750 s s26：globalAlpha 越界 -0.009985310401517185～-0.0007732242505102335（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.000 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.250 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.500 s s26：globalAlpha 越界 -0.009956559528197656～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  29.750 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.000 s s26：globalAlpha 越界 -0.009985310401517185～-0.004334701720397426（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.250 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.500 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  30.750 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.000 s s26：globalAlpha 越界 -0.009938908296816963～-0.005528716820279833（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.250 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（5次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.500 s s26：globalAlpha 越界 -0.00984590604721887～-0.0025013547393667943（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  31.750 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.000 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.250 s s26：globalAlpha 越界 -0.009938908296816963～-0.0037349714412861987（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.500 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  32.750 s s26：globalAlpha 越界 -0.009888196955962221～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.000 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.250 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.500 s s26：globalAlpha 越界 -0.009938908296816963～-0.0014950907797490615（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  33.750 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.000 s s26：globalAlpha 越界 -0.009888196955962221～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.250 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.500 s s26：globalAlpha 越界 -0.009731236988710923～-0.001819444521577361（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  34.750 s s26：globalAlpha 越界 -0.009938908296816963～-0.0014950907797490615（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.000 s s26：globalAlpha 越界 -0.009985310401517185～-0.004991292874938019（6次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.250 s s26：globalAlpha 越界 -0.009888196955962221～-0.0025013547393667943（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.500 s s26：globalAlpha 越界 -0.009996031975528223～-0.0002576354288218799（8次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  35.600 s s26：globalAlpha 越界 -0.009859290916179937～-0.0025936052516420255（7次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
+[通过] 数值健康 1920×1080：1808/1808 帧完成；异常/非有限参数/栈失衡 0 帧（含离屏画布）
+[通过] 数值健康 3840×2160：1808/1808 帧完成；异常/非有限参数/栈失衡 0 帧（含离屏画布）
 
 确定性：
 固定种子 0x43555254，120 个分层随机时刻；按方法名/参数/属性写入记录，数字四舍五入至 3 位小数。
 离屏构建不混入主画布序列；drawImage/createPattern 引用离屏指令及真实 ImageData 字节的内容哈希，兼顾冷启动与缓存复用。
 Math.random、无参 Date/new Date、Date.now、performance.now 被禁止；没有用固定值掩盖非确定性。
 非法透明度写入也纳入指令比较；其数值FAIL单列在数值健康中，不阻断本项的渲染顺序比较。
-采样秒数：0.235155, 0.313858, 0.842529, 0.999133, 1.384169, 1.539005, 2.046772, 2.228637, 2.517775, 2.787956, 2.973062, 3.276683, 3.741194, 3.897834, 4.232788, 4.491474, 4.762118, 5.319812, 5.570952, 5.685292, 5.946262, 6.508915, 6.533403, 6.866571, 7.238, 7.670623, 7.780909, 8.080502, 8.455451, 8.807793, 9.05347, 9.324985, 9.7412, 10.000942, 10.29181, 10.439734, 10.694009, 11.266359, 11.346484, 11.681962, 11.898616, 12.296832, 12.601223, 12.757205, 13.225311, 13.511238, 13.894715, 14.069545, 14.531097, 14.538469, 14.953199, 15.357491, 15.665838, 15.790942, 16.149145, 16.320476, 16.647978, 17.150405, 17.228007, 17.747559, 17.941712, 18.111704, 18.619128, 18.771146, 19.123078, 19.28447, 19.594045, 19.938049, 20.425027, 20.629265, 20.806859, 21.116215, 21.611735, 21.678298, 22.162985, 22.423066, 22.830499, 22.979402, 23.258429, 23.457382, 23.946184, 24.151708, 24.538577, 24.915329, 25.112271, 25.429372, 25.741546, 26.049904, 26.220629, 26.616534, 26.991722, 27.271086, 27.296332, 27.706739, 27.948866, 28.242936, 28.484816, 28.967082, 29.217818, 29.507542, 29.736626, 29.96553, 30.510425, 30.663611, 30.884925, 31.256855, 31.633487, 31.87453, 32.077966, 32.482968, 32.916028, 32.933619, 33.321182, 33.677817, 33.921304, 34.177811, 34.694003, 34.791202, 35.010806, 35.527965
-[失败] 确定性 1920×1080：360/360 次 render；240/240 组逐指令完全一致；差异/中断 0；数值异常 3 组（数值非法仍使本项FAIL）
-  顺序：0.235–35.528 s 的 120 个采样时刻（非连续区间），globalAlpha 越界 -0.00999994383776668～-0.000008085822208445115（801次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  倒序：0.235–35.528 s 的 120 个采样时刻（非连续区间），globalAlpha 越界 -0.00999994383776668～-0.000008085822208445115（801次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  独立 VM 首帧：0.235–35.528 s 的 120 个采样时刻（非连续区间），globalAlpha 越界 -0.00999994383776668～-0.000008085822208445115（801次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-[失败] 确定性 3840×2160：360/360 次 render；240/240 组逐指令完全一致；差异/中断 0；数值异常 3 组（数值非法仍使本项FAIL）
-  顺序：0.235–35.528 s 的 120 个采样时刻（非连续区间），globalAlpha 越界 -0.00999994383776668～-0.000008085822208445115（801次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  倒序：0.235–35.528 s 的 120 个采样时刻（非连续区间），globalAlpha 越界 -0.00999994383776668～-0.000008085822208445115（801次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
-  独立 VM 首帧：0.235–35.528 s 的 120 个采样时刻（非连续区间），globalAlpha 越界 -0.00999994383776668～-0.000008085822208445115（801次）；at dot (kit.js:58:83) ← at Object.drawBackground (kit.js:476:5) ← at call (../../tools/film-kit/engine.js:297:34)；无关联文字
+采样秒数：2.983689, 3.982293, 10.69018, 12.677207, 17.562618, 19.527212, 25.969857, 28.2774, 31.946036, 35.374154, 37.722812, 41.575218, 47.469021, 49.456507, 53.706475, 56.988726, 60.422711, 67.498853, 70.685365, 72.136132, 75.447381, 82.586432, 82.897141, 87.124441, 91.837206, 97.326421, 98.725752, 102.527045, 107.284469, 111.755058, 114.872255, 118.317297, 123.598314, 126.893977, 130.584567, 132.461454, 135.687747, 142.949846, 143.966485, 148.223092, 150.972042, 156.024685, 159.886863, 161.865991, 167.805414, 171.433326, 176.29895, 178.517226, 184.3735, 184.467035, 189.729207, 194.858953, 198.771322, 200.358663, 204.903619, 207.077503, 211.232907, 217.607806, 218.592434, 225.184612, 227.648069, 229.804963, 236.24326, 238.172099, 242.637477, 244.685256, 248.613203, 252.978001, 259.156872, 261.748284, 264.00164, 267.926808, 274.21406, 275.058624, 281.208432, 284.508392, 289.677993, 291.567305, 295.107651, 297.632006, 303.834027, 306.441759, 311.350434, 316.130727, 318.629576, 322.653014, 326.613948, 330.526452, 332.692641, 337.715962, 342.476433, 346.021059, 346.341385, 351.548709, 354.620864, 358.352081, 361.42111, 367.5402, 370.721583, 374.397663, 377.304327, 380.208709, 387.122446, 389.066104, 391.874176, 396.593304, 401.372079, 404.430486, 407.011723, 412.150471, 417.645217, 417.868419, 422.785901, 427.310954, 430.400372, 433.654981, 440.204529, 441.437809, 444.224192, 450.786004
+[通过] 确定性 1920×1080：360/360 次 render；240/240 组逐指令完全一致；差异/中断 0；数值异常 0 组（数值非法仍使本项FAIL）
+[通过] 确定性 3840×2160：360/360 次 render；240/240 组逐指令完全一致；差异/中断 0；数值异常 0 组（数值非法仍使本项FAIL）
 
 字体首族（所有实际执行的 ctx.font 赋值及文字绘制，含离屏/测宽/低透明度路径）：
-[通过] 字体白名单：59576 次检查；首族 FCJK, FDisp, FMono；非法组合 0
+[通过] 字体白名单：226564 次检查；首族 FCJK, FDisp, FMono；非法组合 0
   允许：FCJK / FDisp / FSup / FMono / FMonoCJK；只查首族，允许后续回退族。Canvas 初始默认值不算赋值，未设置字体就绘字仍会被检查。
 
 文字几何规则：
-1920×1080；成功扫描 144/144 帧；有效 fillText 2617 次、strokeText 331 次；globalAlpha < 0.15 或空白文本忽略。
+1920×1080；成功扫描 1808/1808 帧；有效 fillText 29151 次、strokeText 526 次；globalAlpha < 0.15 或空白文本忽略。
 宽度：ASCII 0.6×字号，CJK/其他非 ASCII 1.0×字号，加 (字符数−1)×letterSpacing；高度 1.2×字号。
 按 textAlign/textBaseline 放置，将四角经当前仿射矩阵变换后取屏幕 AABB；alphabetic 为基线−1em 至+0.2em。
 相交比例 = 交集面积 / 较小框面积；比例 ≥15% 才报告。只排除同一次调用自身，同名但不同调用照查。
@@ -342,49 +48,92 @@ Math.random、无参 Date/new Date、Date.now、performance.now 被禁止；没�
 同一帧同一内容对只计一个区间采样点；“命中次数”保留全部调用对。按跨度降序、开始时间升序排序。
 重叠/出画延续上一期只检查 fillText；新增字号和分区检查 fillText/strokeText，避免把同一字的填充+描边新增为重叠 FAIL。
 以下时刻均为当前已注册样片的全局时间；全量字幕规则单独标注幕内局部时间。
-[通过] 文字重叠：0 对次，0 帧，0 个连续区间；以下前 0 条
-  无。
+[失败] 文字重叠：18 对次，6 帧，10 个连续区间；以下前 10 条
+1. 353.250–353.500 s | 跨度 0.250 s / 2 采样点 | s27
+   "Kconfig" ↔ "Kconfig" | 相交 80.2%–95.0%
+2. 353.250–353.500 s | 跨度 0.250 s / 2 采样点 | s27
+   "Makefile" ↔ "Makefile" | 相交 82.6%–95.6%
+3. 353.250–353.500 s | 跨度 0.250 s / 2 采样点 | s27
+   "dual/" ↔ "product_b/" | 相交 100.0%–100.0%
+4. 353.250–353.500 s | 跨度 0.250 s / 2 采样点 | s27
+   "product_a/" ↔ "single/" | 相交 100.0%–100.0%
+5. 354.000–354.250 s | 跨度 0.250 s / 2 采样点 | s27
+   "Kconfig" ↔ "Kconfig" | 相交 80.2%–80.2%
+6. 354.000–354.250 s | 跨度 0.250 s / 2 采样点 | s27
+   "Makefile" ↔ "Makefile" | 相交 82.6%–82.6%
+7. 354.000–354.250 s | 跨度 0.250 s / 2 采样点 | s27
+   "dual/" ↔ "product_b/" | 相交 100.0%–100.0%
+8. 354.000–354.250 s | 跨度 0.250 s / 2 采样点 | s27
+   "product_a/" ↔ "single/" | 相交 100.0%–100.0%
+9. 183.500–183.500 s | 跨度 0.000 s / 1 采样点 | s14
+   "两侧参数互换" ↔ "同步使能" | 相交 18.4%–18.4%
+10. 184.000–184.000 s | 跨度 0.000 s / 1 采样点 | s14
+   "两侧比较" ↔ "同步使能" | 相交 39.7%–39.7%
 
 超出画面边界的文字（全部区间）：
-[失败] 文字越界：107 次，23 帧，10 个区间；边界 [0,1920]×[0,1080]，不套用15%阈值
-1. 15.750–19.250 s | 跨度 3.500 s / 15 采样点 | s09
-   "Kconfig" | 越界 6.9%–100.0% | 16.000 s 框 [-225.743, 286.111]–[-78.154, 328.280]
-2. 15.750–19.250 s | 跨度 3.500 s / 15 采样点 | s09
-   "单电机" | 越界 93.8%–100.0% | 16.000 s 框 [-295.804, 593.150]–[-210.150, 627.411]
-3. 16.000–19.250 s | 跨度 3.250 s / 14 采样点 | s09
-   "双电机" | 越界 18.0%–100.0% | 16.000 s 框 [-93.748, 593.150]–[-8.093, 627.411]
-4. 16.000–19.250 s | 跨度 3.250 s / 14 采样点 | s09
-   "选产品" | 越界 100.0%–100.0% | 16.000 s 框 [-191.482, 335.308]–[-112.416, 366.934]
-5. 16.250–19.000 s | 跨度 2.750 s / 12 采样点 | s09
-   "Makefile" | 越界 7.7%–15.5% | 16.500 s 框 [-23.360, 410.304]–[127.168, 447.936]
-6. 16.250–19.000 s | 跨度 2.750 s / 12 采样点 | s09
-   "SRC_DIRS += variant/" | 越界 3.6%–7.2% | 16.500 s 框 [-23.360, 479.072]–[299.200, 511.328]
-7. 9.000–10.750 s | 跨度 1.750 s / 8 采样点 | s09
-   "LINK" | 越界 80.3%–100.0% | 9.000 s 框 [2376.480, 301.920]–[2445.600, 336.480]
-8. 9.000–10.250 s | 跨度 1.250 s / 6 采样点 | s09
-   "链接" | 越界 84.7%–100.0% | 9.000 s 框 [1982.400, 297.600]–[2054.400, 340.800]
-9. 9.250–10.500 s | 跨度 1.250 s / 6 采样点 | s09
-   "aggregate_report();" | 越界 54.0%–100.0% | 9.250 s 框 [1984.800, 406.080]–[2340.480, 443.520]
-10. 9.250–10.250 s | 跨度 1.000 s / 5 采样点 | s09
-   "调用点" | 越界 90.1%–100.0% | 9.250 s 框 [1984.800, 359.520]–[2071.200, 394.080]
+[失败] 文字越界：106 次，23 帧，10 个区间；边界 [0,1920]×[0,1080]，不套用15%阈值
+1. 117.000–120.500 s | 跨度 3.500 s / 15 采样点 | s09
+   "单电机" | 越界 41.6%–100.0% | 117.250 s 框 [-263.183, 592.799]–[-178.093, 626.835]
+2. 117.250–120.500 s | 跨度 3.250 s / 14 采样点 | s09
+   "Kconfig" | 越界 100.0%–100.0% | 117.250 s 框 [-193.584, 287.785]–[-46.968, 329.675]
+3. 117.250–120.500 s | 跨度 3.250 s / 14 采样点 | s09
+   "双电机" | 越界 73.4%–100.0% | 117.500 s 框 [-169.148, 593.979]–[-82.156, 628.776]
+4. 117.250–120.500 s | 跨度 3.250 s / 14 采样点 | s09
+   "选产品" | 越界 100.0%–100.0% | 117.250 s 框 [-159.548, 336.657]–[-81.003, 368.075]
+5. 117.500–120.250 s | 跨度 2.750 s / 12 采样点 | s09
+   "Makefile" | 越界 2.0%–15.5% | 118.000 s 框 [-23.360, 410.304]–[127.168, 447.936]
+6. 117.500–120.250 s | 跨度 2.750 s / 12 采样点 | s09
+   "SRC_DIRS += variant/" | 越界 0.9%–7.2% | 118.000 s 框 [-23.360, 479.072]–[299.200, 511.328]
+7. 110.250–112.000 s | 跨度 1.750 s / 8 采样点 | s09
+   "LINK" | 越界 100.0%–100.0% | 110.250 s 框 [2376.480, 301.920]–[2445.600, 336.480]
+8. 110.250–111.500 s | 跨度 1.250 s / 6 采样点 | s09
+   "链接" | 越界 100.0%–100.0% | 110.250 s 框 [1982.400, 297.600]–[2054.400, 340.800]
+9. 110.500–111.750 s | 跨度 1.250 s / 6 采样点 | s09
+   "aggregate_report();" | 越界 65.5%–100.0% | 110.500 s 框 [1984.800, 406.080]–[2340.480, 443.520]
+10. 110.500–111.500 s | 跨度 1.000 s / 5 采样点 | s09
+   "调用点" | 越界 100.0%–100.0% | 110.500 s 框 [1984.800, 359.520]–[2071.200, 394.080]
 
 字号告警（全部区间，不算 FAIL）：
-[告警] 非字幕字号：49 次，27 帧，7 个区间；换算至1920×1080后 <24 px
+[告警] 非字幕字号：19 次，17 帧，19 个区间；换算至1920×1080后 <24 px
 逻辑字号 = px字号 × 去除画布分辨率缩放后矩阵的最小奇异值（包含 maxWidth 压缩）；非等比缩放/斜切取最小倍率，旋转不改变字号。
-1. 1.750–7.000 s | 跨度 5.250 s / 22 采样点 | s03
-   "1" | 字号 17.160–19.763 px | 最小字号采样 7.000 s
-2. 1.750–7.000 s | 跨度 5.250 s / 22 采样点 | s03
-   "2" | 字号 2.259–19.258 px | 最小字号采样 1.750 s
-3. 13.000–13.000 s | 跨度 0.000 s / 1 采样点 | s09
-   "不参与编译" | 字号 21.253–21.253 px | 最小字号采样 13.000 s
-4. 15.250–15.250 s | 跨度 0.000 s / 1 采样点 | s09
-   "不参与编译" | 字号 16.084–16.084 px | 最小字号采样 15.250 s
-5. 19.750–19.750 s | 跨度 0.000 s / 1 采样点 | s09
-   "不参与编译" | 字号 16.074–16.074 px | 最小字号采样 19.750 s
-6. 28.000–28.000 s | 跨度 0.000 s / 1 采样点 | s26
-   "单电机 + B 款" | 字号 22.887–22.887 px | 最小字号采样 28.000 s
-7. 28.750–28.750 s | 跨度 0.000 s / 1 采样点 | s26
-   "双电机 + B 款" | 字号 13.802–13.802 px | 最小字号采样 28.750 s
+1. 26.250–26.250 s | 跨度 0.000 s / 1 采样点 | s03
+   "1" | 字号 23.024–23.024 px | 最小字号采样 26.250 s
+2. 28.250–28.250 s | 跨度 0.000 s / 1 采样点 | s03
+   "同名符号 · 构建时二选一" | 字号 23.420–23.420 px | 最小字号采样 28.250 s
+3. 38.750–38.750 s | 跨度 0.000 s / 1 采样点 | s04
+   "EP2" | 字号 3.066–3.066 px | 最小字号采样 38.750 s
+4. 39.250–39.250 s | 跨度 0.000 s / 1 采样点 | s04
+   "EP3" | 字号 3.182–3.182 px | 最小字号采样 39.250 s
+5. 43.250–43.250 s | 跨度 0.000 s / 1 采样点 | s04
+   "EP1" | 字号 23.299–23.299 px | 最小字号采样 43.250 s
+6. 54.750–54.750 s | 跨度 0.000 s / 1 采样点 | s05
+   "1" | 字号 17.063–17.063 px | 最小字号采样 54.750 s
+7. 79.500–79.500 s | 跨度 0.000 s / 1 采样点 | s07
+   "4" | 字号 16.759–16.759 px | 最小字号采样 79.500 s
+8. 114.250–114.250 s | 跨度 0.000 s / 1 采样点 | s09
+   "不参与编译" | 字号 12.816–12.816 px | 最小字号采样 114.250 s
+9. 173.250–173.250 s | 跨度 0.000 s / 1 采样点 | s13
+   "编译期常量" | 字号 12.816–12.816 px | 最小字号采样 173.250 s
+10. 230.750–230.750 s | 跨度 0.000 s / 1 采样点 | s17
+   "停" | 字号 12.816–12.816 px | 最小字号采样 230.750 s
+11. 231.750–231.750 s | 跨度 0.000 s / 1 采样点 | s17
+   "EP1" | 字号 16.396–16.396 px | 最小字号采样 231.750 s
+12. 243.250–243.250 s | 跨度 0.000 s / 1 采样点 | s18
+   "调用方：set_speed(v)" | 字号 11.830–11.830 px | 最小字号采样 243.250 s
+13. 250.000–250.000 s | 跨度 0.000 s / 1 采样点 | s19
+   "EP2 / EP3" | 字号 18.351–18.351 px | 最小字号采样 250.000 s
+14. 250.000–250.000 s | 跨度 0.000 s / 1 采样点 | s19
+   "true" | 字号 18.351–18.351 px | 最小字号采样 250.000 s
+15. 250.000–250.000 s | 跨度 0.000 s / 1 采样点 | s19
+   "电机反转" | 字号 18.351–18.351 px | 最小字号采样 250.000 s
+16. 264.250–264.250 s | 跨度 0.000 s / 1 采样点 | s20
+   "加属性" | 字号 12.816–12.816 px | 最小字号采样 264.250 s
+17. 270.500–270.500 s | 跨度 0.000 s / 1 采样点 | s20
+   "同一套手法" | 字号 21.253–21.253 px | 最小字号采样 270.500 s
+18. 333.250–333.250 s | 跨度 0.000 s / 1 采样点 | s25
+   "电机校准事件" | 字号 12.816–12.816 px | 最小字号采样 333.250 s
+19. 344.500–344.500 s | 跨度 0.000 s / 1 采样点 | s26
+   "双电机 + A 款" | 字号 22.887–22.887 px | 最小字号采样 344.500 s
 
 页眉区/字幕区告警（全部区间，不算 FAIL）：
 身份由 FilmKit.create 的 drawChrome/drawCaption 实际钩子调用期间标记；屏幕内保留区任意正面积进入即报告，即使钩子当时没有画字。
@@ -409,4 +158,4 @@ Math.random、无参 Date/new Date、Date.now、performance.now 被禁止；没�
 12. 全注册时仍用同一逻辑：FILM顺序须为SCRIPT键序的子序列；每幕源时长累计生成字幕期望，集合差变空即可；不存在样片id、固定幕数、固定字幕数或固定总时长分支。
 13. 非法 globalAlpha 不放宽[0,1]阈值，仍使报告FAIL；忽略赋值仅模拟浏览器的继续执行语义，以保留后续文字/确定性覆盖，不改源代码，也不将数值问题隐藏为通过。
 
-总结果：[失败] 11/16 项硬检查通过，5 项失败（数值健康 1920×1080、数值健康 3840×2160、确定性 1920×1080、确定性 3840×2160、文字越界）；1 类告警（非字幕字号）不影响退出码。退出码 1。
+总结果：[失败] 14/16 项硬检查通过，2 项失败（文字重叠、文字越界）；1 类告警（非字幕字号）不影响退出码。退出码 1。
