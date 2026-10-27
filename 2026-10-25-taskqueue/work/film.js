@@ -208,7 +208,7 @@ function oldLine(g, lt, frame, o = {}) {
   const waiting = (lt > 11.7 && lt < 13.1) || (lt > 15.6 && lt < 17);
   robot(g, 1640, FLOOR, [1420 + wob(lt, .3, 6), 470 + wob(lt, .25, 6)], lt, { state: waiting ? 'wait' : 'run' });
   stopwatch(g, 1640, 330, 46, ((lt - 11.7) % 3.9) / 1.4 * TAU, { sweep: true, al: waiting ? 1 : .35 });
-  if (lt > 12.0) sign(g, '一次只发一个', 1320, 560, { s: 24, fill: C.redD, k: pop(seg(lt, 12.0, 12.35)), rivets: false });
+  if (lt > 12.0) sign(g, '一次只发一个', 1190, 380, { s: 24, fill: C.redD, k: pop(seg(lt, 12.0, 12.35)), rivets: false });
   sign(g, '屏端系统服务', 300, 230, { s: 30, fill: C.ink2, bar: C.cyan });
   if (lt > 14.1) at(g, 780, 400, pop(seg(lt, 14.1, 14.5)) * (1 + .04 * Math.sin(lt * 5)), () => { dot(g, 0, 0, 62, C.yellow); ring(g, 0, 0, 62, C.ink, 4); text(g, '?', 0, 6, { f: 'disp', s: 92, w: 900, c: C.ink }); }, { rot: wob(lt, .5, .08) });
 }
@@ -227,7 +227,7 @@ S('s01', {
         const pts = Array.from({ length: 30 }, (_, i) => arcAt(a, b, i / 29, 180)); path(g, partial(pts, u), { c: rgba(C.cyan, .7), w: 4, dash: [10, 12], off: -lt * 40, al: 1 - seg(lt, 3.5, 3.8) });
         const p = arcAt(a, b, u, 180); dot(g, p[0], p[1], 9, C.cyan, 1 - seg(lt, 3.5, 3.8)); }
       cloudHouse(g, ...A01.cloud, 1, lt);
-      pushPipe(g, PIPE01, lt, { collar: .3, hot: seg(lt, 8.5, 8.7) * (1 - seg(lt, 9.8, 10.3)), ly: -62 });
+      pushPipe(g, PIPE01, lt, { collar: .3, hot: seg(lt, 8.5, 8.7) * (1 - seg(lt, 9.8, 10.3)), ly: 66 });
       // 推送：小胶囊“布局变化”顺管而下
       if (lt > 3.6 && lt < 4.4) { const q = partial(PIPE01, eio(seg(lt, 3.6, 4.3))), p = q[q.length - 1]; capsule(g, p[0], p[1], { s: .7, rot: Math.PI / 2, glow: .6 }); }
       smartScreen(g, ...A01.scr, 1, lt, { label: '某智能屏', hi: lt > 4.3 && lt < 5 ? 3 : null });
@@ -235,7 +235,7 @@ S('s01', {
       // 一串工单飞向云端
       SLIPS01.forEach(([s, t0, lift, c]) => {
         if (lt < t0 || lt > t0 + 1.6) return;
-        const u = eio(seg(lt, t0, t0 + 1.1)), p = arcAt([A01.scr[0] + 120, A01.scr[1] - 90], [A01.door[0] - 40, A01.door[1] - 10], u, lift);
+        const j = SLIPS01.findIndex(q => q[0] === s), u = eio(seg(lt, t0, t0 + 1.1)), p = arcAt([A01.scr[0] + 110 + j * 30, A01.scr[1] - 80 - j * 26], [A01.door[0] - 40, A01.door[1] - 10 + j * 14], u, lift);
         slip(g, p[0], p[1], s, { c, k: 1.15 + .15 * Math.sin(u * Math.PI), al: 1 - seg(lt, t0 + 1.1, t0 + 1.6), rot: (u - .5) * .2 });
       });
       // 布局数据箱挤不进推送管
@@ -270,7 +270,7 @@ function drawCover(g, frame) {
   SCX = frame.scaleX; CAMZ = 1;
   const fr = { ...frame, t: 3, lt: 3, sc: { cam: [[0, 960, 540, 1]] } };
   drawBackground(g, fr);
-  g.save(); g.translate(960, 640); g.scale(1.05, 1.05); g.translate(-1050, -520);
+  g.save(); g.translate(960, 720); g.scale(1.05, 1.05); g.translate(-1050, -520);
   hall(g, fr);
   belt(g, 120, 820, 600, 0, { v: 0 });
   [[300, 'http', 151], [440, 'local', 152], [580, 'hi', 153], [720, 'http', 154]].forEach(([x, kind, no]) => crate(g, x, 596, { kind, no, w: 124, h: kind === 'local' ? 76 : 90 }));
@@ -395,7 +395,7 @@ const SCR04 = [620, 450], BELL04 = [900, 330], DOOR04 = [1500, 470];
 const PIPE04 = [[1332, 260], [960, 260], [912, 232]];
 function fetch04(g, lt, t0, s, c, lift, kind, slot) { // 工单飞去 → 箱子飞回
   if (lt < t0) return;
-  if (lt < t0 + 1.2) { const u = eio(seg(lt, t0, t0 + 1.0)), p = arcAt([SCR04[0] + 150, SCR04[1] - 100], [DOOR04[0] - 40, DOOR04[1] - 20], u, lift); slip(g, p[0], p[1], s, { c, al: 1 - seg(lt, t0 + .95, t0 + 1.2) }); }
+  if (lt < t0 + 1.2) { const u = eio(seg(lt, t0, t0 + 1.0)), p = arcAt([SCR04[0] + 150 + slot * 30, SCR04[1] - 100 - slot * 30], [DOOR04[0] - 40, DOOR04[1] - 20 + slot * 20], u, lift); slip(g, p[0], p[1], s, { c, al: 1 - seg(lt, t0 + .95, t0 + 1.2) }); }
   if (lt > t0 + 1.2) { const u = eio(seg(lt, t0 + 1.2, t0 + 2.1)), tx = 470 + slot * 150, p = arcAt([DOOR04[0] - 60, DOOR04[1] + 40], [tx, 716], u, 60); const [, sq] = landing(lt, t0 + 2.1, .01); crate(g, p[0], p[1], { kind: 'http', label: kind, w: 120, h: 84, sq }); }
 }
 S('s04', {
@@ -439,7 +439,7 @@ S('s05', {
     belt(g, 160, 1240, 380, lt, { v: 70, legs: false });
     gate(g, 760, 380, 0, lt, { span: 120, h: 150, alarm: 0, base: 440 });
     const serial = [.3, 1.0, 1.7, 2.4, 3.1];
-    const started = serial.filter(s => lt >= s).length;
+    const started = serial.reduce((a, s) => a + eio(seg(lt, s + .15, s + .65)), 0);
     serial.forEach((t0, i) => {
       if (lt < t0) crate(g, 640 - (i - started) * 104, 376, { kind: 'http', label: '设备', w: 92, h: 66 });
       else crate(g, lerp(640, 1120, eio(seg(lt, t0, t0 + .7))), 376, { kind: 'http', label: '设备', w: 92, h: 66, al: 1 - seg(lt, t0 + .6, t0 + .8) });
@@ -457,8 +457,8 @@ S('s05', {
       const y = 660 + i * 62, k = eio(seg(lt, 5.4, 6.5));
       if (lt > 5.3) { path(g, [[640, 716], [740, y], [1180, y]], { c: rgba(C.green, .35), w: 4, dash: [8, 10], off: -lt * 30 }); slip(g, lerp(700, 1100, k), y, lb, { c: [C.yellow, C.green, C.orange][i], al: 1 - seg(lt, 6.5, 6.8) * .5 }); }
     });
-    timeBar(g, 300, 842, [{ w: 150, c: C.kraft, label: '布局' }, { w: 180, c: C.green, label: '并行' }], seg(lt, 4.4, 6.6), { maxW: 750 });
-    if (lt > 6.8) sign(g, '界面可以刷新了', 820, 842, { s: 24, fill: C.greenD, k: pop(seg(lt, 6.8, 7.1)), rivets: false });
+    timeBar(g, 300, 812, [{ w: 150, c: C.kraft, label: '布局' }, { w: 180, c: C.green, label: '并行' }], seg(lt, 4.4, 6.6), { maxW: 750 });
+    if (lt > 6.8) sign(g, '界面可以刷新了', 820, 812, { s: 24, fill: C.greenD, k: pop(seg(lt, 6.8, 7.1)), rivets: false });
   },
 });
 
@@ -487,7 +487,7 @@ S('s06', {
       }
     });
     cloudDuct(g, 880, 1480, 180, lt);
-    robot(g, 1600, FLOOR, [1450 + wob(lt, .3, 6), 400 + wob(lt, .25, 8)], lt, { state: 'run' });
+    robot(g, 1600, FLOOR, [1450 + wob(lt, .3, 6), 400 + wob(lt, .25, 8)], lt, { state: 'run', label: 'worker' });
     // 地基铭牌：接手时就有的三件套
     if (lt > 4.1) {
       const k = pop(seg(lt, 4.1, 4.45));
@@ -539,10 +539,11 @@ S('s07', {
     let tgt = [1150, 470];
     if (lt < 5.6) { const i = Math.min(2, Math.max(0, Math.floor((lt - 2.0) / 1.4))); tgt = lt > 1.8 ? drawer(i) : [1180, 440]; }
     else if (clash) tgt = [1010 + 10 * Math.sin(lt * 23), 586];
-    robot(g, 1330, FLOOR, tgt, lt, { state: 'run' });
+    robot(g, 1330, FLOOR, tgt, lt, { state: 'run', label: multi > 0 ? '线程 A' : 'worker' });
     if (multi > 0) {
       g.save(); g.globalAlpha *= multi;
       robot(g, 640, FLOOR, clash ? [915 + 10 * Math.sin(lt * 19), 590] : [760, 470], lt, { label: '线程 B', state: 'run' });
+      text(g, '线程 C', 1110, 170, { s: 24, w: 900, emboss: true });
       ceilRobot(g, 960, 120, clash ? [965 + 8 * Math.sin(lt * 17), 560] : [960, 420], lt, { state: 'run' });
       g.restore();
       if (lt > 6.6 && lt < 9.8) { sparks(g, 975, 590, (lt - 6.6) % .7, 14, Math.floor((lt - 6.6) / .7)); }
@@ -569,17 +570,17 @@ S('s08', {
     dataCabinet(g, 1790, FLOOR, lt, { open: [0, eo(seg(lt, 9.6, 10.1)) * (1 - eo(seg(lt, 11.0, 11.4))), 0], hot: lt > 9.6 && lt < 11.4 ? 1 : null });
     // 推车：开到栏杆前被挡住
     const cx = lerp(250, 520, eio(seg(lt, .3, 1.8))) - eo(seg(lt, 2.1, 2.6)) * 40;
-    cart(g, cx, FLOOR, lt, { label: '其他线程', v: lt < 1.8 ? 180 : 0 });
+    at(g, cx, FLOOR, 1.3, () => cart(g, 0, 0, lt, { label: '其他线程', v: lt < 1.8 ? 180 : 0 }));
     // 栏杆（摆臂）
     const arm = eo(seg(lt, 1.5, 1.9));
     plate(g, 600, FLOOR - 170, 26, 170, { fill: C.steelD, r: 4, rivets: false });
     g.save(); g.translate(613, FLOOR - 160); g.rotate(-Math.PI / 2 * (1 - arm)); hazard(g, 0, -10, 260, 20, { s: 14, r: 6, c1: C.red, c2: '#F4EDDF' }); g.restore();
-    if (lt > 1.9) sign(g, '不能直接改共享数据', 760, 560, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 1.9, 2.25)), al: 1 - seg(lt, 7.8, 8.2), rivets: false });
+    if (lt > 1.9) sign(g, '不能直接改共享数据', 760, 560, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 1.9, 2.25)), al: 1 - seg(lt, 4.1, 4.4), rivets: false });
     // 本地任务：从推车里装箱 → 上传送带 → 到工位
     let tx = cx, ty = FLOOR - 92, al = 1;
     if (lt > 4.4) {
       const up = eio(seg(lt, 4.5, 5.0)), mv = eio(seg(lt, 5.0, 5.8)), ride = eio(seg(lt, 5.9, 7.6));
-      tx = lerp(cx, 720, mv) + ride * 640; ty = lerp(FLOOR - 92 - up * 120, 616, mv);
+      tx = lerp(cx, 720, mv) + ride * 640; ty = lerp(FLOOR - 120 - up * 120, 616, mv);
       if (lt > 8.6) al = 1 - seg(lt, 9.0, 9.4);
       crate(g, tx, ty, { kind: 'local', w: 120, h: 76, al, glow: lt > 4.5 && lt < 5.2 ? .6 : 0, glowC: C.green });
       if (lt > 4.6) sign(g, '打包成本地任务，投进队列', 900, 470, { s: 24, fill: C.greenD, k: pop(seg(lt, 4.6, 4.95)), al: 1 - seg(lt, 8.2, 8.5) });
@@ -633,8 +634,8 @@ S('s09', {
     // 等待时间条：一段段相加
     const segs = REQ09.map(([a, b], i) => ({ w: 190, c: i % 2 ? C.kraftL : C.kraft, label: '等' + (i + 1) }));
     const grown = REQ09.reduce((acc, [a, b]) => acc + clamp((lt - a - .35) / (b - a - .7)), 0);
-    timeBar(g, 300, 780, segs, grown / 5, { maxW: 950 });
-    if (lt > 7.5) sign(g, '等待叠加', 1350, 780, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 7.5, 7.85)), rivets: false, al: 1 - seg(lt, 8.6, 9.0) });
+    timeBar(g, 300, 760, segs, grown / 5, { maxW: 950 });
+    if (lt > 7.5) sign(g, '等待叠加', 1110, 690, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 7.5, 7.85)), rivets: false, al: 1 - seg(lt, 8.6, 9.0) });
   },
 });
 
@@ -668,7 +669,8 @@ S('s10', {
     let tgt = lt < .4 ? [1290, 420] : lt < 2.0 ? [ST15.cx + 60 + 20 * Math.sin(lt * 6), 470] : lt < 4.3 ? [1290, 400] : lt < 4.8 ? [1238, 440] : [1300 + wob(lt, .3, 6), 380];
     robot(g, 1395, FLOOR, tgt, lt, { state: lt > 4.9 && lt < 7.6 ? 'wait' : 'run' });
     // 左侧屏：相加 vs 取最长
-    cabinet(g, 90, 440, 620, 330, lt, (gg, sx, sy, sw, sh) => {
+    if (lt > 8.2) { g.save(); g.globalAlpha *= seg(lt, 8.2, 8.6); }
+    if (lt > 8.2) cabinet(g, 90, 440, 620, 330, lt, (gg, sx, sy, sw, sh) => {
       scrText(gg, '挨个发：等待相加', sx + 16, sy + 30, { s: 24 });
       const W5 = [90, 110, 80, 120, 100]; let xx = sx + 16, p = seg(lt, 8.6, 9.4) * 500;
       W5.forEach((w, i) => { const ww = clamp(p / w) * w; p -= w; if (ww > 0) { rr(gg, xx, sy + 54, ww - 3, 30, 5); gg.fillStyle = i % 2 ? '#C99459' : '#E3B67E'; gg.fill(); } xx += w; });
@@ -676,6 +678,7 @@ S('s10', {
       const q = eio(seg(lt, 9.6, 10.3));
       W5.forEach((w, i) => { if (q <= 0) return; rr(gg, sx + 16, sy + 144 + i * 4, w * q, 30, 5); gg.fillStyle = rgba(C.green, .35 + (w === 120) * .5); gg.fill(); });
     }, { sh: 210, legs: false });
+    if (lt > 8.2) g.restore();
   },
 });
 
@@ -782,7 +785,7 @@ S('s12', {
 /* 第13幕：公共参数 + 变长列表，切块拼头 */
 const CUT13 = [1000, 1250];
 S('s13', {
-  cam: [[0, 900, 460, 1.1], [4.2, 1000, 460, 1.1], [8.4, 1120, 430, 1.06], [12.5, 1150, 430, 1.08]],
+  cam: [[0, 900, 460, 1.1], [4.2, 1000, 460, 1.1], [8.4, 1280, 400, 1.15], [12.5, 1420, 380, 1.3]],
   cues: [[.3, 'latch', .6], [.9, 'whoosh', .6], [1.2, 'slide', .6], [4.6, 'chop'], [5.6, 'chop'], [6.4, 'stamp', .7], [6.7, 'stamp', .7], [7.0, 'stamp', .7], [8.8, 'latch', .6], [9.0, 'latch', .6], [9.2, 'latch', .6]],
   draw(g, lt, sc, frame) {
     hall(g, frame);
@@ -911,7 +914,7 @@ S('s16', {
     robot(g, 1395, FLOOR, tgt, lt, { state: 'run' });
     const msg = lt < 6.2 ? '' : lt < 10.8 ? 'callback(true)' : 'callback(false)';
     serviceWindow(g, 1720, 560, lt, msg, { c: lt < 10.8 ? '#7CFFB2' : '#FFB4A8' });
-    if (lt > 6.4) sign(g, '整批结果，只回调一次', 1720, 790, { s: 24, fill: C.ink2, bar: C.green, k: pop(seg(lt, 6.4, 6.75)) });
+    if (lt > 6.4) sign(g, '整批结果，只回调一次', 1720, 755, { s: 24, fill: C.ink2, bar: C.green, k: pop(seg(lt, 6.4, 6.75)) });
     if (lt < 4.2) sign(g, '剩下 2 个子请求：重发', 735, 300, { s: 24, fill: C.ink2, bar: C.yellow, k: pop(seg(lt, .3, .6)), al: 1 - seg(lt, 3.9, 4.2) });
   },
 });
@@ -923,7 +926,7 @@ function loop17(u) { // 回流环：工位 → 下降 → 回流带左行 → �
   const q = partial(P, clamp(u)); return q[q.length - 1];
 }
 S('s17', {
-  cam: [[0, 900, 420, 1.06], [4, 900, 470, 1.0], [12, 900, 470, 1.0], [16, 960, 480, 1.08]],
+  cam: [[0, 900, 440, 1.06], [4, 900, 460, 1.0], [12, 900, 460, 1.0], [16, 960, 470, 1.08]],
   cues: [[.3, 'pop'], [1.8, 'tick'], [2.4, 'tick'], [3.0, 'tick'], [3.6, 'latch'], [4.3, 'error', .6], [4.5, 'stamp', .6], [6.0, 'error', .6], [6.2, 'stamp', .6], [7.3, 'error', .6], [7.8, 'thud'], [8.2, 'belt', .6], [12.4, 'scan', .6], [13.4, 'blip'], [14.6, 'pop']],
   draw(g, lt, sc, frame) {
     hall(g, frame);
@@ -956,8 +959,8 @@ S('s17', {
       else if (lt < 7.5) { p = [lerp(900, 1270, eio(seg(lt, 7.1, 7.3))), 556]; lamp = lt > 7.3 ? 'fail' : null; tag = '1000ms'; n = 3; }
       else { const k = eio(seg(lt, 7.5, 7.9)); p = [lerp(1270, 1520, k), lerp(556, FLOOR - 40, k) - Math.sin(k * Math.PI) * 120]; n = 3; lamp = 'fail'; }
       crate(g, p[0], p[1], { kind: 'http', w: 124, h: 90, lamp, al: 1 - seg(lt, 7.9, 8.2) });
-      if (tag) timeTag(g, tag, p[0], p[1] - 100, lt, 1);
-      sign(g, `普通任务：第 ${n} 次尝试`, 1270, 420, { s: 24, fill: C.ink2, bar: C.cyan });
+      if (tag) timeTag(g, tag, p[0], p[1] - 160, lt, 1);
+      sign(g, `普通任务：第 ${n} 次尝试`, 1270, 420, { s: 24, fill: C.ink2, bar: C.cyan, al: 1 - seg(lt, 7.9, 8.1) });
       if (lt > 7.8) crumble(g, 1520, FLOOR - 70, lt - 7.8, C.red, 14, 70, 3);
     }
     // 8–12 s：周期同步任务一直重试
@@ -965,15 +968,15 @@ S('s17', {
       const u = ((lt - 8.2) / .75) % 1, n = Math.max(1, 1 + Math.floor((lt - 8.2) / .75));
       const p = lt < 8.2 ? [1270, 556] : loop17(u);
       crate(g, p[0], p[1], { kind: 'sync', w: 124, h: 90, al: seg(lt, 8.0, 8.2) * (1 - seg(lt, 11.9, 12.2)) });
-      timeTag(g, Math.min(2000, n * 500) + 'ms', p[0], p[1] - 100, lt, 1);
-      sign(g, '周期同步：一直重试，最多隔 2 秒', 1270, 420, { s: 24, fill: C.ink2, bar: C.cyan, al: 1 - seg(lt, 11.9, 12.2) });
+      timeTag(g, Math.min(2000, n * 500) + 'ms', p[0], p[1] - 160, lt, 1);
+      sign(g, '周期同步：一直重试，最多隔 2 秒', 1270, 420, { s: 24, fill: C.ink2, bar: C.cyan, al: seg(lt, 8.1, 8.3) * (1 - seg(lt, 11.9, 12.2)) });
     }
     // 12–16 s：出队时没到点就跳过
     if (lt > 12) {
       const a = seg(lt, 12, 12.3);
       [[1060, '+500ms', true], [900, null, false], [740, null, false]].forEach(([x, tag, wait], i) => {
         crate(g, x, 556, { kind: 'http', w: 124, h: 90, al: a, lamp: wait && lt > 13.4 ? 'wait' : null });
-        if (tag) timeTag(g, tag, x, 456, lt, a);
+        if (tag) timeTag(g, tag, x, 396, lt, a);
       });
       const sx = lerp(1180, 600, seg(lt, 12.4, 14.4));
       g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createLinearGradient(sx - 40, 0, sx + 40, 0); gr.addColorStop(0, 'rgba(92,200,255,0)'); gr.addColorStop(.5, 'rgba(92,200,255,.35)'); gr.addColorStop(1, 'rgba(92,200,255,0)'); g.fillStyle = gr; g.fillRect(sx - 40, 420, 80, 160); g.restore();
@@ -993,16 +996,16 @@ S('s18', {
     smartScreen(g, 330, 300, .8, lt, { err: lt > 2.2 ? seg(lt, 2.2, 2.5) : 0, errText: '超时' });
     bench(g, 200, 640, 640);
     crate(g, 420, 636, { kind: 'http', w: 130, h: 92, label: '界面', lamp: lt > 1.0 ? 'fail' : null });
-    if (lt > .4) sign(g, '带消息号', 420, 480, { s: 24, fill: C.ink2, bar: C.cyan, rivets: false });
+    if (lt > .4) sign(g, '带消息号', 420, 494, { s: 24, fill: C.ink2, bar: C.cyan, rivets: false });
     if (lt > 1.2 && lt < 2.3) { const k = eio(seg(lt, 1.3, 2.2)); at(g, lerp(420, 330, k), lerp(540, 300, k), 1, () => { plate(g, -60, -24, 120, 48, { fill: C.redD, r: 8, rivets: false }); text(g, '错误', 0, 2, { s: 24, w: 900 }); }); }
-    if (lt > 3.0) { sign(g, '超时', 250, 450, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 3.0, 3.3)), rivets: false }); sign(g, '其他错误', 410, 450, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 3.2, 3.5)), rivets: false }); }
+    if (lt > 3.0) { sign(g, '超时', 250, 430, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 3.0, 3.3)), rivets: false }); sign(g, '其他错误', 410, 430, { s: 24, fill: C.redD, c: '#fff', k: pop(seg(lt, 3.2, 3.5)), rivets: false }); }
     if (lt > 4.6) sign(g, '人在等：立刻回错，不重试', 420, 760, { s: 24, fill: C.ink2, bar: C.red, k: pop(seg(lt, 4.6, 4.95)) });
     // 右：后台任务
     belt(g, 1000, 1640, 760, lt, { v: -90, legs: false, frame: C.paintD });
     bench(g, 1080, 1520, 600);
     const bg1 = lt < 4.9 ? [1300, 596] : (() => { const k = eio(seg(lt, 5.0, 7.6)); return [lerp(1300, 1060, k), lt < 5.4 ? lerp(596, 756, eio(seg(lt, 5.0, 5.4))) : 756]; })();
-    if (lt < 8.0) { crate(g, bg1[0], bg1[1], { kind: 'http', w: 124, h: 90, label: '后台', lamp: lt > 4.6 ? 'fail' : null, al: 1 - seg(lt, 7.6, 8.0) }); if (lt > 4.9) timeTag(g, '+500ms', bg1[0], bg1[1] - 100, lt, seg(lt, 4.9, 5.2)); }
-    if (lt > 4.8) sign(g, '后台：退避后慢慢补', 1300, 860 - 40, { s: 24, fill: C.ink2, bar: C.green, k: pop(seg(lt, 4.8, 5.15)), al: 1 - seg(lt, 8.2, 8.5) });
+    if (lt < 8.0) { crate(g, bg1[0], bg1[1], { kind: 'http', w: 124, h: 90, label: '后台', lamp: lt > 4.6 ? 'fail' : null, al: 1 - seg(lt, 7.6, 8.0) }); if (lt > 4.9) timeTag(g, '+500ms', bg1[0], bg1[1] - 160, lt, seg(lt, 4.9, 5.2)); }
+    if (lt > 4.8) sign(g, '后台：退避后慢慢补', 1150, 430, { s: 24, fill: C.ink2, bar: C.green, k: pop(seg(lt, 4.8, 5.15)), al: 1 - seg(lt, 8.2, 8.5) });
     // 401：先按“刷新 token”，再照常回流
     plate(g, 1560, 380, 170, 150, { fill: C.paintD, r: 10, sb: 20, so: 8 });
     text(g, '刷新 token', 1645, 412, { s: 24, w: 900, emboss: true });
@@ -1013,7 +1016,7 @@ S('s18', {
       const k = eio(seg(lt, 11.0, 12.4)), p = lt < 11.0 ? [1300, 596] : [lerp(1300, 1080, k), lt < 11.4 ? lerp(596, 756, eio(seg(lt, 11.0, 11.4))) : 756];
       crate(g, p[0], p[1], { kind: 'http', w: 124, h: 90, label: '后台', al: seg(lt, 8.4, 8.7), lamp: lt < 11 ? 'fail' : null });
       at(g, p[0] + 52, p[1] - 108, 1, () => { plate(g, -44, -22, 88, 44, { fill: C.redD, r: 6, rivets: false }); text(g, '401', 0, 2, { f: 'mono', s: 26, w: 700 }); }, { al: seg(lt, 8.5, 8.8) * (1 - seg(lt, 10.4, 10.8)) });
-      if (lt > 11.0) timeTag(g, '+500ms', p[0] - 30, p[1] - 100, lt, seg(lt, 11.0, 11.3));
+      if (lt > 11.0) timeTag(g, '+500ms', p[0] - 30, p[1] - 160, lt, seg(lt, 11.0, 11.3));
     }
     let tgt = [1500, 440];
     if (lt > 8.9 && lt < 9.9) tgt = [lerp(1500, 1610, eo(seg(lt, 8.9, 9.3))), lerp(440, 466 + pr * 4, eo(seg(lt, 8.9, 9.3)))];
@@ -1100,7 +1103,7 @@ S('s15', {
     belt(g, 230, 820, beltY, lt, { v: 90, label: '任务队列', labelDx: 0 });
     const trap = eo(seg(lt, 8.5, 8.7)) * (1 - eo(seg(lt, 9.4, 9.8)));
     stationBench(g, lt, trap);
-    belt(g, 150, 1185, retY, lt, { v: -170, legs: false, frame: C.paintD, label: '回流带 · 重试', labelDx: 160 });
+    belt(g, 150, 1185, retY, lt, { v: -170, legs: false, frame: C.paintD, label: lt > 8.4 ? '回流带 · 重试' : null, labelDx: 160 });
     const liftK = eio(seg(lt, 11.05, 11.6));
     elevator(g, ST15.lift, beltY, lerp(retY + 6, beltY + 6, liftK));
     QUEUE15.forEach(([x, kind, no]) => crate(g, x, beltY - 4, { kind, no, w: 124, h: 90, lamp: 'wait' }));
@@ -1270,9 +1273,9 @@ S('s19', {
     }
     robot(g, 1600, FLOOR, [1440 + wob(lt, .3, 6), 470 + wob(lt, .25, 6)], lt, { state: 'run' });
     if (lt > 2.0 && lt < 5.8) sign(g, '一条线：谁先谁后，得有规矩', 800, 360, { s: 26, fill: C.ink2, bar: C.cyan, k: pop(seg(lt, 2.0, 2.35)), al: 1 - seg(lt, 5.5, 5.8) });
-    if (lt > 8.9 && lt < 10.2) sign(g, '本地任务：排到所有网络任务前', 900, 760, { s: 24, fill: C.greenD, k: pop(seg(lt, 8.9, 9.25)), al: 1 - seg(lt, 9.9, 10.2) });
-    if (lt > 12.5) sign(g, '加急：直接插到队头', 1150, 760, { s: 24, fill: '#B5521B', k: pop(seg(lt, 12.5, 12.85)) });
-    if (lt > 12.5) sign(g, '普通：照常排队尾', 500, 760, { s: 24, fill: C.ink2, k: pop(seg(lt, 12.7, 13.05)) });
+    if (lt > 8.9 && lt < 10.2) sign(g, '本地任务：排到所有网络任务前', 900, 715, { s: 24, fill: C.greenD, k: pop(seg(lt, 8.9, 9.25)), al: 1 - seg(lt, 9.9, 10.2) });
+    if (lt > 12.5) sign(g, '加急：直接插到队头', 1150, 715, { s: 24, fill: '#B5521B', k: pop(seg(lt, 12.5, 12.85)) });
+    if (lt > 12.5) sign(g, '普通：照常排队尾', 500, 715, { s: 24, fill: C.ink2, k: pop(seg(lt, 12.7, 13.05)) });
   },
 });
 
@@ -1304,13 +1307,13 @@ S('s21', {
       const lamp = (lt > scan2 && kind !== 'local') ? (kind === 'wait' ? 'wait' : kind === 'barrier' ? null : 'fail') : lt > scan1 ? (kind === 'wait' ? 'wait' : kind === 'http' ? 'fail' : kind === 'local' ? 'ok' : null) : null;
       if (kind === 'local') { if (taken < 1) crate(g, lerp(x, 1980, taken), 636 - Math.sin(taken * Math.PI) * 120, { kind: 'local', w: 110, h: 70, lamp, al: 1 - seg(lt, 6.3, 6.6) }); return; }
       crate(g, x, 636, { kind: kind === 'wait' ? 'http' : kind, w: 110, h: kind === 'barrier' ? 70 : 84, label: kind === 'barrier' ? '屏障' : '网络', lamp });
-      if (kind === 'wait') timeTag(g, '+500ms', x, 530, lt, 1);
+      if (kind === 'wait') timeTag(g, '+500ms', x, 476, lt, 1);
     });
     const sx = lt < 2.1 ? -999 : lt < 6.2 ? lerp(1760, 1250, seg(lt, 2.1, 6.0)) : lt > 8.6 && lt < 10.8 ? lerp(1760, 1120, seg(lt, 8.7, 10.6)) : -999;
     if (sx > 0) { g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createLinearGradient(sx - 50, 0, sx + 50, 0); gr.addColorStop(0, 'rgba(92,200,255,0)'); gr.addColorStop(.5, 'rgba(92,200,255,.4)'); gr.addColorStop(1, 'rgba(92,200,255,0)'); g.fillStyle = gr; g.fillRect(sx - 50, 470, 100, 200); g.restore(); }
     const lbl = [[2.4, 3.4, '退避没到：跳过', C.yellowD, '#151515'], [3.4, 4.8, '屏障还在：闸门落下', C.ink2, C.cream], [4.8, 5.6, '闸门后的网络任务：跳过', C.redD, '#fff'], [5.6, 8.4, '本地任务：取走执行', C.greenD, '#fff'], [10.8, 12.5, '一个都不行：睡在条件变量上', C.ink2, C.cyan]];
     lbl.forEach(([a, b, s, f, c]) => { if (lt > a && lt < b) sign(g, s, 1390, 400, { s: 26, fill: f, c, k: pop(seg(lt, a, a + .3)) }); });
-    robot(g, 1900, FLOOR, [1800, 500], lt, { state: lt > 10.8 ? 'sleep' : 'run', label: false });
+    robot(g, 1840, FLOOR, [1760, 500], lt, { state: lt > 10.8 ? 'sleep' : 'run' });
   },
 });
 
@@ -1386,7 +1389,7 @@ S('s23', {
       const x = lt < 11.2 ? Math.min(420, -200 + (lt - 9.8) * 620) : lerp(420, 560, eio(seg(lt, 11.2, 12.0)));
       crate(g, x, 616, { kind: 'http', w: 116, h: 88, label: '', lamp: lt > 11.0 ? 'ok' : null });
       paramTag(g, '控制 灯1', x, 486, { fill: lt > 12.2 ? '#CFF5DA' : C.paper, stroke: lt > 11 ? C.green : C.ink, lw: lt > 11 ? 3.5 : 2 });
-      if (lt > 11.0) sign(g, '免检', 420, 330, { s: 26, fill: C.greenD, k: pop(seg(lt, 11.0, 11.3)), rivets: false });
+      if (lt > 11.0) sign(g, '免检', 420, 276, { s: 26, fill: C.greenD, k: pop(seg(lt, 11.0, 11.3)), rivets: false });
       if (lt > 12.3) sign(g, '控制、查询、执行场景：不去重', 1000, 340, { s: 24, fill: C.greenD, k: pop(seg(lt, 12.3, 12.65)) });
     }
   },
@@ -1451,9 +1454,9 @@ S('s25', {
     plate(g, 468, 344, 28, 70, { fill: C.steel, r: 4, rivets: false });
     const nos = [[.8, 137], [1.9, 138], [3.0, 139]];
     nos.forEach(([t0, no], i) => {
-      const x = lt < t0 ? -200 + (lt - t0 + 1.2) * 580 : lt < 4.2 ? 482 + (lt - t0) * 130 * (i === 0 ? 1 : .35) : i === 0 ? lerp(482 + (4.2 - t0) * 130, 1540, eio(seg(lt, 4.2, 4.6))) : 482 + (4.2 - t0) * 130 * .35 - (2 - i) * 0;
-      const xx = i === 0 ? Math.min(x, 1540) : Math.min(x, 1250 - i * 150);
-      crate(g, xx, 616, { kind: 'http', w: 124, h: 90, no: lt > t0 ? no : null });
+      const stop = i === 0 ? (lt < 4.2 ? 1250 : lerp(1250, 1540, eio(seg(lt, 4.2, 4.6)))) : 1250 - i * 150;
+      const x = lt < t0 ? Math.max(-300, 482 - (t0 - lt) * 580) : Math.min(stop, 482 + (lt - t0) * 300);
+      crate(g, x, 616, { kind: 'http', w: 124, h: 90, no: lt > t0 ? no : null });
       if (lt > t0 && lt < t0 + .5) { for (let j = 0; j < 10; j++) dot(g, 482 + (hash(j + t0 * 9) - .5) * 60, 430 + hash(j * 3 + t0) * 120 * ((lt - t0) / .5), 3, C.cream, 1 - (lt - t0) / .5); }
     });
     // 打卡钟 + 工单卡
@@ -1501,7 +1504,7 @@ function plaques(g, lt, ks) {
     at(gg, x + 110, y + 296, .5, () => robot(gg, 0, 0, [140, -230], lt, { label: false, state: 'run' }));
   });
   plaque(g, PLQ[2], 470, 440, 380, '不同的活，不同待遇', ks[2], lt, (gg, x, y, w, h) => {
-    const ic = [[x + 110, y + 120, '插队'], [x + 330, y + 120, '闸门'], [x + 110, y + 240, '只重试失败的'], [x + 330, y + 240, '界面立刻回错']];
+    const ic = [[x + 110, y + 100, '插队'], [x + 330, y + 100, '闸门'], [x + 110, y + 212, '只重试失败的'], [x + 330, y + 212, '界面立刻回错']];
     ic.forEach(([cx, cy, s], i) => {
       const on = ks[3] == null ? 1 : seg(ks[3], 4.2 + i * .45, 4.5 + i * .45);
       gg.save(); gg.globalAlpha *= .35 + .65 * on;

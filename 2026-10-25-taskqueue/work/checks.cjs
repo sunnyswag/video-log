@@ -556,16 +556,18 @@ function segmentBox(a, b, box, padding = 0) {
 }
 function probeLead(runtime, expected) {
   const issues = [], builder = runtime.builder;
-  if (typeof runtime.context.S !== 'function' || !builder) return [{ scene: '全局', content: 'S(id, options)', reason: '未找到可独立探测的 S 注册函数' }];
+  const registerName = typeof runtime.context.register === 'function' ? 'register' : 'S';
+  if (typeof runtime.context[registerName] !== 'function' || !builder) return [{ scene: '全局', content: `${registerName}(id, options)`, reason: `未找到可独立探测的 ${registerName} 注册函数` }];
   const original = { chapter: builder.chapter, addScene: builder.addScene };
   try {
     builder.chapter = () => {};
     for (const sc of expected.scenes) {
       let captured;
       builder.addScene = o => { captured = o; return o; };
-      runtime.context.S(sc.id, { draw() {}, cues: [[.125, 'tick', .7]] });
-      const cue = captured?.cues?.[0], caps = expected.captions.filter(c => c.id === sc.id);
-      if (!captured || Math.abs(captured.dur-sc.d) > EPS || !cue || Math.abs(cue.t-(.125+sc.lead)) > EPS || cue.type !== 'tick' || cue.v !== .7 || captured.captions.length !== caps.length || captured.captions.some((c, i) => Math.abs(c.t-caps[i].local0) > EPS || Math.abs(c.end-caps[i].local1) > EPS || c.text !== caps[i].text)) issues.push({ t: sc.start, scene: sc.id, content: `S(${quote(sc.id)}, {cues:[[0.125,"tick",0.7]]})`, reason: `注册函数未正确同时平移时长、字幕或 cue；lead=${sc.lead}；实际 cue=${JSON.stringify(cue)}` });
+      runtime.context[registerName](sc.id, { draw() {}, cues: [[.125, 'tick', .7]] });
+      const cue = registerName === 'register' ? captured?.cues?.find(c => c.type === 'tick') : captured?.cues?.[0];
+      const caps = expected.captions.filter(c => c.id === sc.id);
+      if (!captured || Math.abs(captured.dur-sc.d) > EPS || !cue || Math.abs(cue.t-(.125+sc.lead)) > EPS || cue.type !== 'tick' || cue.v !== .7 || captured.captions.length !== caps.length || captured.captions.some((c, i) => Math.abs(c.t-caps[i].local0) > EPS || Math.abs(c.end-caps[i].local1) > EPS || c.text !== caps[i].text)) issues.push({ t: sc.start, scene: sc.id, content: `${registerName}(${quote(sc.id)}, {cues:[[0.125,"tick",0.7]]})`, reason: `注册函数未正确同时平移时长、字幕或 cue；lead=${sc.lead}；实际 cue=${JSON.stringify(cue)}` });
     }
   } finally { builder.chapter = original.chapter; builder.addScene = original.addScene; }
   return issues;
@@ -675,8 +677,32 @@ function selfTest() {
     const builder = { chapter() {}, addScene() {} }, rt = { builder, context: {} };
     rt.context.S = (id, o) => builder.addScene({ dur: 4.6, captions: [{ t: 1.6, end: 3.6, text: '甲' }], cues: o.cues.map(([t, type, v]) => ({ t: t+1.6, type, v })) });
     assert.equal(probeLead(rt, expected).length, 0);
+    rt.context.register = {}; // A non-function register must still fall back to S.
+    assert.equal(probeLead(rt, expected).length, 0);
     rt.context.S = (id, o) => builder.addScene({ dur: 4.6, captions: [{ t: 1.6, end: 3.6, text: '甲' }], cues: o.cues.map(([t, type, v]) => ({ t, type, v })) });
     assert.equal(probeLead(rt, expected).length, 1);
+  });
+  check(() => {
+    const input = { a: { dur: 3, chapter: 1, caps: [[0, 2, '甲']] } }, expected = derive(input, ['a'], { a: { lead: 1.6, card: 4 } });
+    const builder = { chapter() {}, addScene() {} }, original = { ...builder };
+    const rt = { builder, context: { S() { assert.fail('register 存在时不应调用 S'); } } };
+    const extras = [{ t: 0, type: 'shutter', v: 1 }, { t: 1.42, type: 'whoosh', v: .5 }];
+    let cueLead = 1.6, extrasFirst = false, omitTick = false;
+    rt.context.register = (id, o) => {
+      assert.equal(id, 'a'); assert.equal(typeof o.draw, 'function');
+      builder.chapter(1);
+      const cues = omitTick ? [] : o.cues.map(([t, type, v]) => ({ t: t+cueLead, type, v }));
+      return builder.addScene({ dur: 4.6, captions: [{ t: 1.6, end: 3.6, text: '甲' }], cues: extrasFirst ? [...extras, ...cues] : [...cues, ...extras] });
+    };
+    assert.equal(probeLead(rt, expected).length, 0);
+    extrasFirst = true; // Locate tick by type even if other cues precede it.
+    assert.equal(probeLead(rt, expected).length, 0);
+    cueLead = 0;
+    const issues = probeLead(rt, expected);
+    assert.equal(issues.length, 1); assert.match(issues[0].content, /^register\(/);
+    cueLead = 1.6; omitTick = true;
+    assert.equal(probeLead(rt, expected).length, 1);
+    assert.equal(builder.chapter, original.chapter); assert.equal(builder.addScene, original.addScene);
   });
   return count;
 }
@@ -870,7 +896,7 @@ function main() {
   }
   console.log('\n说明：');
   console.log('1. 时长/场景/字幕从 VM 中实际 SCRIPT + ONLY + SAMPLE_OPT 独立推算，按 SCRIPT 顺序过滤 ONLY；不从实际 FILM 反推期望。ONLY=null 选全部 SCRIPT；lead 同时计入 dur、字幕起止。未入选幕不作画面或字幕质量验收。');
-  console.log('2. cue 从 addScene 注册数据核验带 lead 的局部时间到全局时间的映射及幕内边界；另在独立 VM 以已知 cue 探测实际 S 注册函数，逐幕验证 lead 同时平移 dur、字幕和 cue。此探测只替换私有 VM 的接收器，不修改源码或已渲染的时间线。');
+  console.log('2. cue 从 addScene 注册数据核验带 lead 的局部时间到全局时间的映射及幕内边界；另在独立 VM 以已知 cue 优先探测 register 注册函数（不是函数时回退 S），逐幕验证 lead 同时平移 dur、字幕和 cue；register 按 type 查找 tick，忽略额外的 shutter/whoosh。此探测只替换私有 VM 的接收器，不修改源码或已渲染的时间线。');
   console.log('3. 字符按 Unicode 码点计数，只去掉 {} [] ^ 标记，保留空格标点；句长≥1.6 s，幕内不重叠；允许相邻句端点相接。标题幕即使隐藏字幕，也核对导出的完整字幕清单。');
   console.log('4. 文字宽度为 ASCII 0.6em、其他字符 1em，加 letterSpacing；高度 1.2em，按 textAlign/textBaseline 和仿射变换取屏幕 AABB。真实字体未加载；旋转空白角落、字形留白和字距会造成误报。');
   console.log('5. 保留试点 globalAlpha≥0.15/非空文本过滤，同名不同绘制照查；文字相交≥15% 才报告。描边用折线段与文字框相交，弧/曲线采样，圆角框保守按矩形，arcTo 保守折线；细长 fillRect（短边≤6px、长边≥12px）也按线条检查。');

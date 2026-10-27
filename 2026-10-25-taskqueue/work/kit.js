@@ -396,9 +396,9 @@ function robot(g, bx, by, tgt, lt, o = {}) {
   g.save(); const cg = g.createLinearGradient(bx - 46, 0, bx + 46, 0); cg.addColorStop(0, C.paintD); cg.addColorStop(.4, C.paintL); cg.addColorStop(1, C.paintD);
   rr(g, bx - 46, by - 138, 92, 100, 8); g.fillStyle = cg; g.fill(); g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke(); g.restore();
   plate(g, bx - 58, by - 158, 116, 24, { fill: C.steel, r: 8, rivets: false, sb: 8, so: 3 });
-  if (o.label !== false) sign(g, o.label || 'worker', bx, by - 70, { f: 'mono', s: 24, w: 700, fill: C.ink2, rivets: false, pad: 30, ph: 12 });
+  plate(g, bx - 34, by - 74, 68, 22, { fill: C.ink2, r: 4, rivets: false, shadow: false, lw: 1.5 });
   const st = o.state || 'run', lc = st === 'run' ? C.green : st === 'wait' ? C.yellow : C.cyan;
-  lampDot(g, bx, by - 116, 10, lc, st === 'sleep' ? .25 + .3 * (.5 + .5 * Math.sin(lt * 2.2)) : 1);
+  lampDot(g, bx, by - 96, 10, lc, st === 'sleep' ? .25 + .3 * (.5 + .5 * Math.sin(lt * 2.2)) : 1);
   const k = ik(sx, sy, tgt[0], tgt[1], L1, L2);
   // 管线
   g.save(); g.beginPath(); g.moveTo(bx + 30, by - 140); g.quadraticCurveTo(k.ex + 60, k.ey + 40, k.ex + 10, k.ey + 14); g.lineWidth = 6; g.strokeStyle = C.ink2; g.stroke(); g.restore();
@@ -411,6 +411,7 @@ function robot(g, bx, by, tgt, lt, o = {}) {
   plate(g, -6, -18, 26, 36, { fill: C.steelD, r: 5, rivets: false, shadow: false });
   for (const sgn of [-1, 1]) { g.save(); g.translate(18, sgn * 12); g.rotate(sgn * (.15 + grip * .5)); rr(g, 0, -5, 34, 10, 4); g.fillStyle = C.steel; g.fill(); g.lineWidth = 2; g.strokeStyle = C.ink; g.stroke(); g.restore(); }
   g.restore();
+  if (o.label) sign(g, o.label, bx - 150, by - 230, { f: o.label === 'worker' ? 'mono' : 'cjk', s: 24, w: 700, fill: C.ink2, bar: C.yellow, rivets: false });
   return k;
 }
 
