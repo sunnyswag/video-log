@@ -1,5 +1,5 @@
 /* =====================================================================
- * Kotlin 实现 SIP 通信协议 v2 —— 画面工具：主题、纸面质感、镜头、角色与图元
+ * Kotlin 实现 SIP 通信协议 v2/v3 —— 画面工具：主题、纸面质感、镜头、角色与图元
  * 普通 <script>，顶层声明供 film.js 使用。所有绘制只依赖时间 t（可任意跳帧、分段并行渲染）。
  * 逻辑坐标 1920×1080；canvas 阴影参数不随变换缩放，统一乘 SH（设备像素/逻辑像素 × 镜头缩放）。
  * ===================================================================== */
@@ -272,9 +272,9 @@ function capsule(g, x, y, kind, o = {}) {
     text(g, code, -w / 2 + 42, 1, { f: 'mono', s: fs, w: 700, c: '#fff' });
     text(g, name, -w / 2 + 84 + nw / 2, 1, { f: 'mono', s: fs, w: 700 });
     if (o.tag) { // 右上角会话标签（如 S1）
-      const tw2 = textW(g, o.tag, { f: 'mono', s: 22, w: 700 }) + 22;
-      card(g, w / 2 - tw2 + 6, -h / 2 - 22, tw2, 34, { r: 17, fill: C.purple, lw: 2.5, shadow: false });
-      text(g, o.tag, w / 2 - tw2 / 2 + 6, -h / 2 - 5, { f: 'mono', s: 22, w: 700, c: '#fff' });
+      const tw2 = textW(g, o.tag, { f: 'mono', s: 28, w: 700 }) + 24;
+      card(g, w / 2 - tw2 + 6, -h / 2 - 28, tw2, 40, { r: 20, fill: C.purple, lw: 2.5, shadow: false });
+      text(g, o.tag, w / 2 - tw2 / 2 + 6, -h / 2 - 8, { f: 'mono', s: 28, w: 700, c: '#fff' });
     }
   }, { rot: o.rot, sx: o.sx, sy: o.sy, al: o.al });
   return w * (o.s ?? 1);

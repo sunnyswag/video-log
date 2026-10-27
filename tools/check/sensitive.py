@@ -17,7 +17,7 @@ import os, re, sys
 
 SKIP_EXT = {'.mp4', '.mkv', '.mov', '.wav', '.m4a', '.mp3', '.aac', '.flac', '.jpg', '.jpeg', '.png', '.gif', '.webp',
             '.woff', '.woff2', '.ttf', '.otf', '.ttc', '.zip', '.pdf'}
-SKIP_NAME = {'fonts.css'}          # 字体子集是 base64，字符都来自已扫描的 film.js
+SKIP_NAME = {'fonts.css', '.git'}  # fonts.css：字体子集是 base64，字符都来自已扫描的 film.js；.git：worktree 根目录的指针文件，不进仓库
 SKIP_DIR = {'node_modules', '.git', 'preview', '.trash'}
 
 

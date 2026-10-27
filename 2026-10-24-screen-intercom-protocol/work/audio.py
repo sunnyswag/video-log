@@ -6,11 +6,11 @@ python3 audio.py /absolute/timeline.json /absolute/audio.wav
 依赖：numpy、scipy、audio_kit。FILM_KIT_DIR 可覆盖相对脚本的
 ../../tools/film-kit。只在显式调用 main/render 时合成，不写工具包缓存。
 
-章节协议：n=1..5 为第一至第五章，6=总结，7=结尾，8=系列片尾；
-n=0 为开场。参考导出器只列正式章节时，未编号段用 scenes 的
-id=hook/title/outro/endcard（也接受 intro/ending/series_outro）定位。
-title 场景可在 n=0 内；不存在明确标题场景时保持稀疏开场至第一章。
-场景的 chap/title/name 和显示文案均不用于猜测章节。无绝对节目时间。
+v3 章节协议：每段都有章节 marker，n=0 开场、1 片名、2..7 第一至
+第六章、8 总结、9 系列片尾；段落只按 marker 分派，不再按场景 id 覆盖。
+第六章的解决点取 RESOLVE_SCENE 场景起点；缺失或不在本章内时用本章
+45% 处，之后约 6 s 恢复和声。场景的 chap/title/name 和显示文案均不用于
+猜测章节。节拍从片名起点启拍，无绝对节目时间。
 
 附带 <输出文件名>.metrics.json：PCM 实测、浮点分轨统计、0.5 s RMS 曲线。
 音乐与提示音比较使用相同的有效音效窗口，排除 ring 的 100 ms 间隙；
@@ -46,6 +46,7 @@ TARGET_RMS_DB = -24.4
 CUE_GAP_DB = 8.0
 DUCK_DB = 2.0
 REFERENCE_V = 0.85
+RESOLVE_SCENE = "s25"  # 第六章从该幕起恢复和声；缺失/不在本章内则用本章 45% 处。
 
 # 段落表 → 和弦、层级、每小节八分音符槽位。主章节只按 n 分派。
 CHORDS = {
@@ -61,19 +62,19 @@ CHORDS = {
 }
 PATTERNS = {
     "intro": dict(label="开场", prog=("Am(add9,no3)",), mallet=.25, bass=0, perc=.25, slots=(0,), bright=.35),
-    "title": dict(label="标题", prog=("C6", "Gsus2"), mallet=.30, bass=.15, perc=.34, slots=(0, 3, 6), bright=.60),
-    "1": dict(label="第一章", prog=("C6", "Am7", "Fmaj7", "Gsus2"), mallet=.40, bass=.22, perc=.43, slots=(0, 2, 5, 6), bright=.67),
-    "2": dict(label="第二章", prog=(), mallet=0, bass=0, perc=.44, slots=(), bright=.3),
-    "3": dict(label="第三章", prog=(), mallet=0, bass=0, perc=.46, slots=(), bright=.3),
-    "4": dict(label="第四章", prog=("Dm7", "Gsus2", "Am7", "Fmaj7"), mallet=.43, bass=.23, perc=.46, slots=(0, 2, 5, 6), bright=.7),
-    "5": dict(label="第五章", prog=("C6/9", "Fmaj7", "G6", "C/E"), mallet=.51, bass=.27, perc=.53, slots=(0, 1, 2, 4, 5, 7), bright=.95),
-    "6": dict(label="总结", prog=("Fmaj7", "G6", "C6", "C6"), mallet=.43, bass=.23, perc=.46, slots=(0, 2, 4, 7), bright=.85),
-    "7": dict(label="结尾", prog=("Fmaj7", "Gsus2", "C6", "C6"), mallet=.31, bass=.16, perc=.30, slots=(0, 3, 6), bright=.6),
-    "8": dict(label="系列片尾", prog=("C6",), mallet=.26, bass=.11, perc=0, slots=(), bright=.55),
+    "title": dict(label="片名", prog=("C6", "Gsus2"), mallet=.30, bass=.15, perc=.34, slots=(0, 3, 6), bright=.60),
+    "1": dict(label="第一章", prog=("C6", "Am7", "Fmaj7", "Gsus2"), mallet=.38, bass=.20, perc=.40, slots=(0, 2, 5, 6), bright=.62),
+    "2": dict(label="第二章", prog=("C6", "G6", "Am7", "Fmaj7"), mallet=.42, bass=.22, perc=.45, slots=(0, 2, 4, 6), bright=.72),
+    "3": dict(label="第三章", prog=("Fmaj7", "C6", "Dm7", "Gsus2"), mallet=.40, bass=.22, perc=.42, slots=(0, 3, 5), bright=.62),
+    "4": dict(label="第四章", prog=("Am7", "Fmaj7", "Dm7", "Gsus2"), mallet=.36, bass=.24, perc=.44, slots=(0, 2, 5, 6), bright=.50),
+    "5": dict(label="第五章", prog=("Dm7", "Gsus2", "C6", "Am7"), mallet=.44, bass=.25, perc=.48, slots=(0, 1, 2, 4, 5, 6), bright=.75),
+    "6": dict(label="第六章", prog=(), mallet=0, bass=0, perc=.46, slots=(), bright=.3),
+    "sum": dict(label="总结", prog=("Fmaj7", "G6", "C6", "C6"), mallet=.43, bass=.23, perc=.40, slots=(0, 2, 4, 7), bright=.85),
+    "end": dict(label="系列片尾", prog=("C6",), mallet=.26, bass=.11, perc=0, slots=(), bright=.55),
 }
-# film.js 的章节编号：0 开场、1 片名、2–6 五个主章节、7 总结、8 结尾、9 系列片尾
-FILM_CHAPTERS = {0: "intro", 1: "title", 2: "1", 3: "2", 4: "3", 5: "4", 6: "5", 7: "6", 8: "7", 9: "8"}
-SCENE_ROLES = {"hook": "intro", "intro": "intro", "title": "title", "outro": "7", "ending": "7", "endcard": "8", "series_outro": "8"}
+# 第六章解决后的明亮和声；只在内部切段，metrics 仍保留十个章节段落。
+RESOLVED_PATTERN = dict(prog=("C6/9", "Fmaj7", "G6", "C/E"), mallet=.51, bass=.27, perc=.53, slots=(0, 1, 2, 4, 5, 7), bright=.95)
+FILM_CHAPTERS = {0: "intro", 1: "title", 2: "1", 3: "2", 4: "3", 5: "4", 6: "5", 7: "6", 8: "sum", 9: "end"}
 CUE_DURATIONS = {"send": .070, "latch": .080, "success": .220, "error": .180, "whoosh": .250, "tick": .040, "ring": .280}
 
 
@@ -123,37 +124,34 @@ def prepare(info):
     markers.sort()
     if any(a[0] == b[0] for a, b in zip(markers, markers[1:])):
         raise ValueError("章节起点不能重复")
-    # 标题、结尾在参考导出器中可能只有场景，没有章节 marker。
-    overlays = []
-    for scene in info.get("scenes", []):
-        role = SCENE_ROLES.get(scene.get("id"))
-        if role is None:
-            continue
-        start = finite_number(scene["start"], "scene.start")
-        length = finite_number(scene["d"], "scene.d")
-        if length <= 0 or start < 0 or start + length > duration + 1e-6:
-            raise ValueError("特殊场景区间越界或为空")
-        overlays.append((start, min(duration, start + length), role))
-    overlays.sort()
-    if any(a[1] > b[0] + 1e-6 for a, b in zip(overlays, overlays[1:])):
-        raise ValueError("特殊场景不能重叠")
-    boundaries = sorted({0.0, duration, *(m[0] for m in markers), *(v for a, b, _ in overlays for v in (a, b))})
+    boundaries = sorted({0.0, duration, *(m[0] for m in markers)})
     sections = []
     for start, end in zip(boundaries, boundaries[1:]):
         role, number = "intro", None
         for t, r, n in markers:
             if t <= start:
                 role, number = r, n
-        for a, b, r in overlays:
-            if a <= start < b:
-                # 仅未编号前奏可被 hook/title 覆盖，绝不覆盖 n=1..5。
-                if r in ("7", "8") or role == "intro":
-                    role = r
-                    number = int(r) if r.isdigit() else None
         if sections and sections[-1]["role"] == role and sections[-1]["n"] == number:
             sections[-1]["end"] = end
         else:
             sections.append(dict(start=start, end=end, role=role, n=number, label=PATTERNS[role]["label"]))
+    candidates = [s for s in info.get("scenes", []) if s.get("id") == RESOLVE_SCENE]
+    if len(candidates) > 1:
+        raise ValueError("解决点场景 id 不能重复")
+    resolve_start, resolve_end = None, None
+    if candidates:
+        resolve_start = finite_number(candidates[0]["start"], "scene.start")
+        length = finite_number(candidates[0]["d"], "scene.d")
+        resolve_end = resolve_start + length
+        if length <= 0 or resolve_start < 0 or resolve_end > duration + 1e-6:
+            raise ValueError("解决点场景区间越界或为空")
+    for section in sections:
+        if section["role"] != "6":
+            continue
+        start, end = section["start"], section["end"]
+        inside = resolve_start is not None and start <= resolve_start < end and resolve_end <= end + 1e-6
+        section["resolve"] = resolve_start if inside else start + .45 * (end - start)
+        section["resolve_source"] = RESOLVE_SCENE if inside else "chapter_45%"
     cues = []
     for item in info.get("cues", []):
         kind = item["type"]
@@ -213,9 +211,18 @@ def music_bus(duration, sections):
     # 从时间线的标题起点启拍；此后全片使用同一个 90 BPM 网格，不逐章重置。
     anchor = next((s["start"] for s in sections if s["role"] == "title"),
                   next((s["start"] for s in sections if s["role"] == "1"), 0.0))
+    # 第六章在解决点裁断故障段尾音；两段沿用全片网格，不从解决点另起节拍。
+    parts = []
     for section in sections:
+        if section["role"] == "6":
+            parts.append(dict(section, end=section["resolve"]))
+            parts.append(dict(section, start=section["resolve"], resolved=True))
+        else:
+            parts.append(section)
+    for section in parts:
         role = section["role"]
-        p = PATTERNS[role]
+        resolved = section.get("resolved", False)
+        p = RESOLVED_PATTERN if resolved else PATTERNS[role]
         start, end = section["start"], section["end"]
         first = math.ceil((start - anchor) / (BEAT / 2) - 1e-9)
         last = math.ceil((end - anchor) / (BEAT / 2) - 1e-9)
@@ -227,15 +234,16 @@ def music_bus(duration, sections):
             slot = step % 8
             bar = step // 8 - first_bar
             progress = (t - start) / max(end - start, 1 / SR)
-            recover = (.08 + .92 * progress) if role == "4" else 1.0
-            taper = (1.0 - .65 * progress) if role == "7" else 1.0
+            recovery = min(1.0, (t - start) / 6.0) if resolved else 1.0
+            recover = .08 + .92 * recovery if resolved else 1.0
+            taper = 1.0 - .65 * max(0.0, (progress - .7) / .3) if role == "sum" else 1.0
             chord = p["prog"][bar % len(p["prog"])] if p["prog"] else None
             if chord:
                 root, notes = CHORDS[chord]
                 slots = p["slots"]
-                if role == "4" and progress < .30:
+                if resolved and recovery < .30:
                     slots = (0,)
-                elif role == "4" and progress < .6:
+                elif resolved and recovery < .6:
                     slots = (0, 4)
                 if role == "intro" and bar % 2:
                     slots = ()
@@ -245,11 +253,11 @@ def music_bus(duration, sections):
                     note = notes[(pick + bar // 4) % len(notes)]
                     gain = p["mallet"] * recover * taper * (1 if slot % 2 == 0 else .73)
                     add_in_section(music, mallet(note, p["bright"]), t, section, gain, ((step % 3) - 1) * .24)
-                if slot in (0, 4) and p["bass"] and role != "8":
+                if slot in (0, 4) and p["bass"] and role != "end":
                     add_in_section(music, low_note(root), t, section, p["bass"] * recover * taper * (1 if slot == 0 else .78))
             if not p["perc"]:
                 continue
-            perc = 3.2 * p["perc"] * taper * ((.7 + .3 * progress) if role == "4" else 1)
+            perc = 3.2 * p["perc"] * taper * ((.7 + .3 * recovery) if resolved else 1)
             if role == "intro":
                 if slot == 0:
                     add_in_section(music, soft_pulse(), t, section, perc * .55)
@@ -260,11 +268,11 @@ def music_bus(duration, sections):
                 add_in_section(music, soft_pulse(), t, section, perc * .62)
             if slot in (2, 6):
                 add_in_section(music, ak.woodblock(720 if slot == 2 else 630, .095, .45), t, section, perc * .42, -.18)
-            if slot % 2 and (role not in ("2", "3") or slot in (3, 7)):
+            if slot % 2 and (role != "6" or resolved or slot in (3, 7)):
                 noise = ak.shaker(.075, bright=.65, rng=SEED + step + 1000000)
                 add_in_section(music, noise, t, section, perc * .60, .22)
-        if role == "8":
-            # 片尾只奏一次 C6 收束，起点来自片尾场景/章节，无额外 cue。
+        if role == "end":
+            # 片尾只奏一次 C6 收束，起点来自片尾章节，无额外 cue。
             for k, note in enumerate((60, 67, 69, 76)):
                 add_in_section(music, mallet(note, .55), start + k * .055, section, .18, (k - 1.5) * .12)
             add_in_section(music, low_note(48), start, section, .11)
