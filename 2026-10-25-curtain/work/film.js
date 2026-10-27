@@ -637,7 +637,7 @@ S('s12', {
     const miss = seg(lt, 3.9, 4.3), bl = lt > 4.3 && lt < 7.8 ? .55 + .45 * Math.sin(lt * 8) : 1;
     frame(g, 266, 350, 508, 64, { p: miss, dash: [10, 8], c: C.red, fill: rgba(C.red, .05), lw: 2, al: bl });
     text(g, '没有对应物，给不了空实现', 520, 383, { s: 26, w: 700, c: C.red, al: miss * bl });
-    codeCard(g, 240, 520, 780, ['#ifdef CURTAIN_DUAL_MOTOR', '    agg_cache_update(ep, st);', '#endif'], { p: seg(lt, 7.9, 9.4), lt, title: '调用方（示意）', hl: lt > 9.6 ? [0, 2] : [], hlA: seg(lt, 9.6, 10) });
+    codeCard(g, 240, 520, 780, ['#ifdef CURTAIN_DUAL_MOTOR', '    agg_cache_update(ep, st);', '#endif'], { p: seg(lt, 7.9, 9.4), lt, title: '调用方（示意）', hl: lt > 9.6 ? [0, 2] : [], hlA: seg(lt, 9.6, 10), al: seg(lt, 7.5, 7.9) });
     const tl = lt < 11.5 ? 0 : spring(lt - 11.6, 5, .9) * .7;
     balance(g, 1420, 560, tl, '零运行时成本', '调用方要 #ifdef', seg(lt, 11.4, 11.9));
     text(g, '让步', 1420, 500, { s: 28, w: 900, c: C.amber, al: seg(lt, 12.3, 12.7) });
