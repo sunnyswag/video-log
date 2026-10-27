@@ -446,7 +446,7 @@ function scrText(g, s, x, y, o = {}) { text(g, s, x, y, { f: o.f || 'cjk', s: o.
 function gate(g, x, beltY, down, lt, o = {}) {
   const top = beltY - (o.h || 250), pw = 26, span = o.span || 170;
   // 后柱
-  plate(g, x - span / 2 - pw, top, pw, FLOOR - top, { fill: C.steelD, r: 4, rivets: false, sb: 16, so: 6 });
+  plate(g, x - span / 2 - pw, top, pw, (o.base ?? FLOOR) - top, { fill: C.steelD, r: 4, rivets: false, sb: 16, so: 6 });
   // 闸板
   const bh = Math.min(150, beltY - top - 40), by = lerp(top + 26 - bh, beltY - bh - 12, down) + (o.bounce || 0);
   g.save(); rr(g, x - span / 2, top + 26, span, beltY - top - 30, 0); g.clip();
@@ -454,8 +454,8 @@ function gate(g, x, beltY, down, lt, o = {}) {
   plate(g, x - span / 2 + 6, by + bh - 16, span - 12, 16, { fill: C.steelD, r: 2, rivets: false, shadow: false });
   g.restore();
   // 前柱与横梁
-  plate(g, x + span / 2, top, pw, FLOOR - top, { fill: C.steelD, r: 4, rivets: false, sb: 16, so: 6 });
-  hazard(g, x + span / 2, FLOOR - 120, pw, 100, { s: 12, lw: 2 });
+  plate(g, x + span / 2, top, pw, (o.base ?? FLOOR) - top, { fill: C.steelD, r: 4, rivets: false, sb: 16, so: 6 });
+  hazard(g, x + span / 2, (o.base ?? FLOOR) - 120, pw, 100, { s: 12, lw: 2 });
   plate(g, x - span / 2 - pw - 10, top - 36, span + pw * 2 + 20, 40, { fill: C.steel, r: 6, sb: 18, so: 6 });
   beacon(g, x + span / 2 + pw / 2, top - 36, lt, o.alarm ?? (down > .5 ? 1 : 0), C.orange, 1);
   if (o.label) sign(g, o.label, x - 10, top - 16, { s: 24, fill: C.ink2, bar: C.yellow, rivets: false, pad: 36, ph: 14, k: .95 });
@@ -633,4 +633,251 @@ function postFX(g, { cache, t, cw, ch }) {
   g.translate(Math.floor(hash(fr) * 256), Math.floor(hash(fr + 7) * 256)); g.scale(Math.max(1, SCX * .75), Math.max(1, SCX * .75));
   g.fillStyle = gp; g.fillRect(-512, -512, cw + 1024, ch + 1024);
   g.restore();
+}
+
+/* =====================================================================
+ * 全片补充图元：代码屏、智能屏、手机、云端库房、推送管、工单、秤、时间条、门铃、秒表、锁、推车、数据柜、
+ *              工牌、纸带、料斗、齿轮、挂钟、出票机、业务窗口
+ * ===================================================================== */
+const KW = new Set(['struct', 'bool', 'for', 'if', 'return', 'continue', 'NULL', 'false', 'true', 'void', 'while', 'int']);
+const TY = new Set(['task', 'json_t', 'list_t', 'param_factory', 'pool']);
+function codeTokens(line) { // 简单高亮：注释 / 关键字 / 类型 / 数字 / 其他
+  const out = []; let i = 0;
+  const ci = line.indexOf('/*');
+  const body = ci >= 0 ? line.slice(0, ci) : line, cm = ci >= 0 ? line.slice(ci) : '';
+  for (const m of body.matchAll(/([A-Za-z_][A-Za-z_0-9]*|\d+|\s+|.)/g)) {
+    const s = m[0]; out.push({ s, c: KW.has(s) ? '#FFC94A' : TY.has(s) ? '#6FD6FF' : /^\d+$/.test(s) ? '#FF9B5E' : '#E9F3EC' });
+  }
+  if (cm) out.push({ s: cm, c: '#7FA894' });
+  return out;
+}
+/* 代码屏：p 为打字进度（0–1，按字符），hl 为高亮行（可为数组），title 为标题栏 */
+function codePanel(g, x, y, w, lines, p, lt, o = {}) {
+  const lh = o.lh || 40, fs = o.fs || 26, h = lines.length * lh + 92;
+  plate(g, x - 16, y - 16, w + 32, h + 32, { fill: C.paintD, r: 12, sb: 34, so: 14 });
+  rr(g, x - 4, y - 4, w + 8, h + 8, 10); g.fillStyle = C.ink; g.fill();
+  g.save(); rr(g, x, y, w, h, 8); g.clip();
+  const sg = g.createLinearGradient(0, y, 0, y + h); sg.addColorStop(0, '#0E2426'); sg.addColorStop(1, '#091718'); g.fillStyle = sg; g.fillRect(x, y, w, h);
+  g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(x, y, w, 46);
+  text(g, o.title || '示意代码 · 非源码', x + 20, y + 24, { s: 24, w: 700, a: 'left', c: '#9FC7B4' });
+  for (const [i, c] of [C.red, C.yellow, C.green].entries()) dot(g, x + w - 26 - i * 24, y + 23, 7, c, .8);
+  const total = lines.reduce((a, l) => a + l.length, 0); let left = Math.round(total * clamp(p)), cy = 0, cx = 0;
+  const hls = [].concat(o.hl ?? []);
+  lines.forEach((ln, li) => {
+    const yy = y + 76 + li * lh;
+    if (hls.includes(li)) { g.save(); g.fillStyle = rgba(o.hlC || C.yellow, .16 + .06 * Math.sin(lt * 5)); g.fillRect(x + 6, yy - lh / 2 + 2, w - 12, lh - 4); g.fillStyle = o.hlC || C.yellow; g.fillRect(x + 6, yy - lh / 2 + 2, 5, lh - 4); g.restore(); }
+    let xx = x + 26;
+    for (const tk of codeTokens(ln)) {
+      if (left <= 0) break;
+      const s = Array.from(tk.s).slice(0, left).join(''); left -= Array.from(tk.s).length;
+      text(g, s, xx, yy, { f: 'mono', s: fs, w: 400, a: 'left', c: tk.c });
+      xx += textW(g, s, { f: 'mono', s: fs, w: 400 });
+      cx = xx; cy = yy;
+    }
+  });
+  if (p < 1 || o.cursor) { if (Math.floor(lt * 2.4) % 2 === 0) { g.fillStyle = '#9FF5D0'; g.fillRect(cx + 2, cy - fs * .55, fs * .55, fs * 1.05); } }
+  for (let yy = y; yy < y + h; yy += 4) { g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x, yy, w, 1.5); }
+  g.restore();
+  return h;
+}
+/* 智能屏：壁挂面板，2×3 卡片；o.hi 高亮卡片下标，o.err 显示错误牌，o.glow 屏幕光 */
+function smartScreen(g, x, y, s, lt, o = {}) {
+  at(g, x, y, s, () => {
+    plate(g, -200, -130, 400, 260, { fill: '#1B2023', r: 26, sb: 40, so: 16 });
+    rr(g, -176, -108, 352, 216, 14); g.fillStyle = '#10171A'; g.fill();
+    g.save(); rr(g, -176, -108, 352, 216, 14); g.clip();
+    const bg = g.createLinearGradient(0, -108, 0, 108); bg.addColorStop(0, '#22343A'); bg.addColorStop(1, '#162328'); g.fillStyle = bg; g.fillRect(-176, -108, 352, 216);
+    const cols = [C.cyan, C.yellow, C.green, C.orange, C.blue, C.red];
+    for (let i = 0; i < 6; i++) {
+      const cx = -112 + (i % 3) * 112, cy = -46 + Math.floor(i / 3) * 92, hi = o.hi === i;
+      rr(g, cx - 48, cy - 38, 96, 76, 12); g.fillStyle = hi ? rgba(cols[i], .55) : 'rgba(255,255,255,.1)'; g.fill();
+      dot(g, cx - 22, cy - 12, 10, cols[i], .9); rr(g, cx - 34, cy + 10, 60, 8, 4); g.fillStyle = 'rgba(255,255,255,.35)'; g.fill();
+    }
+    if (o.err) { const k = pop(o.err); at(g, 0, 0, k, () => { plate(g, -150, -46, 300, 92, { fill: C.redD, r: 12, rivets: false }); text(g, o.errText || '超时', 0, 2, { s: 40, w: 900 }); }); }
+    const sx = -400 + ((lt * 70) % 1000);
+    const gr = g.createLinearGradient(sx, -108, sx + 160, 108); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.5, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(-176, -108, 352, 216);
+    g.restore();
+    lampDot(g, 0, 116, 4, C.green, .6 + .4 * Math.sin(lt * 2));
+  }, { al: o.al });
+  if (o.label) sign(g, o.label, x, y + 160 * s, { s: 24, fill: C.ink2, bar: C.cyan });
+}
+/* 手机：2×3 卡片；drag = {from, to, p} 把一张卡片拖到另一格 */
+function phone(g, x, y, s, lt, o = {}) {
+  const pos = i => [-56 + (i % 2) * 112, -110 + Math.floor(i / 2) * 104];
+  at(g, x, y, s, () => {
+    plate(g, -110, -220, 220, 440, { fill: '#1C2124', r: 34, sb: 40, so: 16, rivets: false });
+    rr(g, -96, -200, 192, 400, 22); g.fillStyle = '#1F2F34'; g.fill();
+    rr(g, -30, -192, 60, 10, 5); g.fillStyle = '#0B0F11'; g.fill();
+    const cols = [C.cyan, C.yellow, C.green, C.orange, C.blue, C.red];
+    const d = o.drag, k = d ? eio(d.p) : 0;
+    for (let i = 0; i < 6; i++) {
+      if (d && i === d.from) continue;
+      let [cx, cy] = pos(i);
+      if (d && i === d.to) cx += 0 * k;
+      rr(g, cx - 48, cy - 44, 96, 88, 14); g.fillStyle = 'rgba(255,255,255,.12)'; g.fill(); dot(g, cx - 20, cy - 14, 11, cols[i], .9);
+    }
+    if (d) {
+      const a = pos(d.from), b = pos(d.to), cx = lerp(a[0], b[0], k), cy = lerp(a[1], b[1], k) - Math.sin(k * Math.PI) * 30, lift = Math.sin(clamp(d.p * 1.2) * Math.PI) * .12;
+      at(g, cx, cy, 1 + lift, () => { g.save(); shadow(g, .5, 20, 8); rr(g, -48, -44, 96, 88, 14); g.fillStyle = rgba(cols[d.from], .7); g.fill(); g.restore(); dot(g, -20, -14, 11, '#fff', .9); });
+      if (d.p > 0 && d.p < 1.05) { dot(g, cx + 20, cy + 26, 22, rgba('#ffffff', .35)); ring(g, cx + 20, cy + 26, 22, rgba('#ffffff', .7), 3); }
+    }
+  }, { al: o.al });
+  if (o.label) sign(g, o.label, x, y + 250 * s, { s: 24, fill: C.ink2, bar: C.cyan });
+}
+/* 云端库房：屋顶 + 卷帘口 + 天线 */
+function cloudHouse(g, x, y, s, lt, o = {}) {
+  at(g, x, y, s, () => {
+    floorShadow(g, 0, 0, 0);
+    poly(g, [[-190, -90], [0, -190], [190, -90]], C.steelD, { lw: 3 });
+    plate(g, -170, -92, 340, 200, { fill: '#3A4A50', r: 6, sb: 34, so: 14 });
+    for (let yy = -40; yy < 100; yy += 18) path(g, [[-90, yy], [90, yy]], { c: rgba('#000000', .3), w: 3 });
+    plate(g, -96, -52, 192, 160, { fill: C.steel, r: 4, rivets: false, shadow: false });
+    for (let yy = -40; yy < 100; yy += 16) path(g, [[-90, yy], [90, yy]], { c: rgba('#000000', .22), w: 3 });
+    sign(g, o.label || '云端', 0, -128, { s: 26, fill: C.ink2, bar: C.cyan, rivets: false });
+    path(g, [[120, -120], [120, -200]], { c: C.steel, w: 5 });
+    for (let k = 0; k < 3; k++) { const ph = (lt * .8 + k / 3) % 1; ring(g, 120, -204, 10 + ph * 50, C.cyan, 3, (1 - ph) * .5, -Math.PI * .9, -Math.PI * .1); }
+    lampDot(g, 120, -204, 6, C.red, .5 + .5 * Math.sin(lt * 3));
+  }, { al: o.al });
+}
+/* 推送管：沿折线的粗管，collar∈[0,1] 处有“≤ 4KB”卡口 */
+function pushPipe(g, pts, lt, o = {}) {
+  const wd = o.w || 34;
+  path(g, pts, { c: C.ink, w: wd + 6 }); path(g, pts, { c: C.steelD, w: wd }); path(g, pts, { c: rgba('#ffffff', .14), w: wd * .25 });
+  const L = partial(pts, 1); let tot = 0; for (let i = 1; i < L.length; i++) tot += Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1]);
+  for (let d = 60; d < tot; d += 160) { const q = partial(pts, d / tot), p2 = q[q.length - 1], p1 = q[Math.max(0, q.length - 2)], an = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]); g.save(); g.translate(p2[0], p2[1]); g.rotate(an); plate(g, -7, -wd * .64, 14, wd * 1.28, { fill: C.steel, r: 3, rivets: false, shadow: false, lw: 2 }); g.restore(); }
+  if (o.collar != null) {
+    const q = partial(pts, o.collar), c = q[q.length - 1], hot = o.hot || 0;
+    dot(g, c[0], c[1], wd * .95, hot > 0 ? mixHex(C.yellow, C.red, hot) : C.yellow); ring(g, c[0], c[1], wd * .95, C.ink, 3);
+    if (hot > 0) { g.save(); g.shadowColor = C.red; g.shadowBlur = 30 * SH() * hot; ring(g, c[0], c[1], wd * .95, C.red, 4, hot); g.restore(); }
+    sign(g, '≤ 4KB', c[0] + (o.lx ?? 0), c[1] + (o.ly ?? -62), { f: 'mono', s: 26, fill: C.ink2, bar: C.yellow, rivets: false });
+  }
+}
+/* 工单：带折角的纸条 */
+function slip(g, x, y, s, o = {}) {
+  const w = textW(g, s, { s: 24, w: 900 }) + 40, h = 46;
+  at(g, x, y, o.k ?? 1, () => {
+    g.save(); shadow(g, .35, 12, 5); poly(g, [[-w / 2, -h / 2], [w / 2 - 12, -h / 2], [w / 2, -h / 2 + 12], [w / 2, h / 2], [-w / 2, h / 2]], C.paper, { lw: 2 }); g.restore();
+    poly(g, [[w / 2 - 12, -h / 2], [w / 2 - 12, -h / 2 + 12], [w / 2, -h / 2 + 12]], '#D8CFBD', { lw: 1.5 });
+    g.fillStyle = o.c || C.cyan; g.fillRect(-w / 2 + 2, -h / 2 + 2, 7, h - 4);
+    text(g, s, 4, 1, { s: 24, w: 900, c: C.ink });
+  }, { al: o.al, rot: o.rot });
+}
+/* 地秤：平台 + 数显 */
+function scaleMeter(g, x, y, read, o = {}) { // y 为台面
+  plate(g, x - 150, y, 300, 22, { fill: C.steelD, r: 4, rivets: false, sb: 14, so: 6 });
+  hazard(g, x - 150, y + 22, 300, 10, { s: 10, lw: 1.5 });
+  plate(g, x + 160, y - 70, 190, 84, { fill: C.ink2, r: 8 });
+  rr(g, x + 172, y - 58, 166, 60, 6); g.fillStyle = '#0B1310'; g.fill();
+  text(g, read, x + 330, y - 27, { f: 'mono', s: 34, w: 700, a: 'right', c: o.c || '#7CFFB2', glow: rgba(o.c || '#7CFFB2', .6), gb: 10 });
+  if (o.label) text(g, o.label, x + 255, y + 40, { s: 24, w: 700, c: C.dim });
+}
+/* 时间条：segs [{w, c, label}]；p 为生长进度（按总长） */
+function timeBar(g, x, y, segs, p = 1, o = {}) {
+  const tot = segs.reduce((a, b) => a + b.w, 0); let left = tot * clamp(p), xx = x;
+  rr(g, x - 6, y - 22, (o.maxW || tot) + 12, 44, 10); g.fillStyle = 'rgba(0,0,0,.35)'; g.fill();
+  for (const sg of segs) {
+    if (left <= 0) break; const w = Math.min(sg.w, left); left -= w;
+    rr(g, xx, y - 16, Math.max(0, w - 4), 32, 6); g.fillStyle = sg.c || C.kraft; g.fill(); g.lineWidth = 2; g.strokeStyle = C.ink; g.stroke();
+    if (sg.label && w > 40) text(g, sg.label, xx + w / 2 - 2, y + 1, { s: 24, w: 900, c: C.ink });
+    xx += w;
+  }
+  return xx;
+}
+/* 门铃：钟罩 + 小锤；ring = 敲响后的秒数（<0 不响） */
+function doorBell(g, x, y, s, ring2) {
+  const k = ring2 >= 0 && ring2 < 1.4 ? Math.sin(ring2 * 38) * .25 * (1 - ring2 / 1.4) : 0;
+  at(g, x, y, s, () => {
+    plate(g, -16, -70, 32, 40, { fill: C.steelD, r: 4, rivets: false });
+    g.save(); g.rotate(k);
+    g.beginPath(); g.moveTo(-46, 30); g.quadraticCurveTo(-46, -34, 0, -38); g.quadraticCurveTo(46, -34, 46, 30); g.lineTo(54, 40); g.lineTo(-54, 40); g.closePath();
+    const bg = g.createLinearGradient(-50, 0, 50, 0); bg.addColorStop(0, C.yellowD); bg.addColorStop(.4, '#FFE08A'); bg.addColorStop(1, C.yellowD); g.fillStyle = bg; g.fill(); g.lineWidth = 3; g.strokeStyle = C.ink; g.stroke();
+    g.restore();
+    dot(g, Math.sin(k * 2) * 14, 48, 9, C.ink);
+    if (ring2 >= 0 && ring2 < 1.4) for (let j = 0; j < 3; j++) { const ph = (ring2 * 1.6 + j / 3) % 1; ring(g, 0, 0, 60 + ph * 70, C.yellow, 4, (1 - ph) * .6 * (1 - ring2 / 1.4), -Math.PI * .85, -Math.PI * .15); }
+  });
+}
+function stopwatch(g, x, y, r, a, o = {}) {
+  at(g, x, y, o.k ?? 1, () => {
+    plate(g, -10, -r - 22, 20, 16, { fill: C.steel, r: 3, rivets: false, shadow: false });
+    dot(g, 0, 0, r + 8, C.steelD); ring(g, 0, 0, r + 8, C.ink, 2.5); dot(g, 0, 0, r, C.paper);
+    for (let i = 0; i < 12; i++) { const aa = i / 12 * TAU; path(g, [[Math.cos(aa) * (r - 10), Math.sin(aa) * (r - 10)], [Math.cos(aa) * (r - 3), Math.sin(aa) * (r - 3)]], { c: C.ink, w: 2 }); }
+    if (o.sweep) { g.save(); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, r - 4, -TAU / 4, -TAU / 4 + a); g.closePath(); g.fillStyle = rgba(o.c || C.yellow, .45); g.fill(); g.restore(); }
+    path(g, [[0, 0], [Math.cos(a - TAU / 4) * (r - 8), Math.sin(a - TAU / 4) * (r - 8)]], { c: C.red, w: 3.5 });
+    dot(g, 0, 0, 5, C.ink);
+  }, { al: o.al });
+}
+function padlock(g, x, y, s, c = C.yellow, open = 0) {
+  at(g, x, y, s, () => {
+    g.save(); g.translate(0, -open * 12); g.beginPath(); g.arc(0, -14, 18, Math.PI, 0); g.lineWidth = 8; g.strokeStyle = C.steelL; g.stroke(); g.lineWidth = 2; g.strokeStyle = C.ink; g.stroke(); g.restore();
+    plate(g, -26, -14, 52, 44, { fill: c, r: 7, rivets: false, sb: 8, so: 3 });
+    dot(g, 0, 4, 6, C.ink); g.fillStyle = C.ink; g.fillRect(-2.5, 4, 5, 12);
+  });
+}
+/* 推车（另一个线程） */
+function cart(g, x, y, lt, o = {}) { // y 为地面
+  const roll = (o.v || 0) * lt;
+  plate(g, x - 90, y - 92, 180, 52, { fill: o.fill || C.blue, r: 6, sb: 16, so: 6 });
+  path(g, [[x + 90, y - 92], [x + 120, y - 160]], { c: C.steel, w: 7 }); path(g, [[x + 108, y - 160], [x + 132, y - 160]], { c: C.steel, w: 9 });
+  for (const wx of [x - 60, x + 60]) { dot(g, wx, y - 22, 20, C.ink2); ring(g, wx, y - 22, 20, C.ink, 2.5); path(g, [[wx, y - 22], [wx + Math.cos(roll / 20) * 14, y - 22 + Math.sin(roll / 20) * 14]], { c: C.steelL, w: 3 }); }
+  plate(g, x - 76, y - 40, 152, 10, { fill: C.steelD, r: 2, rivets: false, shadow: false });
+  if (o.label) text(g, o.label, x, y - 66, { s: 24, w: 900, emboss: true });
+}
+/* 共享数据柜：三层抽屉，open[i]∈[0,1] */
+function dataCabinet(g, x, y, lt, o = {}) { // y 为地面
+  const w = 260, h = 360, top = y - h;
+  floorShadow(g, x, w + 60, .5);
+  plate(g, x - w / 2, top, w, h, { fill: '#45555B', r: 10, sb: 34, so: 14 });
+  sign(g, o.title || '共享数据', x, top - 34, { s: 24, fill: C.ink2, bar: C.cyan, rivets: false });
+  (o.labels || ['布局', '设备', '场景']).forEach((lb, i) => {
+    const dy = top + 26 + i * 108, op = (o.open && o.open[i]) || 0;
+    plate(g, x - w / 2 + 18 + op * 70, dy, w - 36, 92, { fill: o.hot === i ? C.steel : C.steelD, r: 6, rivets: false, sb: 10, so: 4 });
+    plate(g, x - 40 + op * 70, dy + 34, 80, 18, { fill: C.steelL, r: 9, rivets: false, shadow: false });
+    text(g, lb, x - 70 + op * 70, dy + 46, { s: 26, w: 900, emboss: true });
+    if (o.locks && o.locks[i]) padlock(g, x + 72 + op * 70, dy + 60, .7 * pop(o.locks[i]), C.yellow);
+  });
+}
+/* 工牌（总结用）：钢框 + 链条，fn 在框内作画 */
+function plaque(g, x, y, w, h, title, k, lt, fn, o = {}) {
+  if (k <= 0) return;
+  const sw = (1 - eo(clamp(k))) * .35 * Math.sin(lt * 9) + wob(lt, .3, .012);
+  at(g, x, y - h / 2 - 90, 1, () => {
+    g.rotate(sw);
+    path(g, [[-w / 3, 0], [-w / 2 + 30, 90]], { c: C.steel, w: 4 }); path(g, [[w / 3, 0], [w / 2 - 30, 90]], { c: C.steel, w: 4 });
+    g.translate(0, 90 + h / 2);
+    plate(g, -w / 2, -h / 2, w, h, { fill: '#33403F', r: 12, sb: 40, so: 16 });
+    hazard(g, -w / 2 + 14, -h / 2 + 14, w - 28, 12, { s: 14, lw: 1.5 });
+    fn(g, -w / 2, -h / 2, w, h);
+    text(g, title, 0, h / 2 - 50, { s: 34, w: 900, emboss: true, c: o.c || C.cream });
+  }, { al: clamp(k * 3) });
+}
+/* id 纸带：n 个刻度格，cuts 为切口位置（0–1） */
+function idTape(g, x0, x1, y, n, o = {}) {
+  g.save(); shadow(g, .3, 10, 4); rr(g, x0, y - 26, x1 - x0, 52, 4); g.fillStyle = C.paper; g.fill(); g.restore();
+  rr(g, x0, y - 26, x1 - x0, 52, 4); g.lineWidth = 2; g.strokeStyle = C.ink; g.stroke();
+  const step = (x1 - x0) / n;
+  for (let i = 0; i < n; i++) { const xx = x0 + (i + .5) * step; path(g, [[xx, y - 12], [xx, y + 12]], { c: rgba(C.ink, .5), w: Math.max(1.5, step * .4) }); }
+  if (o.label) text(g, o.label, (x0 + x1) / 2, y - 50, { s: 24, w: 900, emboss: true });
+}
+function gear(g, x, y, r, a, c = C.steel, n = 10) {
+  g.save(); g.translate(x, y); g.rotate(a); g.beginPath();
+  for (let i = 0; i < n * 2; i++) { const rr2 = i % 2 ? r * .78 : r, a0 = i / (n * 2) * TAU; g.lineTo(Math.cos(a0) * rr2, Math.sin(a0) * rr2); g.lineTo(Math.cos(a0 + TAU / (n * 2) * .8) * rr2, Math.sin(a0 + TAU / (n * 2) * .8) * rr2); }
+  g.closePath(); g.fillStyle = c; g.fill(); g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke();
+  dot(g, 0, 0, r * .3, C.steelD); ring(g, 0, 0, r * .3, C.ink, 2); g.restore();
+}
+function wallClock(g, x, y, r, a, o = {}) {
+  dot(g, x, y + 4, r + 10, rgba('#000000', .35)); dot(g, x, y, r + 8, C.steelD); ring(g, x, y, r + 8, C.ink, 2.5); dot(g, x, y, r, C.paper);
+  for (let i = 0; i < 12; i++) { const aa = i / 12 * TAU; path(g, [[x + Math.cos(aa) * (r - 10), y + Math.sin(aa) * (r - 10)], [x + Math.cos(aa) * (r - 3), y + Math.sin(aa) * (r - 3)]], { c: C.ink, w: i % 3 ? 2 : 3.5 }); }
+  path(g, [[x, y], [x + Math.cos(a - TAU / 4) * (r - 10), y + Math.sin(a - TAU / 4) * (r - 10)]], { c: C.red, w: 4 });
+  path(g, [[x, y], [x + Math.cos(a / 12 - TAU / 4) * (r * .55), y + Math.sin(a / 12 - TAU / 4) * (r * .55)]], { c: C.ink, w: 5 });
+  dot(g, x, y, 6, C.ink);
+  if (o.label) text(g, o.label, x, y + r + 36, { s: 24, w: 900, emboss: true });
+}
+/* 业务窗口：墙上的出件口 + 显示屏 */
+function serviceWindow(g, x, y, lt, msg, o = {}) {
+  plate(g, x - 150, y - 150, 300, 300, { fill: C.paintD, r: 12, sb: 30, so: 12 });
+  rr(g, x - 110, y - 20, 220, 130, 8); g.fillStyle = '#0B0F11'; g.fill();
+  hazard(g, x - 110, y + 110, 220, 12, { s: 12, lw: 1.5 });
+  rr(g, x - 120, y - 130, 240, 84, 8); g.fillStyle = '#0B1310'; g.fill();
+  if (msg) text(g, msg, x, y - 88, { f: 'mono', s: 28, w: 700, c: o.c || '#7CFFB2', glow: rgba(o.c || '#7CFFB2', .6), gb: 10 });
+  sign(g, o.label || '业务回调', x, y - 186, { s: 24, fill: C.ink2, bar: C.green, rivets: false });
 }
