@@ -202,7 +202,7 @@ function drawBoard(g, ox, oy, s, lt, o = {}) {
   screenFrame(g, 0, 0, 800, 480, lt, { cell: 40 });
   const list = o.slot ? [...BL, BSLOT] : BL;
   list.forEach((b, i) => {
-    const t1 = (o.t0 ?? 0) + i * (o.st ?? .08), [dy, sx] = landing(lt, t1, .4, -140);
+    const t1 = (o.t0 ?? 0) + i * (o.st ?? .08), [dy, sx] = landing(lt, t1, .4, o.drop ?? -140);
     const al = seg(lt, t1, t1 + .1); if (al <= 0) return;
     const [x, y, w, h] = bRect(b), hk = o.hl ? o.hl(i, b) : 0;
     at(g, x + w / 2, y + h + dy - hk * 8, 1 + hk * .05, () => bcard(g, -w / 2, -h, w, h, { kind: b[4], acc: b[5], name: o.names ? b[6] : null, lt: lt + i * .7, sh: 6 + hk * 4 }), { sx, sy: 1 / sx, al });
@@ -239,24 +239,24 @@ S('s01', {
     vm[2].hk = eo(seg(lt, 3.7, 4.0)); vm[2].p = seg(lt, 4.0, 5.4); vm[3].hk = eo(seg(lt, 3.8, 4.1)); vm[3].p = seg(lt, 5.4, 6.8);
     cfg[1].hk = eo(seg(lt, 7.4, 7.7)); cfg[1].p = seg(lt, 7.7, 8.9); cfg[2].hk = eo(seg(lt, 7.5, 7.8)); cfg[2].p = seg(lt, 8.9, 10.4);
     const wa = seg(lt, 3.5, 3.9), wb = seg(lt, 7.2, 7.6);
-    if (wa > 0) at(g, 450, 265, .9 + .1 * pop(wa), () => ide(g, -380, -125, 760, 250, vm, { title: 'PanelViewModel.kt', tag: '示意', s: 24, lh: 42, lt }), { al: Math.min(wa * 4, 1) * dim });
-    if (wb > 0) at(g, 1470, 265, .9 + .1 * pop(wb), () => ide(g, -380, -125, 760, 250, cfg, { title: 'cardmapper.json', tag: '示意', s: 24, lh: 42, lt }), { al: Math.min(wb * 4, 1) * dim });
+    if (wa > 0) at(g, 450, 282, .9 + .1 * pop(wa), () => ide(g, -380, -125, 760, 250, vm, { title: 'PanelViewModel.kt', tag: '示意', s: 24, lh: 42, lt }), { al: Math.min(wa * 4, 1) * dim });
+    if (wb > 0) at(g, 1470, 282, .9 + .1 * pop(wb), () => ide(g, -380, -125, 760, 250, cfg, { title: 'cardmapper.json', tag: '示意', s: 24, lh: 42, lt }), { al: Math.min(wb * 4, 1) * dim });
     // 导线：两处都写完才连上新卡
     const wp = eo(seg(lt, 11.0, 11.8)), wal = 1 - seg(lt, 13.3, 13.7);
     if (wp > 0 && wal > 0) {
-      path(g, partial([[450, 398], [450, 430], [870, 430]], wp), { c: C.red, w: 8, al: wal });
-      path(g, partial([[1470, 398], [1470, 430], [1050, 430]], wp), { c: C.red, w: 8, al: wal });
+      path(g, partial([[450, 415], [450, 445], [870, 445]], wp), { c: C.red, w: 8, al: wal });
+      path(g, partial([[1470, 415], [1470, 445], [1050, 445]], wp), { c: C.red, w: 8, al: wal });
     }
-    if (lt < 15.1) tagB(g, '两处共同决定', 960, 322, C.ink, seg(lt, 11.3, 11.7), { fs: 26, rot: -.02, al: 1 - seg(lt, 14.6, 15.0) });
+    if (lt < 15.1) tagB(g, '两处共同决定', 960, 336, C.ink, seg(lt, 11.3, 11.7), { fs: 26, rot: -.02, al: 1 - seg(lt, 14.6, 15.0) });
     // 悬空的新卡（温控）：两边都改完才落进空格
     const hover = lt < 13.2, hyA = scy - chh - 30 * s;
-    let hy = lerp(hyA, 430, k) + (hover ? wob(lt, .7, 6) : 0);
-    if (!hover) hy = lerp(430, scy, eio(drop));
+    let hy = lerp(hyA, 445, k) + (hover ? wob(lt, .7, 6) : 0);
+    if (!hover) hy = lerp(445, scy, eio(drop));
     const [, sxx] = landing(lt, 13.55, .001, 0);
     at(g, 960, hy, 1, () => bcard(g, -cw / 2, -chh / 2, cw, chh, { kind: 'thermo', acc: C.yellow, lt, sh: hover ? 14 : 6 }), { rot: hover ? wob(lt, .5, .04) : 0, sx: sxx, sy: 1 / sxx, al: seg(lt, 1.0, 1.3) });
     if (lt > 13.55) { ripple(g, 960, scy, lt - 13.55, cw, chh, 26, .55); burst(g, 960, scy, lt - 13.55, 12, 200); }
     // 问号：能不能不碰旧代码
-    if (lt > 14.7) badge(g, 960, 255, 66, C.yellow, '?', seg(lt, 14.8, 15.2), { rot: wob(lt, .6, .1) });
+    if (lt > 14.7) badge(g, 960, 270, 66, C.yellow, '?', seg(lt, 14.8, 15.2), { rot: wob(lt, .6, .1) });
   },
 });
 
@@ -336,7 +336,7 @@ S('s03', {
   draw(g, lt) {
     const bal = 1 - eo(seg(lt, 9.2, 9.8));
     const hl = (i) => { let v = 0; for (const [t0, ids] of GROUPS3) if (ids.includes(i)) v = Math.max(v, win(lt, t0, t0 + .9, .2, .35)); return v; };
-    if (bal > 0) drawBoard(g, 460, 170, 1.25, lt, { t0: 2.1, st: .13, names: true, slot: true, hl, al: bal });
+    if (bal > 0) drawBoard(g, 460, 170, 1.25, lt, { t0: 2.1, st: .13, names: true, slot: true, hl, al: bal, drop: -50 });
     // 记录：从灯卡里翻出来的四块积木
     const rp = seg(lt, 9.3, 10.1); if (rp <= 0) return;
     const rdim = 1 - .45 * eo(seg(lt, 12.6, 13.0));
@@ -538,7 +538,7 @@ S('s06', {
 const S07A = ['卡片类型', '设备类型', '尺寸'], S07B = ['解析数据', 'new UiModel', '加进列表'];
 const S07L = [[0, 1], [1, 0], [2, 2], [0, 2], [1, 1], [2, 0]];
 function s07Pos(lt, side, i) {
-  const h = side ? 11 : 3, p0 = [960 + (hash(i * 3.1 + h) - .5) * 300, 470 + (hash(i * 5.7 + h) - .5) * 220], p1 = [side ? 1360 : 560, 432 + i * 90];
+  const h = side ? 11 : 3, p0 = [960 + (i - 1) * 190 + (side ? 90 : -90) + (hash(i * 3.1 + h) - .5) * 60, 470 + (side ? 1 : -1) * (40 + i * 22) + (hash(i * 5.7 + h) - .5) * 40], p1 = [side ? 1360 : 560, 432 + i * 90];
   const k = eio(seg(lt, 1.2 + i * .08 + side * .05, 2.2 + i * .08 + side * .05)), sh = lt > .4 && lt < 1.3 ? wob(lt, 7, 7, i + side) : 0;
   return [lerp(p0[0], p1[0], k) + sh, lerp(p0[1], p1[1], k), (1 - k) * (hash(i * 2.3 + h) - .5) * .7];
 }
@@ -730,7 +730,7 @@ S('s10', {
       const s = big ? 'ac_big' : 'ac_middle', w = textW(g, s, { f: 'mono', s: 32, w: 700 }) + 40;
       if (hlS > 0) box(g, -w / 2 - 10, -36, (w + 20) * hlS, 72, C.yellow, { sh: 0, lw: 0 });
       box(g, -w / 2, -28, w, 56, C.white, { sh: 5, lw: 3 }); text(g, s, 0, 2, { f: 'mono', s: 32, w: 700, c: C.ochre });
-    }, { sy: Math.max(.05, fl), al: seg(lt, .4, .7) });
+    }, { al: seg(lt, .4, .7) * (.25 + .75 * fl) });
     note(g, 'uiStyle', 1060, 790, { al: seg(lt, .5, .8) });
   },
 });
@@ -895,7 +895,7 @@ S('s14', {
       burst(g, 1530, 420, lt - 5.6, 12, 160);
       note(g, 'Subject 为空 → 不建', 1530, 300, { al: win(lt, 4.6, 7.4, .3, .3) });
     }
-    if (lt > 8.4) { // 一定给出实例
+    if (lt > 8.5) { // 一定给出实例
       const p = flyPos(lt, 8.5, .5, [1530, 690], [1530, 420], 60);
       at(g, p[0], p[1], .6 + .4 * eo(seg(lt, 8.5, 9.0)), () => bcard(g, -110, -70, 220, 140, { kind: 'lamp', acc: C.yellow, name: '灯', lt, sh: 8 }));
       note(g, '只管给出实例', 1530, 300, { al: seg(lt, 8.9, 9.2) });
@@ -970,13 +970,13 @@ S('s16', {
       note(g, name, x, 650, { s: 26, c: C.ink, al: seg(lt, .4, .7) });
     });
     // 大箱子
-    const bx = lerp(-80, 640, push) - away * 900, by = 520;
-    if (away < 1) at(g, bx, by, 1, () => {
+    const bx = lerp(330, 640, push), by = 520;
+    if (away < 1) at(g, bx, by, pop(seg(lt, .1, .5)) * (1 - .5 * away), () => {
       box(g, -230, -160, 460, 320, C.greyL, { sh: 10 });
       text(g, '大 Entity', 0, -70, { s: 44, w: 900 });
       note(g, '能耗 · 场景 · 设备 · …', 0, 10, { s: 28 });
       if (lt > 4.5) icCross(g, 0, 40, 200, C.red, seg(lt, 4.5, 4.9), 26);
-    }, { rot: away * -.3 + (lt > 2.4 && lt < 2.8 ? Math.sin(lt * 60) * .02 : 0) });
+    }, { rot: away * -.3 + (lt > 2.4 && lt < 2.8 ? Math.sin(lt * 60) * .02 : 0), al: 1 - away });
     // 底层：数据接口下沉
     const bp = seg(lt, 8.7, 9.2);
     if (bp > 0) {
@@ -1158,18 +1158,18 @@ S('s21', {
   draw(g, lt) {
     const sp = eio(seg(lt, 4.6, 5.4)), dimBase = .45 * eo(seg(lt, 9.2, 9.6));
     for (let c = 0; c < 3; c++) {
-      if (sp <= 0 && c !== 1) continue;
+      if (c !== 1 && sp < .3) continue;
       const x = lerp(960, X21[c], sp), w = lerp(600, 420, sp), h = lerp(360, 320, sp);
       at(g, x, 450, pop(seg(lt, .2, .6)), () => {
         box(g, -w / 2, -h / 2, w, h, C.white, { sh: 9 });
-        text(g, sp < .5 ? '设备卡' : N21[c], -w / 2 + 24, -h / 2 + 34, { s: 30, w: 900, a: 'left' });
+        if (c === 1 || sp >= .5) text(g, sp < .5 ? '设备卡' : N21[c], -w / 2 + 24, -h / 2 + 34, { s: 30, w: 900, a: 'left' });
         BASE21.forEach(([s, col], i) => {
           const k = seg(lt, 1.0 + i * .5, 1.3 + i * .5); if (k <= 0) return;
           // 大：2×2 带字；小：顶上一排小方块
           const bx = lerp(-150 + (i % 2) * 300, -w / 2 + 40 + i * 52, sp), by = lerp(-40 + Math.floor(i / 2) * 110, -h / 2 + 84, sp), bw = lerp(270, 44, sp), bh = lerp(90, 30, sp);
           at(g, bx + (sp < .5 ? 0 : bw / 2), by, pop(k), () => {
             box(g, -bw / 2, -bh / 2, bw, bh, col, { sh: lerp(5, 2, sp), lw: 3, dash: col === C.white ? [8, 6] : null, al: 1 - dimBase });
-            if (sp < .4) text(g, s, 0, 2, { s: 26, w: 900, c: onCol(col), al: 1 - sp * 2.5 });
+            if (sp < .3 && c === 1) text(g, s, 0, 2, { s: 26, w: 900, c: onCol(col), al: 1 - sp * 3.3 });
           });
         });
         if (sp > .5) note(g, '基础 4 块', -w / 2 + 40 + 4 * 52 + 10, -h / 2 + 84, { s: 24, a: 'left', al: seg(sp, .5, 1) * (1 - dimBase) });
@@ -1244,7 +1244,7 @@ S('s23', {
     // 上：uimodel + 尺寸牌
     const small = lt > 11.0, fl = lt > 10.8 && lt < 11.2 ? Math.abs(lt - 11.0) / .2 : 1;
     at(g, 860, 196, pop(seg(lt, .1, .5)), () => { box(g, -190, -36, 380, 72, C.white, { sh: 6 }); icon(g, 'lamp', -150, 4, .5, lt); text(g, 'LampCardUiModel', 20, 2, { f: 'mono', s: 26, w: 700 }); });
-    at(g, 1210, 196, 1, () => chipM(g, small ? 'span = SMALL' : 'span = MIDDLE', 0, 0, { col: C.yellow, fs: 26 }), { sy: Math.max(.05, fl), al: seg(lt, .4, .7) });
+    at(g, 1210, 196, 1, () => chipM(g, small ? 'span = SMALL' : 'span = MIDDLE', 0, 0, { col: C.yellow, fs: 26 }), { al: seg(lt, .4, .7) * (.25 + .75 * fl) });
     basket(g, 640, 400, 'SmallBinder', lt, seg(lt, 4.9, 5.3));
     basket(g, 1280, 400, 'MiddleBinder', lt, seg(lt, 5.9, 6.3));
     // 落入：先中篮（中卡），后小篮（小卡）；外层虚线是共用的编辑/删除外壳
@@ -1313,7 +1313,7 @@ S('s25', {
     LIST25.forEach(([name, kind, acc], i) => {
       const t0 = 1.6 + i * .1, [dy, sx] = landing(lt, t0, .35, -100); if (lt < t0) return;
       const hit = lt > 10.1 + i * .3 ? win(lt, 10.1 + i * .3, 10.9 + i * .3, .1, .4) : 0;
-      at(g, 1480, ly25(i) + dy, 1, () => { bcard(g, -300, -46, 600, 92, { kind, acc, name, lt: lt + i, sh: 5 + hit * 5 }); if (hit > 0) box(g, -306, -52, 612, 104, null, { lw: 6, stroke: C.yellow, al: hit }); }, { sx, sy: 1 / sx });
+      at(g, 1480, ly25(i) + dy, 1, () => { bcard(g, -300, -46, 600, 92, { kind, acc, name, fs: 28, lt: lt + i, sh: 5 + hit * 5 }); if (hit > 0) box(g, -306, -52, 612, 104, null, { lw: 6, stroke: C.yellow, al: hit }); }, { sx, sy: 1 / sx });
     });
     // 事件总线
     const bp = eo(seg(lt, 5.4, 6.6));
@@ -1346,8 +1346,8 @@ S('s26', {
   draw(g, lt) {
     at(g, 960, 470, pop(seg(lt, 0, .4)), () => {
       bcard(g, -620, -250, 1240, 500, { kind: null, acc: C.yellow, sh: 10 });
-      icon(g, 'lamp', -540, -160, .7, lt); text(g, '灯', -480, -160, { s: 40, w: 900, a: 'left' });
-      text(g, 'funcList', -540, -80, { f: 'mono', s: 28, w: 700, a: 'left', c: C.ink2 });
+      icon(g, 'lamp', 450, -160, .7, lt); text(g, '灯', 510, -160, { s: 40, w: 900, a: 'left' });
+      text(g, 'funcList', -580, 222, { f: 'mono', s: 28, w: 700, a: 'left', c: C.ink2 });
     });
     const on = lt > 6.2 ? 1 : 0;
     FL26.forEach(([name, kind], i) => {
@@ -1370,7 +1370,7 @@ S('s26', {
     if (lt < 9.4) chipM(g, '设备id + path', kx, ky - 92, { fs: 24, p: seg(lt, .5, .9) });
     if (lt > 5.0 && lt < 5.6) burst(g, fx26(4), 480, lt - 5.0, 10, 120);
     // payload 纸条
-    if (lt > 9.4) { const p = flyPos(lt, 9.6, .9, [fx26(4), 470], [1500, 180], 100); chipM(g, 'payload：traitCode · 新值', p[0], p[1], { f: 'cjk', fs: 26, col: C.yellow, rot: (1 - seg(lt, 9.6, 10.5)) * -.2 }); }
+    if (lt > 9.6) { const p = flyPos(lt, 9.6, .9, [fx26(4), 470], [1500, 180], 100); chipM(g, 'payload：traitCode · 新值', p[0], p[1], { f: 'cjk', fs: 26, col: C.yellow, rot: (1 - seg(lt, 9.6, 10.5)) * -.2 }); }
   },
 });
 
@@ -1384,7 +1384,7 @@ S('s27', {
     const on = lt > 5.2 ? 1 : 0, ins = lt > 9.2 ? 0 : 1;
     G27.forEach(([kind, name, acc], i) => {
       const x = gx27(i), y = gy27(i);
-      if (kind) { at(g, x, y, pop(seg(lt, .1 + i * .05, .4 + i * .05)), () => bcard(g, -175, -105, 350, 210, { kind, acc, name, lt: 0, sh: 6 }), { al: ins ? 1 : 1 - seg(lt, 9.2, 9.8) * .6 }); return; }
+      if (kind) { const fa = 1 - seg(lt, 9.2, 9.7); if (fa > 0) at(g, x, y, pop(seg(lt, .1 + i * .05, .4 + i * .05)), () => bcard(g, -175, -105, 350, 210, { kind, acc, name, lt: 0, sh: 6 }), { al: fa }); return; }
       at(g, x, y, pop(seg(lt, .1, .4)), () => { // 目标灯卡：名称、位置、在线、开关各自一块
         bcard(g, -175, -105, 350, 210, { kind: null, acc, sh: 6 });
         text(g, '灯', -140, -42, { s: 40, w: 900, a: 'left' });
@@ -1393,7 +1393,7 @@ S('s27', {
         icon(g, 'switch', 95, 20, .95, lt, { on: on ? eo(seg(lt, 5.2, 5.5)) : 0 });
       });
     });
-    const p = flyPos(lt, .6, .8, [1900, 160], [gx27(1) + 95, gy27(1) + 20], 60);
+    const p = flyPos(lt, .6, .8, [1700, 170], [gx27(1) + 95, gy27(1) + 20], 60);
     if (p && lt < 5.2) chipM(g, 'payload', p[0], p[1] - 60, { col: C.yellow, fs: 24 });
     chipM(g, 'notifyItemChanged(下标, payloads)', 960, 160, { fs: 26, p: seg(lt, 2.0, 2.4), al: 1 - seg(lt, 9.2, 9.6) });
     if (lt > 5.2 && lt < 6.0) ripple(g, gx27(1) + 95, gy27(1) + 20, lt - 5.2, 100, 60, 26, .6);
