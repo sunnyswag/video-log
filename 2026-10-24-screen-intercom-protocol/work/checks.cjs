@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// v2 audit only: no browser, dependencies, source rewriting, or implicit file writes.
+// Audit only: no browser, dependencies, source rewriting, or implicit file writes.
 // Run: node checks.cjs > checks.report.txt ; a finding gives exit status 1.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 
 const STEP = 0.25, WIDTH = 1920, HEIGHT = 1080, ALPHA = 0.15, OVERLAP = 0.15;
+const BODY_SIZE = 23.5, TOP_RESERVED = 110;
 const SEED = 0x53495032, SAMPLE_COUNT = 120;
 const FILES = ['../../tools/film-kit/engine.js', 'script.js', 'kit.js', 'film.js'];
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -185,7 +186,10 @@ class AuditContext {
     finite(points, '文字屏幕坐标');
     const bounds = { left: Math.min(...points.map(p => p[0])), right: Math.max(...points.map(p => p[0])), top: Math.min(...points.map(p => p[1])), bottom: Math.max(...points.map(p => p[1])) };
     if (bounds.right <= bounds.left || bounds.bottom <= bounds.top) return;
-    this.texts.push({ text: String(s), bounds, caption: this.harness.captionDepth > 0, alpha: this.globalAlpha });
+    // 局部纵轴 (0,1) 经矩阵后的长度；旋转不缩小字号，镜头缩放计入。
+    this.texts.push({ text: String(s), bounds, size: size*Math.hypot(c, d),
+      caption: this.harness.captionDepth > 0, transition: this.harness.transitionDepth > 0,
+      chrome: this.harness.chromeDepth > 0, scene: this.harness.sceneDepth > 0, alpha: this.globalAlpha });
   }
   strokeText(s, x, y, maxWidth) { numbers([x, y], 2, 'strokeText'); this.record('strokeText', maxWidth == null ? [s, x, y] : [s, x, y, maxWidth]); }
 }
@@ -205,7 +209,10 @@ for (const [name, count] of Object.entries({ ...pathMethods, beginPath: 0, fill:
 }
 
 class Harness {
-  constructor() { this.contexts = []; this.captionDepth = 0; this.collectText = false; }
+  constructor() {
+    this.contexts = []; this.collectText = false;
+    this.captionDepth = 0; this.transitionDepth = 0; this.chromeDepth = 0; this.sceneDepth = 0;
+  }
   canvas(w, h, main = false) { return new AuditCanvas(this, w, h, main); }
   balanced() {
     for (const c of this.contexts) if (c.stack.length) throw new Error(`${c.canvas.main ? '主' : '离屏'}画布 save/restore 泄漏 ${c.stack.length}`);
@@ -237,15 +244,23 @@ function load(sources) {
     globalThis.performance = { now: () => impure('performance.now') };
   `, context);
   sources[0].compiled.runInContext(context, { timeout: 10000 });
-  // Tag the ACTUAL caption hook, not matching strings/font/coordinates. No source edits.
+  // 按实际钩子/scene.draw 的调用范围标记归属，不猜文字、字体或坐标，不改源码。
+  const tagged = (draw, depth) => function (...args) {
+    h[depth]++; try { return draw.apply(this, args); } finally { h[depth]--; }
+  };
   const create = context.FilmKit.create;
   context.FilmKit.create = function (options) {
     const opts = { ...options };
-    if (opts.drawCaption) {
-      const draw = opts.drawCaption;
-      opts.drawCaption = function (...args) { h.captionDepth++; try { return draw.apply(this, args); } finally { h.captionDepth--; } };
+    for (const [hook, depth] of [['drawCaption', 'captionDepth'], ['drawTransition', 'transitionDepth'], ['drawChrome', 'chromeDepth']]) {
+      if (opts[hook]) opts[hook] = tagged(opts[hook], depth);
     }
-    return create.call(this, opts);
+    const film = create.call(this, opts), addScene = film.addScene;
+    if (addScene) {
+      film.addScene = function (scene) {
+        return addScene.call(this, { ...scene, draw: typeof scene.draw === 'function' ? tagged(scene.draw, 'sceneDepth') : scene.draw });
+      };
+    }
+    return film;
   };
   for (const source of sources.slice(1)) source.compiled.runInContext(context, { timeout: 10000 });
   if (!context.FILM || typeof context.FILM.render !== 'function') throw new Error('没有导出 FILM.render');
@@ -256,6 +271,13 @@ function intersection(a, b) {
   return Math.max(0, Math.min(a.right, b.right)-Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom)-Math.max(a.top, b.top));
 }
 const area = b => (b.right-b.left)*(b.bottom-b.top);
+const bodyText = x => !x.caption && !x.transition && (x.scene || x.chrome);
+const smallTextHits = texts => texts.filter(x => bodyText(x) && x.size < BODY_SIZE).map(x => ({
+  key: JSON.stringify([x.text]), texts: [x.text], bounds: x.bounds, ratio: BODY_SIZE-x.size,
+}));
+const topTextHits = texts => texts.filter(x => bodyText(x) && x.scene && !x.chrome && x.bounds.top < TOP_RESERVED).map(x => ({
+  key: JSON.stringify([x.text]), texts: [x.text], bounds: x.bounds, ratio: TOP_RESERVED-x.bounds.top,
+}));
 function overlapHits(texts) {
   const hits = [];
   for (let i = 0; i < texts.length; i++) for (let j = i+1; j < texts.length; j++) {
@@ -371,16 +393,44 @@ function selfTest() {
     history = 0; tile.context.putImageData({ width: 1, height: 1, data: new Uint8ClampedArray([255, 0, 0, 255]) }, 0, 0);
     assert.notDeepEqual(first, h.frame(draw, cv, 1.00001, { trace: true }).commands);
   });
+  check(() => {
+    const h = new Harness(), g = h.canvas(WIDTH, HEIGHT, true).context;
+    h.collectText = true; h.sceneDepth = 1; g.font = '23.5px sans-serif'; g.textBaseline = 'top';
+    g.fillText('阈值', 0, TOP_RESERVED);
+    assert.equal(smallTextHits(g.texts).length, 0); assert.equal(topTextHits(g.texts).length, 0);
+    g.scale(.5, .5); g.fillText('缩小', 0, TOP_RESERVED);
+    assert.equal(smallTextHits(g.texts)[0].texts[0], '缩小'); assert.equal(topTextHits(g.texts).length, 1);
+    g.resetTransform(); g.rotate(Math.PI/2); g.scale(2, 2); g.fillText('推近', 0, TOP_RESERVED);
+    assert.equal(g.texts.at(-1).size, 47); assert.equal(smallTextHits(g.texts).length, 1);
+  });
+  check(() => {
+    const source = text => ({ compiled: new vm.Script(text) });
+    const tracked = load([
+      source('var FilmKit = { create: o => ({ ...o, addScene(s) { this.scene = s; } }) };'),
+      source('const SCRIPT = {};'), source(''),
+      source(`const draw = g => g.fillText('同文', 0, 0);
+        const opt = FilmKit.create({ drawCaption: draw, drawChrome: draw, drawTransition: draw });
+        opt.addScene({ draw });
+        var FILM = { render(g) { opt.scene.draw(g); opt.drawChrome(g); opt.drawTransition(g); opt.drawCaption(g); } };`),
+    ]);
+    tracked.h.collectText = true;
+    const g = tracked.h.canvas(WIDTH, HEIGHT, true).context;
+    tracked.film.render(g);
+    assert.deepEqual(g.texts.map(x => [x.scene, x.chrome, x.transition, x.caption]),
+      [[true, false, false, false], [false, true, false, false], [false, false, true, false], [false, false, false, true]]);
+    assert.equal(smallTextHits(g.texts).length, 2); assert.equal(topTextHits(g.texts).length, 1);
+    assert.deepEqual([tracked.h.sceneDepth, tracked.h.chromeDepth, tracked.h.transitionDepth, tracked.h.captionDepth], [0, 0, 0, 0]);
+  });
   return count;
 }
 
 function main() {
   const statuses = [];
   const status = (name, pass, detail) => { statuses.push({ name, pass }); console.log(`[${pass ? '通过' : '失败'}] ${name}：${detail}`); };
-  console.log('Kotlin 实现 SIP 通信协议 v2 — 自动检查完整报告');
+  console.log('Kotlin 实现 SIP 通信协议 — 自动检查完整报告');
   console.log(`Node ${process.version}；逻辑画布 ${WIDTH}×${HEIGHT}；采样间隔 ${STEP} s（包含 0 和片尾）`);
   console.log('检查只读取源文件。FAIL 表示命中规则，几何告警仍需真实浏览器复核。\n');
-  status('检查器自检', true, `${selfTest()} 组：仿射变换/测宽/状态恢复、透明度/同名绘制、非有限数/栈、离屏内容、连续区间、基线/阈值、VM加载/时钟禁用/字幕归属、3位小数/历史状态/离屏变化捕获`);
+  status('检查器自检', true, `${selfTest()} 组：仿射变换/测宽/状态恢复、透明度/同名绘制、非有限数/栈、离屏内容、连续区间、基线/阈值、VM加载/时钟禁用/字幕归属、3位小数/历史状态/离屏变化捕获、字号/顶部阈值/镜头缩放、四种绘制归属`);
   const sources = FILES.map(name => {
     const text = fs.readFileSync(path.join(__dirname, name), 'utf8');
     return { name, hash: sha(text), compiled: new vm.Script(text, { filename: name }) };
@@ -389,12 +439,20 @@ function main() {
   for (const s of sources) console.log(`  ${s.name}  ${s.hash}`);
   const loaded = load(sources), { film, script } = loaded;
   status('加载', true, 'engine.js → script.js → kit.js → film.js，共享一个 vm context；FILM.render 可调用');
-  status('时长', Math.abs(film.duration-338) < .01, `${film.duration} s；目标 338，误差 ${Math.abs(film.duration-338)}`);
-  status('场景', film.scenes.length === 29, `${film.scenes.length} / 29`);
+  const ids = Object.keys(script), expectedDuration = Object.values(script).reduce((sum, sc) => sum+sc.dur, 0);
+  status('时长', Math.abs(film.duration-expectedDuration) < .01, `期望 SCRIPT ${expectedDuration} s，实际 FILM ${film.duration} s；误差 ${Math.abs(film.duration-expectedDuration)}`);
+  status('场景', film.scenes.length === ids.length, `期望 SCRIPT ${ids.length}，实际 FILM ${film.scenes.length}`);
+  const sceneMismatches = [];
+  for (let i = 0; i < Math.max(ids.length, film.scenes.length); i++) {
+    const sc = film.scenes[i], expectedScene = script[ids[i]];
+    if (!sc || !expectedScene || sc.id !== ids[i] || sc.chap !== expectedScene.chapter) sceneMismatches.push(i);
+  }
+  status('场景顺序与章号', !sceneMismatches.length, `按 SCRIPT 键顺序逐幕核对 id/chapter；差异 ${sceneMismatches.length}`);
+  for (const i of sceneMismatches) console.log(`  #${i+1}: SCRIPT=${quote(ids[i])}/${script[ids[i]]?.chapter}，FILM=${quote(film.scenes[i]?.id)}/${film.scenes[i]?.chap}`);
   const expected = Object.values(script).flatMap(sc => sc.caps.map(c => c[2]));
   const mismatches = [];
   for (let i = 0; i < Math.max(expected.length, film.captions.length); i++) if (expected[i] !== film.captions[i]?.text) mismatches.push(i);
-  status('字幕', expected.length === 84 && film.captions.length === 84 && !mismatches.length, `SCRIPT ${expected.length}，FILM ${film.captions.length} / 84；逐条原文差异 ${mismatches.length}`);
+  status('字幕', expected.length === film.captions.length && !mismatches.length, `期望 SCRIPT ${expected.length}，实际 FILM ${film.captions.length}；逐条原文差异 ${mismatches.length}`);
   for (const i of mismatches) console.log(`  #${i+1}: SCRIPT=${quote(expected[i])}，FILM=${quote(film.captions[i]?.text)}`);
   const allowed = new Set(['send', 'latch', 'success', 'error', 'whoosh', 'tick', 'ring']);
   const badCues = film.cues.filter(c => !allowed.has(c.type)), cueCounts = {};
@@ -404,12 +462,14 @@ function main() {
   const chapterOK = film.chapters.length === 10 && film.chapters.every((c, i) => c.n === i && Number.isFinite(c.t) && (i === 0 ? c.t === 0 : c.t > film.chapters[i-1].t));
   const sceneChapterOK = film.scenes.every((sc, i) => Number.isInteger(sc.chap) && sc.chap >= 0 && sc.chap <= 9 && (!i || sc.chap >= film.scenes[i-1].chap));
   status('章节', chapterOK && sceneChapterOK, `${film.chapters.length} 章；编号 ${film.chapters.map(c => c.n).join(' → ')}；章节时间严格递增/场景章号不递减=${chapterOK && sceneChapterOK}`);
+  console.log('  v3 章号协议：0 开场、1 片名、2–7 六个主章节、8 总结、9 系列片尾；仅核对编号与顺序，不推断文案语义。');
   const sceneAt = t => film.scenes.find(s => t >= s.start && t < s.start+s.d)?.id || film.scenes.at(-1).id;
   const duration = film.duration;
   if (!Number.isFinite(duration) || duration <= 0 || duration > 3600) throw new Error(`无法扫描时长 ${duration}`);
   const times = Array.from({ length: Math.floor(duration/STEP)+1 }, (_, i) => i*STEP);
   if (times.at(-1) < duration) times.push(duration);
   const overlap = new Intervals(), outside = new Intervals(), subtitle = new Intervals();
+  const smallText = new Intervals(), topText = new Intervals();
   let layoutFrames = 0, visibleTexts = 0;
   console.log('\n数值健康与几何扫描：');
   for (const [w, h] of [[WIDTH, HEIGHT], [WIDTH*2, HEIGHT*2]]) {
@@ -419,6 +479,8 @@ function main() {
         const out = runtime.h.frame(runtime.film, canvas, t, { text: w === WIDTH }); checked++;
         if (w !== WIDTH) continue;
         layoutFrames++; visibleTexts += out.texts.length;
+        smallText.add(index, t, smallTextHits(out.texts), sceneAt(t));
+        topText.add(index, t, topTextHits(out.texts), sceneAt(t));
         overlap.add(index, t, overlapHits(out.texts), sceneAt(t));
         outside.add(index, t, out.texts.filter(x => x.bounds.left < 0 || x.bounds.top < 0 || x.bounds.right > WIDTH || x.bounds.bottom > HEIGHT).map(x => ({
           key: JSON.stringify([x.text, x.caption]), texts: [x.text], bounds: x.bounds, caption: x.caption,
@@ -493,6 +555,18 @@ function main() {
   for (const [i, g] of subtitle.sorted().entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])} | 入区 ${(g.minRatio*100).toFixed(1)}%–${(g.maxRatio*100).toFixed(1)}% | ${f3(g.sampleTime)} s 框 ${boxLabel(g.bounds)}`);
   if (!subtitle.groups.length) console.log('  无。');
 
+  console.log('\n正文字号（全部区间）：');
+  status('正文字号', layoutFrames === times.length && !smallText.hits, `${smallText.hits} 次，${smallText.frames} 帧，${smallText.groups.length} 个区间；scene.draw/drawChrome 实际字号 < ${BODY_SIZE} px`);
+  console.log('排除 drawCaption/drawTransition；实际字号 = font 字号 × 当前矩阵纵轴长度（1080p 逻辑像素）。镜头推近可放大，缩小 z<1 导致字号不足也报告，属于预期。');
+  for (const [i, g] of smallText.sorted().entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])} | 实际字号 ${f3(BODY_SIZE-g.maxRatio)}–${f3(BODY_SIZE-g.minRatio)} px | ${f3(g.sampleTime)} s 框 ${boxLabel(g.bounds)}`);
+  if (!smallText.groups.length) console.log('  无。');
+
+  console.log('\n顶部保留区（全部区间）：');
+  status('顶部保留区', layoutFrames === times.length && !topText.hits, `${topText.hits} 次，${topText.frames} 帧，${topText.groups.length} 个区间；scene.draw 文字屏幕框上沿 y < ${TOP_RESERVED}`);
+  console.log('排除 drawChrome/drawTransition/drawCaption；两条新规则均按文字内容与连续采样点聚合，列出全部区间。');
+  for (const [i, g] of topText.sorted().entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])} | 上沿 y ${f3(TOP_RESERVED-g.maxRatio)}–${f3(TOP_RESERVED-g.minRatio)} | ${f3(g.sampleTime)} s 框 ${boxLabel(g.bounds)}`);
+  if (!topText.groups.length) console.log('  无。');
+
   const changed = sources.filter(s => sha(fs.readFileSync(path.join(__dirname, s.name), 'utf8')) !== s.hash);
   status('输入版本一致性', !changed.length, `${sources.length-changed.length}/${sources.length} 份输入在检查期间未变；本报告使用开头哈希标识的源码快照`);
   for (const s of changed) console.log(`  检查期间 ${s.name} 已变化，请针对当前源码重跑。`);
@@ -507,6 +581,8 @@ function main() {
   console.log('7. 0.25s 网格可能漏掉更短的瞬时冲突；确定性是两种尺寸各120个时间点的抽检、3位小数指令一致性，不是数学纯函数证明或像素一致性证明。');
   console.log('8. 不同尺寸分别验证，未交替切换尺寸/穿插 drawCover；离屏哈希按构建指令保守判断，不模拟复杂像素覆盖，冗余的重复离屏绘制可能触发差异。');
   console.log('9. 此假画布对未知方法不提供静默 no-op；当前脚本用到的 API 已实现。Canvas 的浏览器容错、抗锯齿、裁切等语义仍需沙箱外关键帧验收。');
+  console.log('10. 正文字号只查主画布 scene.draw/drawChrome 的 fillText，以矩阵纵轴长度衡量字号，不测实际字形可读性；maxWidth 横向压缩不改变字号。镜头缩小和入场缩放可能触发。');
+  console.log('11. 顶部 y<110 是保留区规则，不要求与外框实际相交；估算 AABB、旋转、裁切和画外入场可产生误报。两条新规则不追踪离屏图像中的文字。');
   const failures = statuses.filter(s => !s.pass);
   console.log(`\n总结果：[${failures.length ? '失败' : '通过'}] ${statuses.length-failures.length}/${statuses.length} 项通过，${failures.length} 项失败${failures.length ? '（'+failures.map(s => s.name).join('、')+'）' : ''}。退出码 ${failures.length ? 1 : 0}。`);
   process.exitCode = failures.length ? 1 : 0;
