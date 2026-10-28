@@ -16,14 +16,14 @@ video-log/
 │   ├── render/             # 动画渲染、时间线导出、抽帧
 │   ├── fonts/              # 字体子集化
 │   ├── preview/            # 关键帧拼图
-│   └── biliup-upload/      # B 站投稿与本地预检
+│   └── upload/      # 双平台投稿（bilibili/、sph/、common/）
 └── fonts/                  # 字体授权文本
 ```
 
 - 项目目录使用 `YYYY-MM-DD-英文主题`；日期取录制或项目开始日。
 - 新项目外层放最终投稿文件，工作资料放 `work/`。历史项目保留已有内部结构和各版剪辑。
 - 单 P 的 MP4、投稿 JSON 和可选 SRT 使用同一文件名主体；多 P 在 JSON 的 `videos` 数组中指定视频文件名。
-- MP4、WAV、登录凭据、`biliup.exe` 和 Node 依赖由 Git 忽略。换电脑时需另行迁移所需的大文件和本地工具。
+- MP4、WAV、登录凭据、`biliup.exe`、`sph.exe`、浏览器登录态和 Node 依赖由 Git 忽略。换电脑时需另行迁移所需的大文件和本地工具。
 
 ## 视频项目
 
@@ -45,7 +45,7 @@ video-log/
 | 渲染 | [render2.mjs](tools/render/render2.mjs) | 较早的 Playwright 版本，提供时间线、指定时间抽帧和视频导出 |
 | 字体 | [build_fonts.py](tools/fonts/build_fonts.py) | 从字体中提取所需字符，生成内嵌 WOFF 的 CSS |
 | 预览 | [sheet.py](tools/preview/sheet.py) | 将已有 JPG 关键帧拼成预览图 |
-| 投稿 | [使用说明](tools/biliup-upload/使用说明.md) | 本地预检、选择项目、调用 biliup 投稿 |
+| 投稿 | [使用说明](tools/upload/使用说明.md) | 本地预检、选择项目、一条命令投稿 B 站和视频号 |
 
 各工具的依赖、用法与运行条件见 [tools/README.md](tools/README.md)。视频专用的配乐和音效脚本保存在对应项目的 `work/` 中。
 
@@ -55,16 +55,22 @@ video-log/
 
 ```powershell
 # 列出项目并检查投稿文件
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\biliup-upload\upload.ps1 -List
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\biliup-upload\upload.ps1 -Check
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -List
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Check
 
 # 打开交互投稿入口
-.\tools\biliup-upload\上传视频.bat
+.\tools\upload\上传视频.bat
 ```
 
-使用方向键选择项目，回车查看摘要，核对标题、分区、标签和文件后输入 `YES` 上传。`-List` 和 `-Check` 只读取本地资料，不需要登录凭据；实际上传需要工具目录中的 `biliup.exe` 和有效的 `cookies.json`。
+先选择上传平台：默认勾选 Bilibili 和视频号，用方向键移动、空格取消或恢复勾选，回车确认（至少选一个）。随后用方向键选择项目，回车查看已选平台的摘要，输入 `YES` 后上传。命令行直接指定项目即可一条命令发布：
 
-上传完成后，到 [B 站创作中心](https://member.bilibili.com/platform/upload-manager/article) 确认稿件状态，并手动上传项目的 SRT 字幕。投稿配置字段和登录方法见 [投稿工具使用说明](tools/biliup-upload/使用说明.md)。
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Project 2026-10-16-32bit-ms-timer -Yes
+```
+
+首次视频号登录运行 `upload.ps1 -Login -Platforms sph`。B 站工具和 Cookie 保存在 `tools/upload/bilibili/`，视频号程序和会话放在 `tools/upload/sph/`。`-List`、`-Check`、`-DryRun` 只读取本地资料；`-Platforms bilibili` 或 `-Platforms sph` 可单独投稿。上传结果在各期 `work/upload/`。
+
+上传完成后到各平台确认稿件状态，B 站 SRT 字幕仍手动上传。字段、短标题、多 P 处理和失败补传见 [投稿工具使用说明](tools/upload/使用说明.md)。
 
 ## 制作与预览
 
