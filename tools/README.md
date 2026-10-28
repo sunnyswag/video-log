@@ -7,7 +7,7 @@
 | [render/](render/) | MP4 渲染、时间线导出、指定时间抽帧；Node 配置也放在此目录 | Node、浏览器、ffmpeg |
 | [fonts/](fonts/) | 字体子集化脚本 | Python、fontTools、对应字体文件 |
 | [preview/](preview/) | JPG 关键帧拼图 | Python、Pillow |
-| [biliup-upload/](biliup-upload/) | 投稿入口、预检脚本、配置模板及本地 biliup 程序 | Windows PowerShell、biliup |
+| [upload/](upload/) | 统一投稿入口、公共预检、分平台适配器与本地程序 | Windows PowerShell、biliup、sph |
 
 ## 渲染
 
@@ -57,16 +57,16 @@ python tools/preview/sheet.py <frames目录> <输出文件前缀> [每张帧数]
 
 依赖 Pillow。输入帧目录和输出前缀的父目录须已存在；输出名为 `<前缀>_00.jpg`、`<前缀>_01.jpg` 等。建议将输入帧和输出图放在项目的 `work/` 内。
 
-## B 站投稿
+## 双平台投稿
 
-使用 [投稿工具说明](biliup-upload/使用说明.md) 中的步骤配置项目和登录。常用入口：
+统一入口位于 [upload/](upload/)，默认依次上传 Bilibili 和视频号。`common/` 管理公共解析和进程调用，`bilibili/`、`sph/` 分别管理平台适配器、程序和登录状态。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\biliup-upload\upload.ps1 -List
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\biliup-upload\upload.ps1 -Check
-.\tools\biliup-upload\上传视频.bat
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -List
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Check
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Project 2026-10-16-32bit-ms-timer -Yes
 ```
 
-扫描根目录默认由工具位置推导，也可通过 `-Root` 指定。多 P 在投稿 JSON 的 `videos` 中列出文件名。字幕上传和稿件状态确认在创作中心手动完成。
+`-DryRun` 只预览本地参数；`-Platforms bilibili` 或 `-Platforms sph` 可只发布一个平台。双击 `upload/上传视频.bat` 可先勾选平台，再选择项目；默认两个平台都勾选，↑/↓ 移动、空格取消或恢复勾选，回车确认。首次视频号登录运行 `upload.ps1 -Login -Platforms sph`。
 
-`cookies.json` 与 `biliup.exe` 仅在本机保存，不提交 Git。
+项目外层的成片与 JSON 命名规则保持不变，平台差异写进 JSON 的 `sph` 对象，结果记录放入该期 `work/upload/`。程序、Cookie、浏览器会话和运行产物仅存本地，不提交 Git。完整字段、安装、登录及失败补传见 [使用说明](upload/使用说明.md)。

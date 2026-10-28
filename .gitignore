@@ -13,3 +13,11 @@ cookies.json
 biliup.exe
 desktop.ini
 Thumbs.db
+
+# 多平台上传工具与运行状态（不提交登录资料和本地数据库）
+sph.exe
+/tools/upload/bilibili/data/
+/tools/upload/bilibili/*.log
+/tools/upload/bilibili/qrcode*.png
+/tools/upload/sph/state/
+**/work/upload/
