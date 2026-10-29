@@ -1,0 +1,113 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -2,7 +2,7 @@
+ members = ["."]
+ 
+ [workspace.package]
+-version = "2.1.3"
++version = "2.1.3+video-log.1"
+ edition = "2021"
+ license = "MIT"
+ 
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1342,7 +1342,7 @@
+ 
+ [[package]]
+ name = "sph"
+-version = "2.1.3"
++version = "2.1.3+video-log.1"
+ dependencies = [
+  "async-trait",
+  "chromiumoxide",
+--- a/src/publish/page.rs
++++ b/src/publish/page.rs
+@@ -359,9 +359,41 @@
+         self.wait_cover_ready(Some(scope)).await?;
+         self.cover_click(scope, "编辑").await?;
+         if landscape {
+-            tokio::time::sleep(Duration::from_millis(300)).await;
+-            self.cover_click(".ant-popover .btn-directly-edit button", "直接编辑")
+-                .await?;
++            // Some accounts open the sharing-card editor directly. Only click the
++            // legacy intermediate action when it actually appears.
++            let js = format!(
++                r#"(function(){{
++              {ROOTS}
++              const visible = el => {{ const r=el.getBoundingClientRect(), s=getComputedStyle(el); return r.width>0 && r.height>0 && s.display!=='none' && s.visibility!=='hidden'; }};
++              for (const root of __roots) for (const el of root.querySelectorAll('.cover-set-wrap')) {{
++                if (visible(el)) return 'editor';
++              }}
++              for (const root of __roots) for (const el of root.querySelectorAll('.ant-popover .btn-directly-edit button')) {{
++                if (visible(el) && (el.innerText||'').trim()==='直接编辑') return 'choice';
++              }}
++              return '';
++            }})()"#
++            );
++            let deadline = tokio::time::Instant::now() + Duration::from_secs(15);
++            loop {
++                match self.wujie.run_js(&js, Stage::Cover).await?.as_deref() {
++                    Some("editor") => break,
++                    Some("choice") => {
++                        self.cover_click(".ant-popover .btn-directly-edit button", "直接编辑")
++                            .await?;
++                        break;
++                    }
++                    _ => {}
++                }
++                if tokio::time::Instant::now() >= deadline {
++                    return Err(AppError::new(
++                        Code::SchemaChanged,
++                        Stage::Cover,
++                        "未找到横版封面编辑器或直接编辑入口",
++                    ));
++                }
++                tokio::time::sleep(Duration::from_millis(200)).await;
++            }
+         }
+         self.wait_cover_visible(true).await?;
+         self.wujie
+--- a/src/publish/e2e_tests.rs
++++ b/src/publish/e2e_tests.rs
+@@ -233,6 +233,15 @@
+ 
+     #[tokio::test]
+     async fn e2e_publish_landscape_only() {
++        check_landscape_only(false).await;
++    }
++
++    #[tokio::test]
++    async fn e2e_publish_landscape_direct_editor() {
++        check_landscape_only(true).await;
++    }
++
++    async fn check_landscape_only(direct: bool) {
+         let Some(chrome) = test_chrome() else {
+             eprintln!("skip: no chromium");
+             return;
+@@ -244,6 +253,12 @@
+         let profile = tempdir("landscape-only-browser");
+         let (mut browser, page) = browser::launch(&chrome, &profile, false).await.unwrap();
+         let (mut opts, _) = opts_with_fixture(FIXTURE_PUBLISH, video, None, true);
++        if direct {
++            opts.navigate_url
++                .as_mut()
++                .unwrap()
++                .push_str("?directLandscape=1");
++        }
+         opts.cover_landscape = Some(landscape);
+         validate(&opts).unwrap();
+         let backend: Arc<dyn crate::publish::recovery::RecoveryBackend> =
+--- a/testdata/publish_fixture.html
++++ b/testdata/publish_fixture.html
+@@ -98,8 +98,9 @@
+ if (location.search.includes('collectionMissing=1')) collectionItem.querySelector('.options').replaceChildren();
+ function openCover() { document.querySelector('.cover-set-wrap').hidden = false; document.getElementById('ratio-cover').value = ''; }
+ document.querySelector('.vertical-cover-wrap .vertical-img-wrap').onclick = () => { window.firstCoverClickAt = Date.now(); if (document.querySelector('.vertical-mask-layer')) { window.earlyCoverClick++; return; } coverRatio = 'portrait'; openCover(); };
+-document.querySelector('.horizon-cover-wrap .horizon-img-wrap').onclick = () => { if (!window.firstCoverClickAt) window.firstCoverClickAt = Date.now(); if (document.querySelector('.vertical-mask-layer')) { window.earlyCoverClick++; return; } coverRatio = 'landscape'; document.querySelector('.ant-popover').hidden = false; };
++document.querySelector('.horizon-cover-wrap .horizon-img-wrap').onclick = () => { if (!window.firstCoverClickAt) window.firstCoverClickAt = Date.now(); if (document.querySelector('.vertical-mask-layer')) { window.earlyCoverClick++; return; } coverRatio = 'landscape'; if (location.search.includes('directLandscape=1')) openCover(); else document.querySelector('.ant-popover').hidden = false; };
+ document.querySelector('.btn-directly-edit button').onclick = () => { document.querySelector('.ant-popover').hidden = true; if (!location.search.includes('landscapeFail=1')) openCover(); };
++if (location.search.includes('directLandscape=1')) document.querySelector('.btn-directly-edit button').remove();
+ document.getElementById('ratio-cover').onchange = function () { window.coverUploads[coverRatio] = this.files[0].name; };
+ document.getElementById('cover-confirm').onclick = () => { document.querySelector('.cover-set-wrap').hidden = true; };
+ if (location.search.includes('noLandscape=1')) document.querySelector('.horizon-cover-wrap').remove();

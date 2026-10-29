@@ -5,15 +5,27 @@ function ConvertTo-NativeArgument([string]$Value) {
     return '"' + [regex]::Replace($escaped, '(\\+)$', '${1}${1}') + '"'
 }
 
-function Invoke-UploadTool($Plan, [string[]]$Arguments) {
+function Invoke-UploadTool($Plan, [string[]]$Arguments, [switch]$CaptureOutput) {
     $start = New-Object System.Diagnostics.ProcessStartInfo
     $start.FileName = $Plan.Exe
     $start.Arguments = (($Arguments | ForEach-Object { ConvertTo-NativeArgument $_ }) -join ' ')
     $start.WorkingDirectory = $Plan.WorkingDirectory
     $start.UseShellExecute = $false
+    if ($CaptureOutput) {
+        # sph sends its final JSON to stdout and live progress to inherited stderr.
+        $start.RedirectStandardOutput = $true
+        $start.StandardOutputEncoding = [Text.Encoding]::UTF8
+    }
     foreach ($key in $Plan.Environment.Keys) { $start.EnvironmentVariables[$key] = $Plan.Environment[$key] }
     $process = [Diagnostics.Process]::Start($start)
-    try { $process.WaitForExit(); return $process.ExitCode }
+    try {
+        if ($CaptureOutput) { $output = $process.StandardOutput.ReadToEndAsync() }
+        $process.WaitForExit()
+        if ($CaptureOutput) {
+            return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output.GetAwaiter().GetResult() }
+        }
+        return $process.ExitCode
+    }
     finally { $process.Dispose() }
 }
 
@@ -32,10 +44,15 @@ function Assert-ToolReady($Plan, [switch]$ForLogin) {
 }
 
 function Invoke-PlatformUpload($Plan) {
+    if ($Plan.Platform -eq 'sph') { return Invoke-SphUpload $Plan }
     if ($Plan.Platform -eq 'bilibili') {
         Write-Host '[bilibili] 刷新登录凭据 ...'
         $code = Invoke-UploadTool $Plan @('--rust-log', 'error', '-u', $Plan.CredentialPath, 'renew')
         if ($code -ne 0) { throw "biliup renew 失败（退出码 $code），未开始 B 站上传；请重新登录。" }
     }
-    return Invoke-UploadTool $Plan $Plan.Arguments
+    $code = Invoke-UploadTool $Plan $Plan.Arguments
+    return [pscustomobject]@{
+        ExitCode = $code; Success = ($code -eq 0); ErrorCode = ''; Stage = ''
+        Message = $(if ($code -eq 0) { '上传工具返回成功，审核状态请到平台确认。' } else { '上传工具返回失败；重试前请确认平台是否已收到稿件。' })
+    }
 }

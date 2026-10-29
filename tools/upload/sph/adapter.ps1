@@ -49,7 +49,7 @@ function New-SphPlan($Project) {
     }
     $video = if ($null -ne $videoName) { Resolve-ProjectFile $Project $videoName '[sph] 视频' @('.mp4') } else { $null }
     $plan.VideoPaths = @($video | Where-Object { $_ })
-    $plan.Arguments = @('publish', [string]$video, '--title', [string]$title, '--account', $plan.Account)
+    $plan.Arguments = @('publish', [string]$video, '--title', [string]$title, '--account', $plan.Account, '--json')
     if ($description) { $plan.Arguments += @('--description', [string]$description) }
     if ($tags.Count -gt 0) { $plan.Arguments += @('--tags', ($tags -join ',')) }
 
@@ -82,4 +82,30 @@ function New-SphPlan($Project) {
     }
     if ($options.ai_mark -eq $true) { $plan.Arguments += '--ai-mark' }
     return $plan
+}
+
+function Invoke-SphUpload($Plan) {
+    $run = Invoke-UploadTool $Plan $Plan.Arguments -CaptureOutput
+    $result = [pscustomobject]@{
+        ExitCode = $run.ExitCode; Success = $false; ErrorCode = 'INVALID_RESPONSE'; Stage = ''
+        Message = 'sph 未返回可确认的发表结果；请先检查视频号后台，勿直接重复投稿。'
+    }
+    try { $response = $run.Output | ConvertFrom-Json -ErrorAction Stop } catch { $response = $null }
+    if ($null -ne $response -and $response.ok -ceq $false -and $response.error) {
+        $result.ErrorCode = [string]$response.error.code
+        $result.Stage = [string]$response.error.stage
+        $result.Message = "[$($result.ErrorCode)/$($result.Stage)] $($response.error.message)"
+        if ($result.ErrorCode -eq 'SCHEMA_CHANGED') {
+            $result.Message += '；网页控件与 sph 适配不匹配。请保留此错误及 sph/state/crashes 中的现场，不要反复重传。'
+        }
+    } elseif ($run.ExitCode -eq 0 -and $null -ne $response -and $response.ok -ceq $true -and
+        $response.command -eq 'publish' -and $response.data.submitted -ceq $true -and $response.data.dry_run -ceq $false) {
+        $result.Success = $true
+        $result.ErrorCode = ''
+        $result.Message = 'sph 已确认提交发表，审核状态请到视频号后台确认。'
+    } elseif ($run.ExitCode -eq 11) {
+        $result.ErrorCode = 'SCHEMA_CHANGED'
+        $result.Message = 'sph 网页适配失败（退出码 11）；请查看 sph/state/history.jsonl 和 crashes 中的现场。'
+    }
+    return $result
 }

@@ -85,6 +85,16 @@ class UploadTestProcess {
         Console.Error.WriteLine("mock progress on stderr");
         string failure = Environment.GetEnvironmentVariable("UPLOAD_TEST_FAILURE");
         if (failure == "renew" && Array.IndexOf(args, "renew") >= 0) return 7;
+        if (platform == "sph" && Array.IndexOf(args, "publish") >= 0) {
+            if (failure == "empty-response") return 0;
+            if (failure == "cover") {
+                Console.WriteLine("{\"ok\":false,\"error\":{\"code\":\"SCHEMA_CHANGED\",\"stage\":\"cover\",\"message\":\"Cover editor changed\",\"retryable\":false}}");
+                return 11;
+            }
+            bool success = failure != "sph";
+            if (success) Console.WriteLine("{\"ok\":true,\"command\":\"publish\",\"data\":{\"submitted\":true,\"dry_run\":false}}");
+            else Console.WriteLine("{\"ok\":false,\"error\":{\"code\":\"RECOVERY_FAILED\",\"stage\":\"metadata\",\"message\":\"Mock failure\"}}");
+        }
         if (failure == platform && (Array.IndexOf(args, "upload") >= 0 || Array.IndexOf(args, "publish") >= 0)) return 17;
         return 0;
     }
@@ -197,6 +207,19 @@ class UploadTestProcess {
     }
     $env:UPLOAD_TEST_FAILURE = ''
     Passed 'each runtime failure is isolated, summarized and returned as nonzero'
+
+    Reset-Calls
+    $env:UPLOAD_TEST_FAILURE = 'cover'
+    $failureText = Run-Entry ($options + @('-Platforms', 'sph', '-Yes')) 1
+    $result = (Latest-Result).results[0]
+    Assert ($result.exit_code -eq 11 -and $result.error_code -eq 'SCHEMA_CHANGED' -and $result.stage -eq 'cover') 'sph structured failure was lost'
+    Assert ($result.message -match 'Cover editor changed' -and $failureText -match 'SCHEMA_CHANGED/cover') 'sph error message missing from report or summary'
+    Assert (@(Read-Calls).Count -eq 1) 'Failure triggered an automatic retry'
+    $env:UPLOAD_TEST_FAILURE = 'empty-response'
+    Run-Entry ($options + @('-Platforms', 'sph', '-Yes')) 1 | Out-Null
+    Assert ((Latest-Result).results[0].status -eq 'failed') 'Empty sph output was incorrectly marked as published'
+    $env:UPLOAD_TEST_FAILURE = ''
+    Passed 'sph failures preserve code, stage and message; missing confirmation never reports success'
 
     Reset-Calls
     $meta.Remove('tid')

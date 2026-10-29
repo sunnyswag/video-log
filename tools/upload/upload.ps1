@@ -80,7 +80,7 @@ try {
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
     $reportPath = Join-Path $runDir ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 6) + '.json')
     $results = @(foreach ($plan in $selected.Plans) {
-        [pscustomobject]@{ platform = $plan.Platform; status = 'pending'; exit_code = $null; message = '' }
+        [pscustomobject]@{ platform = $plan.Platform; status = 'pending'; exit_code = $null; error_code = ''; stage = ''; message = '' }
     })
     $report = [ordered]@{ started_at = (Get-Date).ToString('o'); project = $selected.Json; results = $results }
     $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reportPath -Encoding UTF8
@@ -91,9 +91,12 @@ try {
         $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reportPath -Encoding UTF8
         try {
             Write-Host "[$($plan.Platform)] 开始上传 ..." -ForegroundColor Cyan
-            $result.exit_code = Invoke-PlatformUpload $plan
-            $result.status = if ($result.exit_code -eq 0) { 'submitted' } else { 'failed' }
-            $result.message = if ($result.exit_code -eq 0) { '上传工具返回成功，审核状态请到平台确认。' } else { '上传工具返回失败；重试前请确认平台是否已收到稿件。' }
+            $run = Invoke-PlatformUpload $plan
+            $result.exit_code = $run.ExitCode
+            $result.status = if ($run.Success) { 'submitted' } else { 'failed' }
+            $result.error_code = $run.ErrorCode
+            $result.stage = $run.Stage
+            $result.message = $run.Message
         } catch { $result.status = 'failed'; $result.exit_code = 1; $result.message = $_.Exception.Message }
         $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $reportPath -Encoding UTF8
     }
