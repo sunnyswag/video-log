@@ -58,6 +58,10 @@ function Get-Project([IO.FileInfo]$JsonFile) {
         $p.Meta = Get-Content -LiteralPath $p.Json -Raw -Encoding UTF8 | ConvertFrom-Json
         if (-not ($p.Meta -is [pscustomobject])) { throw '投稿 JSON 顶层必须是对象' }
         if (-not ($p.Meta.title -is [string]) -or [string]::IsNullOrWhiteSpace($p.Meta.title)) { throw 'title 必须是非空字符串' }
+        if ($p.Meta.PSObject.Properties['title-short'] -and
+            (-not ($p.Meta.'title-short' -is [string]) -or [string]::IsNullOrWhiteSpace($p.Meta.'title-short'))) {
+            throw 'title-short 必须是非空字符串'
+        }
         if ($p.Meta.PSObject.Properties['desc'] -and -not ($p.Meta.desc -is [string])) { throw 'desc 必须是字符串' }
         foreach ($platform in $script:SelectedPlatforms) {
             $p.Plans += if ($platform -eq 'bilibili') { New-BilibiliPlan $p } else { New-SphPlan $p }

@@ -45,7 +45,7 @@ video-log/
 | 渲染 | [render2.mjs](tools/render/render2.mjs) | 较早的 Playwright 版本，提供时间线、指定时间抽帧和视频导出 |
 | 字体 | [build_fonts.py](tools/fonts/build_fonts.py) | 从字体中提取所需字符，生成内嵌 WOFF 的 CSS |
 | 预览 | [sheet.py](tools/preview/sheet.py) | 将已有 JPG 关键帧拼成预览图 |
-| 投稿 | [使用说明](tools/upload/使用说明.md) | 本地预检、选择项目、一条命令投稿 B 站和视频号 |
+| 投稿 | [使用说明](tools/upload/Readme.md) | 本地预检、选择项目、一条命令投稿 B 站和视频号 |
 
 各工具的依赖、用法与运行条件见 [tools/README.md](tools/README.md)。视频专用的配乐和音效脚本保存在对应项目的 `work/` 中。
 
@@ -59,7 +59,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -L
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Check
 
 # 打开交互投稿入口
-.\tools\upload\上传视频.bat
+.\tools\upload\upload_video.bat
 ```
 
 先选择上传平台：默认勾选 Bilibili 和视频号，用方向键移动、空格取消或恢复勾选，回车确认（至少选一个）。随后用方向键选择项目，回车查看已选平台的摘要，输入 `YES` 后上传。命令行直接指定项目即可一条命令发布：
@@ -70,7 +70,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -P
 
 首次视频号登录运行 `upload.ps1 -Login -Platforms sph`。B 站工具和 Cookie 保存在 `tools/upload/bilibili/`，视频号程序和会话放在 `tools/upload/sph/`。`-List`、`-Check`、`-DryRun` 只读取本地资料；`-Platforms bilibili` 或 `-Platforms sph` 可单独投稿。上传结果在各期 `work/upload/`。
 
-上传完成后到各平台确认稿件状态，B 站 SRT 字幕仍手动上传。字段、短标题、多 P 处理和失败补传见 [投稿工具使用说明](tools/upload/使用说明.md)。
+上传完成后到各平台确认稿件状态，B 站 SRT 字幕仍手动上传。字段、短标题、多 P 处理和失败补传见 [投稿工具使用说明](tools/upload/Readme.md)。
 
 ## 制作与预览
 

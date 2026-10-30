@@ -14,22 +14,23 @@ function New-SphPlan($Project) {
     $meta = $Project.Meta
     $options = Get-Field $meta 'sph' ([pscustomobject]@{})
     if (-not ($options -is [pscustomobject])) { throw 'sph 必须是 JSON 对象' }
-    $allowed = @('title', 'desc', 'tag', 'video', 'cover', 'cover_landscape', 'account', 'collection', 'at', 'ai_mark')
+    $allowed = @('desc', 'tag', 'video', 'cover', 'cover_landscape', 'account', 'collection', 'at', 'ai_mark')
     foreach ($prop in $options.PSObject.Properties) {
-        if ($prop.Name -notin $allowed) { $Project.Issues.Add("未知 sph 字段：$($prop.Name)") }
+        if ($prop.Name -eq 'title') { $Project.Issues.Add('sph.title 已改为顶层 title-short，请迁移短标题字段。') }
+        elseif ($prop.Name -notin $allowed) { $Project.Issues.Add("未知 sph 字段：$($prop.Name)") }
         elseif ($prop.Name -eq 'ai_mark') {
             if (-not ($prop.Value -is [bool])) { $Project.Issues.Add('sph.ai_mark 必须是 true 或 false') }
         } elseif (-not ($prop.Value -is [string])) { $Project.Issues.Add("sph.$($prop.Name) 必须是字符串") }
     }
     $accountName = if ($script:AccountOverride) { $script:AccountOverride } else { Get-Field $options 'account' 'default' }
     $plan = New-SphTool $accountName
-    $title = Get-Field $options 'title' $meta.title
+    $title = Get-Field $meta 'title-short' $meta.title
     $titleInfo = New-Object System.Globalization.StringInfo ([string]$title)
-    if (-not $options.PSObject.Properties['title'] -and $titleInfo.LengthInTextElements -gt 16) {
+    if (-not $meta.PSObject.Properties['title-short'] -and $titleInfo.LengthInTextElements -gt 16) {
         $title = $titleInfo.SubstringByTextElements(0, 16).TrimEnd()
-        $Project.Warnings.Add("[sph] 使用原标题前 16 个字符：$title；可在 JSON 的 sph.title 中自定义。")
+        $Project.Warnings.Add("[sph] 使用原标题前 16 个字符：$title；可在 JSON 的 title-short 中自定义。")
     } elseif ([string]::IsNullOrWhiteSpace([string]$title) -or $titleInfo.LengthInTextElements -gt 16) {
-        $Project.Issues.Add('[sph] 短标题不能为空或超过 16 个字符')
+        $Project.Issues.Add('[sph] 视频号使用的 title-short 不能为空或超过 16 个字符')
     }
     $plan.Title = [string]$title
     # The full shared title remains in the description when adapting a long title.

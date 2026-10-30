@@ -144,6 +144,50 @@ class UploadTestProcess {
     Passed 'dual upload preserves native arguments and reports both platforms'
 
     Reset-Calls
+    $meta['title-short'] = '通用短标题'
+    Save-Meta $meta
+    Run-Entry ($options + '-Yes') | Out-Null
+    $calls = @(Read-Calls)
+    Assert ((Argument-Value $calls[1] '--title') -ceq $meta.title) 'Short title replaced Bilibili full title'
+    Assert ((Argument-Value $calls[2] '--title') -ceq $meta['title-short']) 'Top-level short title was not used'
+    Assert ((Argument-Value $calls[2] '--description') -ceq ($meta.title + "`n" + $meta.desc)) 'Full title was lost from sph description'
+    Passed 'shared title-short supplies the short title while retaining the full title'
+
+    Reset-Calls
+    foreach ($badShort in @($null, '', '   ', 123)) {
+        $meta['title-short'] = $badShort
+        Save-Meta $meta
+        Run-Entry ($options + '-Yes') 1 | Out-Null
+    }
+    Assert (@(Read-Calls).Count -eq 0) 'Invalid short title allowed partial publication'
+    $meta['title-short'] = '这是一条超过十六个字符的通用短标题'
+    Save-Meta $meta
+    Run-Entry ($options + @('-Platforms', 'bilibili', '-Yes')) | Out-Null
+    Assert (@(Read-Calls).Count -eq 2) 'Video-specific short title limit blocked Bilibili'
+    Reset-Calls
+    Run-Entry ($options + '-Yes') 1 | Out-Null
+    Assert (@(Read-Calls).Count -eq 0) 'Overlong video-channel title allowed partial publication'
+    $meta.Remove('title-short')
+    $meta.sph = @{ title = '旧字段' }
+    Save-Meta $meta
+    $migration = Run-Entry ($options + '-Yes') 1
+    Assert ($migration -match 'sph.title' -and $migration -match 'title-short') 'Legacy field lacks a migration hint'
+    Assert (@(Read-Calls).Count -eq 0) 'Legacy title was silently ignored'
+    $meta.Remove('sph')
+    Passed 'shared short-title validation and platform limits prevent unintended publication'
+
+    $originalTitle = $meta.title
+    $meta.title = '这是一条超过十六个字符的完整视频标题'
+    Save-Meta $meta
+    $fallback = Run-Entry ($options + '-Yes')
+    $calls = @(Read-Calls)
+    Assert ((Argument-Value $calls[2] '--title') -ceq $meta.title.Substring(0, 16)) 'Missing short title no longer uses the existing fallback'
+    Assert ($fallback -match 'title-short') 'Fallback hint references the old field'
+    $meta.title = $originalTitle
+    Save-Meta $meta
+    Passed 'missing title-short retains explicit truncation warning and full-title fallback'
+
+    Reset-Calls
     $meta.Remove('cover')
     Copy-Item -LiteralPath (Join-Path $caseDir 'cover.png') -Destination (Join-Path $caseDir 'demo.png')
     $schedule = (Get-Date).AddDays(1).ToString('yyyy-MM-dd HH:mm')
@@ -173,7 +217,7 @@ class UploadTestProcess {
     Save-Meta $meta
     Run-Entry ($options + '-Yes') 1 | Out-Null
     Assert (@(Read-Calls).Count -eq 0) 'Ambiguous multipart upload was submitted'
-    $meta.sph = @{ video = 'part two.mp4'; title = '视频号独立短标题' }
+    $meta.sph = @{ video = 'part two.mp4' }
     Save-Meta $meta
     Run-Entry ($options + '-Yes') | Out-Null
     $calls = @(Read-Calls)

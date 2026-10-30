@@ -13,15 +13,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -P
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Project 2026-10-16-32bit-ms-timer -Platforms sph -Yes
 ```
 
-省略 `-Yes` 时显示摘要并要求输入 `YES`；双击 `上传视频.bat` 后先选择平台：默认勾选 Bilibili 和微信视频号，↑/↓ 移动、空格取消或恢复勾选、Enter 确认，Esc/Q 退出；至少保留一个平台。随后用方向键选择项目。只会检查和上传已勾选的平台。显式指定 `-Platforms` 或使用 `-Yes` 的命令行调用不弹出平台菜单。BAT 支持透传全部参数。无人值守调用必须同时给 `-Project` 和 `-Yes`；不会自动上传最近修改的项目。`-Project` 接受相对仓库根目录的项目目录、投稿 JSON 路径或绝对路径。目录中有多个 JSON 时须指定具体 JSON。
+省略 `-Yes` 时显示摘要并要求输入 `YES`；双击 `upload_video.bat` 后先选择平台：默认勾选 Bilibili 和微信视频号，↑/↓ 移动、空格取消或恢复勾选、Enter 确认，Esc/Q 退出；至少保留一个平台。随后用方向键选择项目。只会检查和上传已勾选的平台。显式指定 `-Platforms` 或使用 `-Yes` 的命令行调用不弹出平台菜单。BAT 支持透传全部参数。无人值守调用必须同时给 `-Project` 和 `-Yes`；不会自动上传最近修改的项目。`-Project` 接受相对仓库根目录的项目目录、投稿 JSON 路径或绝对路径。目录中有多个 JSON 时须指定具体 JSON。
 
 ## 目录拆分
 
 ```text
 tools/upload/
 ├── upload.ps1             # 统一调度、参数、预览、结果汇总
-├── 上传视频.bat           # 双击 / 命令行入口
-├── 视频信息模板.json
+├── upload_video.bat           # 双击 / 命令行入口
+├── video_info_template.json
 ├── common/                # 项目解析、文件校验、控制台、进程调用
 ├── bilibili/
 │   ├── adapter.ps1         # biliup 参数映射与登录刷新
@@ -59,13 +59,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -L
 
 ## 投稿 JSON
 
-原有字段无需迁移：`title` 为完整标题；`desc` 为简介；`tag` 为英文逗号分隔的话题；`cover` 为外层封面文件名。`tid`、`copyright`（默认 1）、`source` 是 B 站字段，只有选择 B 站时校验。转载必须填写来源。`videos: []` 默认采用同名 MP4；B 站多 P 可列出多个外层文件名。
+`title` 为完整标题；可选的顶层 `title-short` 为通用短标题，与平台无关；`desc` 为简介；`tag` 为英文逗号分隔的话题；`cover` 为外层封面文件名。`tid`、`copyright`（默认 1）、`source` 是 B 站字段，只有选择 B 站时校验。转载必须填写来源。`videos: []` 默认采用同名 MP4；B 站多 P 可列出多个外层文件名。
+
+原 `sph.title` 已迁移为顶层 `title-short`。该字段若存在，必须是非空字符串。B 站继续使用完整 `title`；视频号使用 `title-short`，并按视频号要求限制为 16 个字符。未填写时，视频号沿用完整标题，超过 16 字则截取前 16 字并提示；短标题与完整标题不同时，完整标题会保留在视频号简介开头。
 
 视频号设置放在可选的 `sph` 对象里：
 
 ```json
 {
   "title": "完整的视频标题可以继续供 B 站使用",
+  "title-short": "通用短标题",
   "tid": 231,
   "tag": "计算机技术,科普",
   "desc": "两个平台共用的简介",
@@ -73,7 +76,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -L
   "copyright": 1,
   "videos": [],
   "sph": {
-    "title": "视频号专用短标题",
     "account": "default"
   }
 }
@@ -81,7 +83,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -L
 
 | sph 字段 | 默认与用途 |
 | --- | --- |
-| `title` | 复用公共标题；超过 16 字时取前 16 字并明确提示，同时将完整标题放到视频号简介开头。建议自行设置自然的短标题 |
 | `desc` / `tag` | 覆盖视频号简介 / 话题。简介加话题超过 1000 字时预检失败，不截断内容 |
 | `video` | 指定视频号的单个 MP4。B 站多 P 必须明确指定此字段或先生成合并成片，不会只取第一 P 或自动批量发表 |
 | `cover` / `cover_landscape` | 分别指定竖版 / 横版封面。均未设置时复用公共封面，根据图片宽高选择参数；设 `cover: ""` 可停用视频号封面继承 |

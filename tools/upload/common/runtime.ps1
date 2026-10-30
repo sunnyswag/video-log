@@ -36,7 +36,7 @@ function Show-UploadPlan($Plan) {
 
 function Assert-ToolReady($Plan, [switch]$ForLogin) {
     if (-not (Test-Path -LiteralPath $Plan.Exe -PathType Leaf)) {
-        throw "找不到 $($Plan.Platform) 程序：$($Plan.Exe)。请参阅 tools/upload/使用说明.md。"
+        throw "找不到 $($Plan.Platform) 程序：$($Plan.Exe)。请参阅 tools/upload/Readme.md。"
     }
     if (-not $ForLogin -and -not (Test-Path -LiteralPath $Plan.CredentialPath -PathType $Plan.CredentialType)) {
         throw "$($Plan.Platform) 尚未登录。请运行 upload.ps1 -Login -Platforms $($Plan.Platform)$(if ($Plan.Platform -eq 'sph') { ' -Account ' + $Plan.Account })。"
