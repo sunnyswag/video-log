@@ -1,0 +1,247 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -2,7 +2,7 @@
+ members = ["."]
+ 
+ [workspace.package]
+-version = "2.1.3+video-log.2"
++version = "2.1.3+video-log.3"
+ edition = "2021"
+ license = "MIT"
+ 
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1342,7 +1342,7 @@
+ 
+ [[package]]
+ name = "sph"
+-version = "2.1.3+video-log.2"
++version = "2.1.3+video-log.3"
+ dependencies = [
+  "async-trait",
+  "chromiumoxide",
+--- a/src/publish/page.rs
++++ b/src/publish/page.rs
+@@ -259,7 +259,7 @@
+         let _ = self.wujie.run_js(&js, Stage::Navigate).await;
+     }
+ 
+-    pub async fn upload_video(&self, video_path: &Path) -> Result<()> {
++    pub async fn upload_video(&self, video_path: &Path, timeout: Duration) -> Result<()> {
+         self.wujie
+             .set_file_input(
+                 self.selectors.video_file_input.as_ref(),
+@@ -267,13 +267,9 @@
+                 Stage::Upload,
+             )
+             .await?;
+-        self.wujie
+-            .wait_sub(
+-                self.selectors.upload_done_indicator.as_ref(),
+-                STEP_TIMEOUT,
+-                Stage::Upload,
+-            )
+-            .await
++        // The preview container appears as soon as upload starts. Its presence
++        // does not mean bytes have finished uploading or covers are generated.
++        self.wait_media_ready(None, timeout, Stage::Upload).await
+     }
+ 
+     pub async fn fill_title(&self, title: &str) -> Result<()> {
+@@ -414,13 +410,28 @@
+     }
+ 
+     async fn wait_cover_ready(&self, scope: Option<&str>) -> Result<()> {
++        self.wait_media_ready(scope, Duration::from_secs(120), Stage::Cover)
++            .await
++    }
++
++    async fn wait_media_ready(
++        &self,
++        scope: Option<&str>,
++        timeout: Duration,
++        stage: Stage,
++    ) -> Result<()> {
+         let edit_ready = match scope {
+             Some(scope) => format!(
+                 r#"for (const root of __roots) for (const el of root.querySelectorAll({scope:?})) {{
+                 if ((el.innerText || '').trim()==='编辑' && rendered(el)) return 'y';
+             }} return '';"#
+             ),
+-            None => "return 'y';".to_string(),
++            None => format!(
++                r#"for (const root of __roots) for (const el of root.querySelectorAll({preview:?})) {{
++                if (rendered(el)) return 'y';
++            }} return '';"#,
++                preview = self.selectors.upload_done_indicator.as_ref(),
++            ),
+         };
+         let js = format!(
+             r#"(function(){{
+@@ -434,20 +445,30 @@
+           {edit_ready}
+         }})()"#
+         );
+-        let deadline = tokio::time::Instant::now() + Duration::from_secs(120);
+-        loop {
+-            if self.wujie.run_js(&js, Stage::Cover).await?.as_deref() == Some("y") {
+-                return Ok(());
+-            }
+-            if tokio::time::Instant::now() >= deadline {
+-                return Err(AppError::new(
+-                    Code::Timeout,
+-                    Stage::Cover,
+-                    "等待视频上传遮罩消失、封面生成及编辑按钮就绪超时（120秒）",
+-                ));
+-            }
+-            tokio::time::sleep(Duration::from_millis(500)).await;
+-        }
++        let wait = async {
++            let mut ready_polls = 0;
++            loop {
++                if self.wujie.run_js(&js, stage).await?.as_deref() == Some("y") {
++                    ready_polls += 1;
++                    if ready_polls >= 2 {
++                        return Ok(());
++                    }
++                } else {
++                    ready_polls = 0;
++                }
++                tokio::time::sleep(Duration::from_millis(500)).await;
++            }
++        };
++        tokio::time::timeout(timeout, wait).await.map_err(|_| {
++            AppError::fmt(
++                Code::Timeout,
++                stage,
++                format_args!(
++                    "等待视频上传和封面处理完成超时（{}秒）；未进入提交步骤",
++                    timeout.as_secs()
++                ),
++            )
++        })?
+     }
+ 
+     async fn wait_cover_visible(&self, expected: bool) -> Result<()> {
+--- a/src/publish/mod_impl.rs
++++ b/src/publish/mod_impl.rs
+@@ -239,11 +239,17 @@
+     );
+ 
+     // 1) 上传
+-    werr(stderr, format_args!("步骤 1/5：上传视频…\n"));
++    werr(
++        stderr,
++        format_args!(
++            "步骤 1/5：上传视频并等待处理完成（命令总超时 {} 秒）…\n",
++            opts.timeout.as_secs()
++        ),
++    );
+     step!(
+         Stage::Upload,
+         selectors.video_file_input.as_ref(),
+-        flow.upload_video(&opts.video)
++        flow.upload_video(&opts.video, opts.timeout)
+     );
+     flow.require_logged_in().await?;
+ 
+--- a/src/publish/e2e_tests.rs
++++ b/src/publish/e2e_tests.rs
+@@ -144,6 +144,72 @@
+             })
+         }));
+         (opts, stderr_vec)
++    }
++
++    #[tokio::test]
++    async fn e2e_publish_upload_waits_for_completion() {
++        check_upload_wait(false).await;
++    }
++
++    #[tokio::test]
++    async fn e2e_publish_upload_timeout_stops_before_metadata() {
++        check_upload_wait(true).await;
++    }
++
++    async fn check_upload_wait(stalled: bool) {
++        let Some(chrome) = test_chrome() else {
++            return;
++        };
++        let work = tempdir("upload-wait");
++        let profile = tempdir("upload-wait-browser");
++        let video = test_video_file(&work);
++        let (mut browser, page) = browser::launch(&chrome, &profile, false).await.unwrap();
++        let (mut opts, logs) = opts_with_fixture(FIXTURE_PUBLISH, video, None, true);
++        opts.navigate_url.as_mut().unwrap().push_str(if stalled {
++            "?uploadNeverCompletes=1"
++        } else {
++            "?uploadDelayMs=1800"
++        });
++        opts.timeout = if stalled {
++            Duration::from_millis(250)
++        } else {
++            Duration::from_secs(10)
++        };
++        let backend: Arc<dyn crate::publish::recovery::RecoveryBackend> =
++            Arc::new(crate::publish::recovery::NullBackend);
++        let result = crate::publish::mod_impl::run_inner_with_backend(
++            &work,
++            DEFAULT_ACCOUNT,
++            &page,
++            &DEFAULT_SELECTORS,
++            &opts,
++            &backend,
++        )
++        .await;
++        let value = page.evaluate("({previewVisible: !document.querySelector('.cover-preview-wrap').hidden, maskRemovedAt: window.maskRemovedAt, firstTitleInputAt: window.firstTitleInputAt, submits: window.submitCount, covers: window.coverUploads})")
++            .await.unwrap().into_value::<serde_json::Value>().unwrap();
++        assert_eq!(
++            value["previewVisible"], true,
++            "preview is already present while bytes are uploading"
++        );
++        assert_eq!(value["submits"], 0);
++        if stalled {
++            let err = result.unwrap_err();
++            assert_eq!(err.code, Code::Timeout);
++            assert_eq!(err.stage, Stage::Upload);
++            assert_eq!(value["maskRemovedAt"], 0);
++            assert_eq!(value["firstTitleInputAt"], 0);
++            assert!(value["covers"].as_object().unwrap().is_empty());
++            assert!(!String::from_utf8_lossy(&logs.lock().unwrap()).contains("步骤 2/5"));
++        } else {
++            assert!(!result.unwrap().submitted);
++            assert!(value["maskRemovedAt"].as_u64().unwrap() > 0);
++            assert!(
++                value["firstTitleInputAt"].as_u64().unwrap()
++                    >= value["maskRemovedAt"].as_u64().unwrap()
++            );
++        }
++        browser.close().await.unwrap();
+     }
+ 
+     // Use the full publishing pipeline with a retained local page, so the assertions
+--- a/testdata/publish_fixture.html
++++ b/testdata/publish_fixture.html
+@@ -74,7 +74,8 @@
+   <div class="publish-error" hidden></div>
+ </div>
+ <script>
+-window.coverUploads = {}; window.submitCount = 0; window.earlyCoverClick = 0; window.maskRemovedAt = 0; window.firstCoverClickAt = 0;
++window.coverUploads = {}; window.submitCount = 0; window.earlyCoverClick = 0; window.maskRemovedAt = 0; window.firstCoverClickAt = 0; window.firstTitleInputAt = 0;
++document.querySelector('.weui-desktop-form__input').addEventListener('input', () => { if (!window.firstTitleInputAt) window.firstTitleInputAt = Date.now(); });
+ let coverRatio;
+ window.dropdownOpens = 0; window.decoyClicks = 0;
+ const collectionItem = document.querySelector('.form-item');
+@@ -113,7 +114,11 @@
+ document.getElementById('video-file').addEventListener('change', function () {
+   if (!this.files.length) return;
+   // Preview and decorative edit label appear before upload is finished.
+-  setTimeout(() => { document.querySelector('.vertical-mask-layer').remove(); window.maskRemovedAt = Date.now(); }, 4500);
++  const uploadParams = new URLSearchParams(location.search);
++  if (!uploadParams.has('uploadNeverCompletes')) {
++    const delay = uploadParams.has('uploadDelayMs') ? Number(uploadParams.get('uploadDelayMs')) : 4500;
++    setTimeout(() => { document.querySelector('.vertical-mask-layer').remove(); window.maskRemovedAt = Date.now(); }, delay);
++  }
+   setTimeout(function () {
+     document.querySelector(".cover-preview-wrap").hidden = false;
+   }, 60);

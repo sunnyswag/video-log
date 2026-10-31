@@ -25,6 +25,12 @@ function New-SphPlan($Project) {
     $accountName = if ($script:AccountOverride) { $script:AccountOverride } else { Get-Field $options 'account' 'default' }
     $plan = New-SphTool $accountName
     $title = Get-Field $meta 'title-short' $meta.title
+    # The platform rejects commas in short titles and explicitly suggests spaces.
+    # Adapt only the outgoing sph title; shared metadata and other platforms keep it.
+    if ([string]$title -match '[,，]') {
+        $title = ([string]$title).Replace(',', ' ').Replace('，', ' ').Trim()
+        $Project.Warnings.Add("[sph] 平台不接受短标题中的逗号，已转换为空格：$title")
+    }
     $titleInfo = New-Object System.Globalization.StringInfo ([string]$title)
     if (-not $meta.PSObject.Properties['title-short'] -and $titleInfo.LengthInTextElements -gt 16) {
         $title = $titleInfo.SubstringByTextElements(0, 16).TrimEnd()
@@ -66,9 +72,12 @@ function New-SphPlan($Project) {
         if ($cover) {
             Add-Type -AssemblyName System.Drawing
             $picture = [Drawing.Image]::FromFile($cover)
-            try { $flag = if ($picture.Width -ge $picture.Height) { '--cover-landscape' } else { '--cover' } }
+            try { $isLandscape = $picture.Width -ge $picture.Height }
             finally { $picture.Dispose() }
-            $plan.Arguments += @($flag, $cover)
+            # The profile cover and sharing-card cover are separate slots.
+            # A landscape source must not leave the profile on an automatic frame.
+            $plan.Arguments += @('--cover', $cover)
+            if ($isLandscape) { $plan.Arguments += @('--cover-landscape', $cover) }
         }
     }
     foreach ($name in @('collection', 'at')) {
@@ -83,6 +92,18 @@ function New-SphPlan($Project) {
     }
     if ($options.ai_mark -eq $true) { $plan.Arguments += '--ai-mark' }
     return $plan
+}
+
+function Get-SphSession($Plan) {
+    # Read-only query opens this account's browser profile but never a publisher.
+    $run = Invoke-UploadTool $Plan @('list', '--limit', '1', '--account', $Plan.Account, '--json', '--timeout', '60s') -CaptureOutput -CaptureError
+    try { $response = $run.Output | ConvertFrom-Json -ErrorAction Stop }
+    catch { throw '[sph] 登录检查未返回有效 JSON；本次未开始上传，请检查 sph 程序与浏览器。' }
+    if ($run.ExitCode -eq 0 -and $response.ok -eq $true -and $response.command -eq 'list') { return 'Ready' }
+    if ($response.ok -eq $false -and $response.error.code -eq 'SESSION_EXPIRED') { return 'NeedsLogin' }
+    $code = if ($response.error.code) { [string]$response.error.code } else { 'INVALID_RESPONSE' }
+    $stage = if ($response.error.stage) { [string]$response.error.stage } else { 'session_check' }
+    throw "[sph] 登录检查失败（$code/$stage，退出码 $($run.ExitCode)）；未确认登录过期，本次未开始上传。请检查网络、浏览器或 sph 网页适配。"
 }
 
 function Invoke-SphUpload($Plan) {

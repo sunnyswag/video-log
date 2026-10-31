@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $script:ToolDir = $PSScriptRoot
 $script:ScanRoot = if ($Root) { [IO.Path]::GetFullPath($Root) } else { [IO.Path]::GetFullPath((Join-Path $ToolDir '..\..')) }
-$script:Interactive = -not [Console]::IsInputRedirected
+$script:Interactive = -not [Console]::IsInputRedirected -and ([Environment]::GetCommandLineArgs() -notcontains '-NonInteractive')
 $script:AccountOverride = $Account
 try { [Console]::OutputEncoding = New-Object Text.UTF8Encoding $false } catch {}
 foreach ($file in @('common/runtime.ps1', 'common/projects.ps1', 'common/console.ps1', 'bilibili/adapter.ps1', 'sph/adapter.ps1')) { . (Join-Path $ToolDir $file) }
@@ -35,12 +35,8 @@ try {
         $plans = @(foreach ($platform in $script:SelectedPlatforms) {
             if ($platform -eq 'bilibili') { New-BilibiliTool } else { New-SphTool $(if ($Account) { $Account } else { 'default' }) }
         })
-        foreach ($plan in $plans) { Assert-ToolReady $plan -ForLogin }
-        foreach ($plan in $plans) {
-            $loginArgs = if ($plan.Platform -eq 'bilibili') { @('-u', $plan.CredentialPath, 'login') } else { @('login', '--account', $plan.Account) }
-            $code = Invoke-UploadTool $plan $loginArgs
-            if ($code -ne 0) { throw "$($plan.Platform) 登录失败（退出码 $code）" }
-        }
+        foreach ($plan in $plans) { Assert-ToolReady $plan }
+        foreach ($plan in $plans) { Invoke-PlatformLogin $plan }
         exit 0
     }
     if ($Yes -and -not $Project) { throw '-Yes 必须同时指定 -Project，避免自动选择错误的视频。' }
@@ -76,6 +72,8 @@ try {
         if (-not $script:Interactive) { throw '非交互实际发布需要 -Yes；只预览请用 -DryRun。' }
         if ((Read-Host '核对以上各平台信息后，输入 YES 上传；其他输入取消') -cne 'YES') { Write-Host '已取消。'; exit 0 }
     }
+    # Resolve missing/expired sessions for ALL selected platforms before any upload.
+    Ensure-UploadSessions -Plans $selected.Plans -AllowLogin $script:Interactive
     $runDir = Join-Path $selected.Folder 'work\upload'
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
     $reportPath = Join-Path $runDir ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 6) + '.json')

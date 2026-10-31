@@ -23,11 +23,13 @@ try {
     $source = Join-Path $temp 'sph-2.1.3'
     & $gitPath -C $source init --quiet
     if ($LASTEXITCODE -ne 0) { throw '临时源码目录初始化失败' }
-    & $gitPath -C $source apply (Join-Path $PSScriptRoot 'patches\v2.1.3-direct-cover.patch')
-    if ($LASTEXITCODE -ne 0) { throw '源码补丁应用失败' }
+    foreach ($patch in @('v2.1.3-direct-cover.patch', 'v2.1.3-login-detection.patch', 'v2.1.3-upload-wait.patch')) {
+        & $gitPath -C $source apply (Join-Path $PSScriptRoot ('patches\' + $patch))
+        if ($LASTEXITCODE -ne 0) { throw "源码补丁应用失败：$patch" }
+    }
     $env:CARGO_PROFILE_RELEASE_LTO = 'false'
     $env:CARGO_PROFILE_RELEASE_CODEGEN_UNITS = '16'
-    $env:SPH_VERSION = '2.1.3+video-log.1'
+    $env:SPH_VERSION = '2.1.3+video-log.3'
     $manifest = Join-Path $source 'Cargo.toml'
     & $cargoPath build --manifest-path $manifest --release --locked --jobs 2
     if ($LASTEXITCODE -ne 0) { throw '编译失败，原 sph.exe 未替换。' }
@@ -35,10 +37,14 @@ try {
         $env:SPH_CHROME = $Chrome
         & $cargoPath test --manifest-path $manifest --release --locked --jobs 2 e2e_publish_landscape -- --test-threads=1
         if ($LASTEXITCODE -ne 0) { throw '封面流程测试失败，原 sph.exe 未替换。' }
+        & $cargoPath test --manifest-path $manifest --release --locked --jobs 2 session::tests -- --test-threads=1
+        if ($LASTEXITCODE -ne 0) { throw '登录流程测试失败，原 sph.exe 未替换。' }
+        & $cargoPath test --manifest-path $manifest --release --locked --jobs 2 e2e_publish_upload_ -- --test-threads=1
+        if ($LASTEXITCODE -ne 0) { throw '视频上传等待测试失败，原 sph.exe 未替换。' }
     }
     $built = Join-Path $source 'target\release\sph.exe'
     $version = & $built version
-    if ($LASTEXITCODE -ne 0 -or ($version -join "`n") -notmatch '2\.1\.3\+video-log\.1') { throw '构建产物启动或版本验证失败，原 sph.exe 未替换。' }
+    if ($LASTEXITCODE -ne 0 -or ($version -join "`n") -notmatch '2\.1\.3\+video-log\.3') { throw '构建产物启动或版本验证失败，原 sph.exe 未替换。' }
     if (Test-Path -LiteralPath $target) {
         $backups = Join-Path $PSScriptRoot 'state\bin'
         New-Item -ItemType Directory -Force -Path $backups | Out-Null

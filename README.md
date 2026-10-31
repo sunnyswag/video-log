@@ -72,6 +72,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -P
 
 上传完成后到各平台确认稿件状态，B 站 SRT 字幕仍手动上传。字段、短标题、多 P 处理和失败补传见 [投稿工具使用说明](tools/upload/Readme.md)。
 
+新一期可复制 [投稿信息模板](tools/upload/video_info_template.json)。`title-short` 是通用短标题；视频号限制为 16 个字符，上传入口会将其中的中英文逗号转换为空格并提示，不改写 JSON 或 B 站标题。填写示例见 [短标题规则](tools/upload/Readme.md#短标题规则)。如果遇到“发表按钮一直不可用”，先检查 [页面校验提示](tools/upload/Readme.md#发表按钮一直不可用)；B 站已成功时，补传只勾选视频号。
+
 ## 制作与预览
 
 计时器视频的画面由 Canvas 绘制，配乐与音效由 Python 合成。用 Chrome / Edge 打开 [work/film.html](2026-10-16-32bit-ms-timer/work/film.html) 可预览动画：空格播放或暂停，方向键跳转；网页预览不带声音。画面、字幕和时间点在同目录的 [film.js](2026-10-16-32bit-ms-timer/work/film.js) 中。
