@@ -268,15 +268,15 @@ for (const [name, count] of Object.entries({ ...pathMethods, beginPath: 0, fill:
   AuditContext.prototype[name] = function (...args) {
     validatePath(name, args, count); this.record(name, args);
     if (!this.canvas.main || !this.harness.collectText) return;
-    if (name === 'beginPath') { this.pathBox = null; this.pathSimple = true; }
+    if (name === 'beginPath') { this.pathBox = null; this.pathSimple = true; this.pathApprox = false; }
     else if (name === 'rect' || name === 'roundRect') {
       const [x,y,w,h] = args;
       if (this.pathBox) this.pathSimple = false;
       this.pathBox = transformedBox({ left: Math.min(x,x+w), top: Math.min(y,y+h), right: Math.max(x,x+w), bottom: Math.max(y,y+h) }, this.m, this.canvas);
       // Round corners and rotated rectangles use an enclosing AABB (conservative).
-      if (name === 'roundRect' || Math.abs(this.m[1]) > EPS || Math.abs(this.m[2]) > EPS) this.clipApprox = true;
+      if (name === 'roundRect' || Math.abs(this.m[1]) > EPS || Math.abs(this.m[2]) > EPS) this.pathApprox = true;
     } else if (name === 'clip') {
-      if (!args.some(x=>x instanceof AuditPath) && this.pathSimple && this.pathBox) this.clipBox = clipped(this.pathBox, this.clipBox);
+      if (!args.some(x=>x instanceof AuditPath) && this.pathSimple && this.pathBox) { this.clipBox = clipped(this.pathBox, this.clipBox); this.clipApprox ||= this.pathApprox; }
       else this.clipApprox = true;
     } else if (name in pathMethods && name !== 'closePath') this.pathSimple = false;
   };
@@ -291,7 +291,8 @@ class Harness {
   }
   auditFont(font, ctx, method, text) {
     this.fontAudit?.({ font: String(font), family: firstFontFamily(font), method, text,
-      t: this.time, phase: this.phase, canvas: `${ctx.canvas.width}×${ctx.canvas.height}`, main: ctx.canvas.main });
+      t: this.time, phase: this.phase, canvas: `${ctx.canvas.width}×${ctx.canvas.height}`, main: ctx.canvas.main,
+      ...(!FONT_FAMILIES.has(firstFontFamily(font)) ? sourceSite() : {}) });
   }
   canvas(w, h, main = false) { return new AuditCanvas(this, w, h, main); }
   balanced() {
@@ -600,8 +601,8 @@ function selfTest() {
     g.font = '24px serif'; g.fillText('错误字体', 0, 0);
     h.canvas(10, 10).context.font = '24px serif';
     assert.equal(events.filter(x => !FONT_FAMILIES.has(x.family)).length, 3);
-    for (const cue of ['draw', 'blip', 'snip']) assert.ok(CUE_TYPES.has(cue));
-    for (const cue of ['send', 'ring', 'unknown']) assert.ok(!CUE_TYPES.has(cue));
+    for (const cue of ['draw', 'blip', 'shutter']) assert.ok(CUE_TYPES.has(cue));
+    for (const cue of ['stamp', 'type', 'snip', 'unknown']) assert.ok(!CUE_TYPES.has(cue));
   });
   check(() => {
     const h = new Harness(), g = h.canvas(3840, 2160, true).context; h.collectText = true;
@@ -647,209 +648,445 @@ function selfTest() {
   return count;
 }
 
+// Instrument callable bindings inside the VM; the four input files stay byte-for-byte intact.
+// These boxes supplement actual fillText calls. They never masquerade as font glyphs.
+function installPrimitiveAudit(context, h) {
+  function add(g, text, kind, box, alpha = g.globalAlpha, extra = {}) {
+    if (!h.collectText || !g.canvas.main || alpha < ALPHA) return;
+    const rawBounds = transformedBox(box, g.m, g.canvas), bounds = clipped(rawBounds, g.clipBox);
+    if (bounds.right <= bounds.left || bounds.bottom <= bounds.top) return;
+    h.primitives.push({ text, kind, method: kind, rawBounds, bounds, alpha, ...sourceSite(), ...extra });
+  }
+  const wrap = (name, observe) => {
+    if (typeof context[name] !== 'function') return;
+    const original = context[name];
+    context[name] = function (...args) { if (h.collectText) observe(...args); return original.apply(this, args); };
+  };
+  wrap('seg7', (g, s, x, y, height, col, o = {}) => {
+    const width = context.seg7W(s, height), left = o.a === 'left' ? x : o.a === 'right' ? x-width : x-width/2;
+    // Bound the actual digit cells, including their -0.08 shear, but not glow.
+    let advance = 0, lo = Infinity, hi = -Infinity;
+    for (const ch of s) {
+      const cell = ch === '.' ? [.06-.078, .06+.078] : ch === '+' ? [.04,.42] : [0,.48];
+      if (ch !== ' ') { lo = Math.min(lo, advance+cell[0]*height); hi = Math.max(hi, advance+cell[1]*height); }
+      advance += (ch === '.' ? .2 : ch === '+' ? .5 : .62)*height;
+    }
+    if (Number.isFinite(lo)) add(g, `seg7(${s})`, 'seg7', { left: left+lo-.04*height, right: left+hi+.04*height, top: y-height/2, bottom: y+height/2 }, g.globalAlpha*(o.al == null ? 1 : Math.max(0,Math.min(1,o.al))));
+  });
+  if (typeof context.flyIcon === 'function') {
+    const original = context.flyIcon;
+    context.flyIcon = function (...args) { h.flyDepth++; try { return original.apply(this,args); } finally { h.flyDepth--; } };
+  }
+  wrap('icon', (g,x,y,s,k,o={}) => {
+    if (!h.flyDepth || s <= .001) return;
+    add(g, `飞行 icon(${k})`, 'flyingIcon', { left:x-40*s,right:x+40*s,top:y-47*s,bottom:y+47*s }, g.globalAlpha*(o.al??1));
+  });
+  wrap('touch', (g,a,b,lt,t0,d) => {
+    const clamp = x => Math.max(0,Math.min(1,x)), u0=clamp((lt-t0)/d), u=u0<.5?4*u0**3:1-(-2*u0+2)**3/2;
+    const alpha=Math.min(clamp((lt-t0+.15)/.15),1-clamp((lt-t0-d)/.2))*.7*g.globalAlpha;
+    const x=a[0]+(b[0]-a[0])*u,y=a[1]+(b[1]-a[1])*u;
+    add(g,'手指触点圆圈','touch',{left:x-28,right:x+28,top:y-28,bottom:y+28},alpha);
+  });
+  wrap('devBoard', (g,x,y,s) => {
+    if (s<=.001) return;
+    add(g,'开发板屏幕','screen',{left:x-240*s,right:x+240*s,top:y-170*s,bottom:y+102*s});
+  });
+}
+
+function auditCompleteTimeline(film, script, chapters) {
+  const issues=[], ids=Object.keys(script), expectedCaps=[], expectedChapters=[];
+  let duration=0,lastChapter;
+  for (const [i,id] of ids.entries()) {
+    const s=script[id], sc=film.scenes[i];
+    const issue=(rule,detail,lt=0,text=id)=>issues.push({id,lt,rule,detail,text});
+    if (!sc || sc.id!==id) issue('完整场景序列',`第 ${i+1} 幕期望 ${id}，实际 ${sc?.id??'<缺失>'}`);
+    if (sc && (sc.chap!==s.chapter || !sameNumber(sc.d,rounded(s.dur)) || !sameNumber(sc.start,rounded(duration)))) issue('场景参数',`SCRIPT start/dur/chapter=${rounded(duration)}/${s.dur}/${s.chapter}，FILM=${sc.start}/${sc.d}/${sc.chap}`);
+    if (!Number.isInteger(s.chapter) || s.chapter<0 || s.chapter>=chapters.length || (lastChapter!=null && s.chapter<lastChapter)) issue('章节范围/顺序',String(s.chapter));
+    if (s.chapter!==lastChapter) expectedChapters.push({n:s.chapter,t:duration,id});
+    lastChapter=s.chapter;
+    for (const [a,b,text] of s.caps) expectedCaps.push({id,lt:a,t0:rounded(duration+a),t1:rounded(duration+b),text});
+    duration+=s.dur;
+  }
+  for (const sc of film.scenes.slice(ids.length)) issues.push({id:sc.id,lt:0,rule:'额外场景',detail:'SCRIPT 中没有对应幕',text:sc.id});
+  for(let i=0;i<Math.max(film.captions.length,expectedCaps.length);i++) {
+    const a=film.captions[i],e=expectedCaps[i];
+    if(!a||!e||a.text!==e.text||!sameNumber(a.t0,e.t0)||!sameNumber(a.t1,e.t1)) issues.push({id:e?.id??'<时间线>',lt:e?.lt??0,rule:'字幕一致性',text:e?.text??a?.text,detail:`#${i+1} SCRIPT=${JSON.stringify(e)} FILM=${JSON.stringify(a)}`});
+  }
+  for(let i=0;i<Math.max(film.chapters.length,expectedChapters.length,chapters.length);i++) {
+    const a=film.chapters[i],e=expectedChapters[i],info=film.chapterInfo?.[i];
+    if(!a||!e||a.n!==e.n||!sameNumber(a.t,e.t)||!info||['zh','en','desc'].some((k,j)=>info[k]!==chapters[e.n]?.[j])) issues.push({id:e?.id??'<章节>',lt:0,rule:'完整章节',text:chapters[e?.n]?.[0],detail:`#${i+1} SCRIPT=${JSON.stringify(e)} FILM=${JSON.stringify(a)}；同时核对 CHAPTERS 标题/英文/说明`});
+  }
+  if(!sameNumber(film.duration,duration)) issues.push({id:'<全片>',lt:0,rule:'总时长',text:'SCRIPT.dur',detail:`期望 ${duration}，实际 ${film.duration}`});
+  return {issues,ids,duration,expectedCaps,expectedChapters};
+}
+
+// Adjacent sampled hits are grouped by scene and call site, never by text alone.
+class Ledger {
+  constructor() { this.groups=[];this.active=new Map();this.hits=0; }
+  add(index,t,sc,hits) {
+    const next=new Map();
+    for(const hit of hits) {
+      this.hits++;
+      const key=JSON.stringify([sc.id,hit.severity,hit.rule,hit.items.map(x=>x.identity).sort()]);
+      let g=next.get(key)||this.active.get(key);
+      if(!g||g.lastIndex<index-1) {g={...hit,key,id:sc.id,start:t,end:t,startLT:t-sc.start,endLT:t-sc.start,count:0,occurrences:0,sample:{t,lt:t-sc.start,...hit},peak:-Infinity};this.groups.push(g);}
+      if(g.lastIndex!==index) g.count++;
+      g.lastIndex=index;g.end=t;g.endLT=t-sc.start;g.occurrences++;
+      const score=hit.ratio??0;
+      if(score>g.peak) {g.peak=score;g.sample={t,lt:t-sc.start,...hit};}
+      next.set(key,g);
+    }
+    this.active=next;
+  }
+}
+function identify(items) {
+  const counts=new Map();
+  for(const x of items) {
+    const base=JSON.stringify([x.kind,x.site,x.chrome,x.caption]),n=counts.get(base)||0;counts.set(base,n+1);
+    x.identity=base+'#'+n;
+  }
+}
+function geometryHits(out, sc, lt, camera) {
+  const hits=[], glyphs=out.texts.filter(x=>x.method==='fillText'), segs=out.primitives.filter(x=>x.kind==='seg7');
+  identify([...out.texts,...out.primitives]);
+  const chapter=sc.card!=null&&lt<1.95;
+  function add(severity,rule,items,ratio,detail) {
+    if(chapter) { detail=`原规则「${rule}」；${detail}；有 card 且 lt<1.95，可能被转场带遮挡`;severity='EXPECTED';rule='章节转场色带'; }
+    hits.push({severity,rule,items,ratio,detail});
+  }
+  const onscreen=x=>intersection(x.bounds,SCREEN)>EPS;
+  const visible=[...glyphs,...segs].filter(onscreen);
+  for(let i=0;i<visible.length;i++) for(let j=i+1;j<visible.length;j++) {
+    const a=visible[i],b=visible[j],ab=clipped(a.bounds,SCREEN),bb=clipped(b.bounds,SCREEN),ratio=intersection(ab,bb)/Math.min(area(ab),area(bb));
+    if(ratio<OVERLAP) continue;
+    const lines=[a,b].map(x=>Number(x.filmLine?.split(':')[1]));
+    const center=x=>[(x.rawBounds.left+x.rawBounds.right)/2,(x.rawBounds.top+x.rawBounds.bottom)/2];
+    const ac=center(a),bc=center(b);
+    const crossfade=a.kind==='text'&&b.kind==='text'&&a.text!==b.text&&Math.abs(a.alpha+b.alpha-1)<.03&&Math.min(a.alpha,b.alpha)<.85&&Math.abs(lines[0]-lines[1])<=2&&Math.abs(ac[0]-bc[0])<1&&Math.abs(ac[1]-bc[1])<1&&ratio>.85;
+    if(crossfade) add('EXPECTED','交叉淡化',[a,b],ratio,'同位置、相邻绘制调用、互补透明度；保留记录');
+    else if(a.kind==='seg7'||b.kind==='seg7') add('WARN','七段数码管包围框相交',[a,b],ratio,'数码管按字符单元外接框登记，不代表发光段像素一定压字');
+    else add('FAIL','文字压文字',[a,b],ratio,'可见文字估算框相交 ≥15%');
+  }
+  for(const x of out.texts) {
+    if(!onscreen(x)) continue;
+    if(!x.chrome&&intersection(x.bounds,{...SCREEN,bottom:110})>EPS) add('WARN','越过顶部外框区',[x],intersection(x.bounds,{...SCREEN,bottom:110})/area(x.bounds),'y<110，仅 drawChrome 归属豁免');
+    if(!x.caption&&intersection(x.bounds,{...SCREEN,top:890})>EPS) add('WARN','文字进入字幕区',[x],intersection(x.bounds,{...SCREEN,top:890})/area(x.bounds),'y>890，仅 drawCaptionBackground/drawCaption 归属豁免');
+    if(x.caption&&Math.abs(x.size-54)>EPS) add('FAIL','字幕字号',[x],Math.abs(x.size-54),`逻辑字号 ${f3(x.size)} px，要求 54px`);
+    if(!x.caption&&!x.chrome&&x.size<24-EPS) add('WARN','正文字号不足',[x],24-x.size,`逻辑字号 ${f3(x.size)} px <24px`);
+    const ratio=1-intersection(x.bounds,SCREEN)/area(x.bounds);
+    if(ratio>EPS) {
+      const [cx,cy,z]=camera||[WIDTH/2,HEIGHT/2,1],b=x.bounds;
+      const neutral={left:(b.left-WIDTH/2)/z+cx,right:(b.right-WIDTH/2)/z+cx,top:(b.top-HEIGHT/2)/z+cy,bottom:(b.bottom-HEIGHT/2)/z+cy};
+      const cameraOnly=!x.caption&&!x.chrome&&(z!==1||cx!==WIDTH/2||cy!==HEIGHT/2)&&intersection(neutral,SCREEN)>=area(neutral)-EPS;
+      add(cameraOnly?'EXPECTED':'WARN',cameraOnly?'镜头推拉出画':'文字出画待复核',[x],ratio,cameraOnly?'撤去镜头变换后框完全在画内':'可能是位移入场或裁切；不将单次屏外框直接判为失败');
+    }
+  }
+  // Targeted primitive/text checks; panels, background, rulers and corner lines are not text.
+  for(const p of out.primitives.filter(x=>['flyingIcon','touch'].includes(x.kind))) {
+    const targets=p.kind==='touch'?out.primitives.filter(x=>x.kind==='screen'):[...glyphs,...segs];
+    for(const x of targets) {
+      if(!onscreen(p)||!onscreen(x)) continue;
+      const ratio=intersection(p.bounds,x.bounds)/Math.min(area(p.bounds),area(x.bounds));
+      if(ratio<OVERLAP) continue;
+      const known=p.kind==='touch'&&sc.id==='s01'||p.kind==='flyingIcon'&&['s05','s06'].includes(sc.id);
+      add(known?'EXPECTED':'WARN',p.kind==='touch'?'触点圆圈经过屏幕':'飞行图标经过文字',[p,x],ratio,'按图元包围框登记；已知演示动作，未模拟逐像素遮挡');
+    }
+  }
+  return hits;
+}
+
+function episodeLabel(g) {
+  const s=g.sample;
+  return `${g.id} | lt=${f3(g.startLT)}–${f3(g.endLT)}s（${g.count}采样点，${g.occurrences}命中）| 代表 lt=${f3(s.lt)}s / t=${f3(s.t)}s | ${g.rule}\n    ${s.detail}；值=${f3(s.ratio??0)}\n    `+
+    s.items.map(x=>`${quote(x.text)} ${boxLabel(x.bounds)}${x.size!=null?` size=${f3(x.size)}px`:''} α=${f3(x.alpha??1)} | ${x.source}`).join('\n    ');
+}
+
+const hasFailures = (hard, groups, statuses) => hard.length>0 || groups.some(g=>g.severity==='FAIL') || statuses.some(s=>!s.pass);
+
+function fpsSelfTest() {
+  let n=selfTest(); const check=fn=>{fn();n++;};
+  check(()=>{
+    const s={a:{dur:2,chapter:0,caps:[[0,1.6,'甲']]},b:{dur:2,chapter:1,caps:[[0,1.6,'乙']]}},c=[['甲','A','一'],['乙','B','二']];
+    const film={duration:4,scenes:[{id:'a',start:0,d:2,chap:0},{id:'b',start:2,d:2,chap:1}],captions:[{t0:0,t1:1.6,text:'甲'},{t0:2,t1:3.6,text:'乙'}],chapters:[{n:0,t:0},{n:1,t:2}],chapterInfo:[{zh:'甲',en:'A',desc:'一'},{zh:'乙',en:'B',desc:'二'}]};
+    assert.equal(auditCompleteTimeline(film,s,c).issues.length,0);
+    assert.ok(auditCompleteTimeline({...film,scenes:film.scenes.slice(1)},s,c).issues.length);
+    assert.ok(auditCompleteTimeline({...film,duration:2},s,c).issues.some(x=>x.rule==='总时长'));
+    assert.ok(auditCompleteTimeline({...film,chapters:[]},s,c).issues.length);
+  });
+  check(()=>{
+    const h=new Harness(),g=h.canvas(WIDTH,HEIGHT,true).context;h.collectText=true;g.font='24px FCJK';g.textBaseline='top';
+    g.save();g.beginPath();g.rect(100,100,100,100);g.clip();g.fillText('裁切',0,0);assert.equal(g.texts.length,0);
+    g.fillText('边界',90,110);assert.equal(g.texts[0].bounds.left,100);g.restore();g.fillText('恢复',0,0);assert.equal(g.texts.length,2);
+    g.fillStyle='rgba(1,2,3,.1)';g.fillText('透明',0,0);assert.equal(g.texts.length,2);
+  });
+  check(()=>{
+    const box={left:100,right:200,top:200,bottom:250},item=(text,line,alpha=1)=>({text,kind:'text',method:'fillText',site:line,source:line,filmLine:line,bounds:box,rawBounds:box,alpha,size:30});
+    const out={texts:[item('甲','film.js:1'),item('乙','film.js:2')],primitives:[]};
+    assert.equal(geometryHits(out,{id:'x'},2).filter(x=>x.severity==='FAIL').length,1);
+    assert.ok(geometryHits(out,{id:'x',card:2},1).every(x=>x.severity==='EXPECTED'));
+    out.texts[0].alpha=.4;out.texts[1].alpha=.6;assert.ok(geometryHits(out,{id:'x'},2).some(x=>x.rule==='交叉淡化'));
+    out.texts=[{...item('正文','film.js:8'),bounds:{...box,top:900,bottom:930},rawBounds:{...box,top:900,bottom:930},size:20}];
+    assert.ok(geometryHits(out,{id:'x'},2).some(x=>x.rule==='文字进入字幕区'));
+    assert.ok(geometryHits(out,{id:'x'},2).some(x=>x.rule==='正文字号不足'));
+    out.texts[0].caption=true;assert.ok(geometryHits(out,{id:'x'},2).some(x=>x.rule==='字幕字号'));
+  });
+  check(()=>{
+    const h=new Harness(),g=h.canvas(WIDTH,HEIGHT,true).context;h.collectText=true;
+    const fake={seg7(){},seg7W:s=>s.length*62};installPrimitiveAudit(fake,h);fake.seg7(g,'12',100,200,100,'#fff');
+    assert.equal(h.primitives.length,1);assert.equal(h.primitives[0].kind,'seg7');assert.equal(h.primitives[0].bounds.top,150);
+    const ledger=new Ledger(),hit={severity:'WARN',rule:'x',items:[{identity:'x'}],ratio:1};
+    ledger.add(0,0,{id:'a',start:0},[hit]);ledger.add(1,.25,{id:'b',start:.25},[hit]);assert.equal(ledger.groups.length,2);
+  });
+  check(()=>{
+    const box={left:100,right:200,top:200,bottom:250};
+    const item=(kind,text)=>({kind,text,method:kind==='text'?'fillText':kind,site:text,source:'film.js:1',filmLine:'film.js:1',bounds:box,rawBounds:box,alpha:1,size:30});
+    const a=item('text','字'),icon=item('flyingIcon','icon');
+    for(const id of ['s05','s06']) assert.equal(geometryHits({texts:[a],primitives:[icon]},{id},3)[0].severity,'EXPECTED');
+    assert.equal(geometryHits({texts:[a],primitives:[icon]},{id:'s07'},3)[0].severity,'WARN');
+    const touch=item('touch','触点'),screen=item('screen','屏幕');
+    assert.equal(geometryHits({texts:[],primitives:[touch,screen]},{id:'s01'},3)[0].severity,'EXPECTED');
+    assert.equal(geometryHits({texts:[],primitives:[touch,screen]},{id:'s02'},3)[0].severity,'WARN');
+    const seg=item('seg7','数码管');seg.size=1;
+    assert.deepEqual(geometryHits({texts:[a],primitives:[seg]},{id:'s02'},3).map(x=>x.rule),['七段数码管包围框相交']);
+    const off={...a,bounds:{left:-10,right:100,top:200,bottom:250},rawBounds:{left:-10,right:100,top:200,bottom:250}};
+    assert.ok(geometryHits({texts:[off],primitives:[]},{id:'x'},3,[1000,540,1]).some(x=>x.rule==='镜头推拉出画'&&x.severity==='EXPECTED'));
+    const x={...a,alpha:.4},y={...a,text:'另一个字',alpha:.6,bounds:{...box,left:105,right:205},rawBounds:{...box,left:105,right:205}};
+    assert.ok(geometryHits({texts:[x,y],primitives:[]},{id:'x'},3).some(x=>x.rule==='文字压文字'&&x.severity==='FAIL'));
+    assert.ok(geometryHits({texts:[a,a],primitives:[]},{id:'x',card:2},1.95).some(x=>x.severity==='FAIL'));
+  });
+  check(()=>{
+    assert.equal(hasFailures([], [{severity:'WARN'},{severity:'EXPECTED'}], [{pass:true}]),false);
+    assert.equal(hasFailures([], [{severity:'FAIL'}], []),true);
+    assert.equal(hasFailures([{rule:'数值'}], [], []),true);
+    assert.equal(hasFailures([], [], [{pass:false}]),true);
+  });
+  return n;
+}
+
+// Every expectation comes from SCRIPT/CHAPTERS, including missing scenes. The
+// preceding template helpers remain exported for backwards-compatible self-tests.
 function main() {
-  const statuses = [], warnings = [];
-  const status = (name, pass, detail) => { statuses.push({ name, pass }); console.log(`[${pass ? '通过' : '失败'}] ${name}：${detail}`); };
-  const warn = (name, hits, detail) => { if (hits) warnings.push({ name, hits }); console.log(`[${hits ? '告警' : '通过'}] ${name}：${detail}`); };
-  console.log('窗帘单双电机与 spec 隔离 — 自动检查完整报告');
-  console.log(`Node ${process.version}；逻辑画布 ${WIDTH}×${HEIGHT}；采样间隔 ${STEP} s（包含 0 和片尾）`);
-  console.log('检查只读取源文件。FAIL 导致退出码 1；字号/页眉区/字幕区告警不算 FAIL。几何结果需真实浏览器复核。\n');
-  status('检查器自检', true, `${selfTest()} 组：原有8组 + 全量字幕/标记、子集与全量时间线/错误注入、字体与cue白名单、4K逻辑字号/strokeText、分区边界、双钩子归属与异常恢复、非法透明度记FAIL后继续审计`);
+  console.log('显示屏帧率评估 — 自动检查报告');
+  console.log(`Node ${process.version}；无浏览器 / 无依赖；坐标统一为 ${WIDTH}×${HEIGHT} 逻辑像素。`);
+  console.log('FAIL 与 WARN / EXPECTED 分开；只有 FAIL 使退出码为 1。所有时间同时给出幕内 lt 与全片 t。');
+  console.log('几何 FAIL 是估算字框规则命中，需结合源码复核；不宣称完成真实字体像素验收。');
+  console.log('\n模板适配：保留模拟 Canvas、数值检查、字体/字幕规则和确定性比较；补全中断留下的主入口。');
+  console.log('改为 SCRIPT 全量场景与 CHAPTERS 逐项核对；本期 cue 白名单；按真实钩子标记外框/字幕；');
+  console.log('新增源调用栈、幕内时间、矩形 clip、rgba 透明度、seg7 图元框、已知动画分类与前 10 条修正建议。');
+  const statuses = [], hard = [], ledger = new Ledger();
+  const status = (name, pass, detail) => { statuses.push({ name, pass }); console.log(`[${pass ? 'PASS' : 'FAIL'}] ${name}：${detail}`); };
+  status('检查器自检', true, `${fpsSelfTest()} 组通过（错误注入、全量时间线、clip、钩子归属、逻辑字号、已知效果分类、图元与区间聚合）`);
   const sources = FILES.map(name => {
     const text = fs.readFileSync(path.join(__dirname, name), 'utf8');
-    return { name, hash: sha(text), compiled: new vm.Script(text, { filename: name }) };
+    return { name, text, hash: sha(text), compiled: new vm.Script(text, { filename: name }) };
   });
-  console.log('\n本次输入 SHA-256（方便设计方定位版本）：');
-  for (const s of sources) console.log(`  ${s.name}  ${s.hash}`);
-  const fontFindings = new Map(), usedFamilies = new Set(); let fontChecks = 0;
-  const observeFont = event => {
-    fontChecks++; usedFamilies.add(event.family);
-    if (FONT_FAMILIES.has(event.family)) return;
-    const key = JSON.stringify([event.font, event.main]);
-    let finding = fontFindings.get(key);
-    if (!finding) { finding = { ...event, count: 0, times: new Set(), texts: new Set(), phases: new Set() }; fontFindings.set(key, finding); }
-    finding.count++; finding.times.add(event.t); finding.phases.add(event.phase);
-    if (event.text) finding.texts.add(event.text);
+  const htmlPath = path.join(__dirname, 'film.html'), htmlHash = sha(fs.readFileSync(htmlPath));
+  console.log('\n输入 SHA-256：');
+  for (const s of sources) console.log(`  ${s.name}: ${s.hash}`);
+  console.log(`  film.html: ${htmlHash}（只校验版本，不执行播放器）`);
+  const filmLines = sources.find(s => s.name === 'film.js').text.split('\n');
+  const scriptLines = sources.find(s => s.name === 'script.js').text.split('\n');
+  const sceneLine = id => {
+    const i = filmLines.findIndex(s => new RegExp(`^S\\(['"]${id}['"],`).test(s));
+    return i < 0 ? 'film.js（无对应注册）' : `film.js:${i+1}`;
+  };
+  const scriptLine = id => `script.js:${scriptLines.findIndex(s => s.trimStart().startsWith(id+':'))+1}`;
+  const hardIssue = (rule, detail, sc, lt = 0, text = '<无关联文字>', source) => {
+    const id = typeof sc === 'string' ? sc : sc?.id ?? '<全片>';
+    hard.push({ rule, detail, id, lt, text, source: source || sceneLine(id) });
+  };
+  const families = new Set(), fontFindings = new Map(); let fontChecks = 0;
+  const observeFont = e => {
+    fontChecks++; families.add(e.family);
+    if (FONT_FAMILIES.has(e.family)) return;
+    const key = JSON.stringify([e.font, e.site, e.phase]);
+    const old = fontFindings.get(key);
+    if (old) old.count++;
+    else fontFindings.set(key, { ...e, count: 1 });
   };
   const makeRuntime = () => load(sources, observeFont);
-  const loaded = makeRuntime(), { film, script, chapters } = loaded;
-  status('加载', true, 'engine.js → script.js → kit.js → film.js，共享一个 vm context；FILM.render 可调用');
-  const timeline = auditTimeline(film, script, chapters), subtitles = auditScript(script);
-  const delta = Math.abs(film.duration-timeline.expectedDuration);
-  status('时长', Number.isFinite(delta) && delta <= .05+EPS, `${f3(film.duration)} s；已注册幕 SCRIPT.dur 之和 ${f3(timeline.expectedDuration)} s；误差 ${f3(delta)} s，容许 ≤0.05 s`);
-  status('场景', !timeline.sceneIssues.length, `已注册 ${film.scenes.length} / ${timeline.ids.length} 幕；${film.scenes.map(s => s.id).join(' → ')}；id/dur/chapter/顺序/拼接起点差异 ${timeline.sceneIssues.length}`);
-  for (const issue of timeline.sceneIssues) console.log(`  ${issue}`);
-  console.log(`  未注册（不算 FAIL）：${timeline.missing.join(', ') || '无'}`);
-  status('字幕一致性', !timeline.captionIssues.length, `已注册幕期望 ${timeline.expectedCaps.length} 条，FILM ${film.captions.length} 条；文本和起止时间差异 ${timeline.captionIssues.length}`);
-  console.log('  时间按已注册幕顺序累计 SCRIPT.dur，不累计跳过的幕；逐项与 FilmKit.finish() 的三位小数导出值比较。');
-  for (const issue of timeline.captionIssues) console.log(`  ${issue}`);
-  status('全量字幕规则', !subtitles.issues.length, `SCRIPT 全部 ${subtitles.counts.scenes} 幕 / ${subtitles.counts.captions} 条；违规 ${subtitles.issues.length} 条次（含未注册幕）`);
-  console.log('  去掉 {}、[]、^ 后按 Unicode 码点计数：ASCII（含空格/标点）0.5，其余1；≤22；时长≥1.6s且≥字数/4.5；不重叠、幕内、标记配对且不嵌套。');
-  for (const e of subtitles.issues) console.log(`  ${e.id} #${e.index} 局部 ${e.start}–${e.end} s ${quote(e.text)}：${e.rule}；${e.detail}`);
-  const badCues = film.cues.filter(c => !CUE_TYPES.has(c.type)), cueCounts = Object.create(null);
-  for (const cue of film.cues) cueCounts[cue.type] = (cueCounts[cue.type] || 0)+1;
-  status('cue 类型', !badCues.length, `共 ${film.cues.length}；非法 ${badCues.length}；${JSON.stringify(cueCounts)}`);
-  console.log(`  白名单：${[...CUE_TYPES].join(' ')}`);
-  for (const cue of badCues) console.log(`  ${JSON.stringify(cue)}`);
-  status('章节', !timeline.chapterIssues.length, `已登记 ${film.chapters.length} / CHAPTERS ${chapters.length} 章；编号 ${film.chapters.map(c => c.n).join(' → ')}；编号严格递增（可跳号），时间从0严格递增，SCRIPT/FILM 场景章号不递减`);
-  for (const issue of timeline.chapterIssues) console.log(`  ${issue}`);
-  const sceneAt = t => film.scenes.find(s => t >= s.start && t < s.start+s.d)?.id || film.scenes.at(-1).id;
-  const duration = film.duration;
-  if (!Number.isFinite(duration) || duration <= 0 || duration > 3600) throw new Error(`无法扫描时长 ${duration}`);
-  const times = Array.from({ length: Math.floor(duration/STEP)+1 }, (_, i) => i*STEP);
-  if (times.at(-1) < duration) times.push(duration);
-  const overlap = new Intervals(), outside = new Intervals(), subtitle = new Intervals(), header = new Intervals(), small = new Intervals();
-  let layoutFrames = 0, visibleTexts = 0, strokeTexts = 0;
+  const runtime = makeRuntime(), { film, script, chapters } = runtime;
+  status('加载', true, 'engine → script → kit → film，共享 VM；输入源码未改写');
+  const timeline = auditCompleteTimeline(film, script, chapters), subtitles = auditScript(script);
+  for (const e of timeline.issues) hardIssue(e.rule, e.detail, e.id, e.lt, e.text, `${scriptLine(e.id)} ← ${sceneLine(e.id)}`);
+  for (const e of subtitles.issues) hardIssue(`字幕/${e.rule}`, e.detail, e.id, e.start ?? 0, e.text, `${scriptLine(e.id)} ← ${sceneLine(e.id)}`);
+  status('全量时间线', !timeline.issues.length, `${film.scenes.length}/${timeline.ids.length} 幕；${film.captions.length}/${timeline.expectedCaps.length} 句；${film.chapters.length}/${chapters.length} 章；总长 ${f3(film.duration)}s / SCRIPT ${f3(timeline.duration)}s`);
+  console.log('  幕数/顺序/时长/字幕文本与起止/章节编号与标题均来自 script.js；缺幕也 FAIL，无固定幕数或时长。');
+  console.log(`  幕序：${timeline.ids.join(' → ')}；章序：${film.chapters.map(c=>c.n).join(' → ')}`);
+  for (const s of film.scenes) console.log(`  ${s.id} chapter=${s.chap} t=${f3(s.start)}s dur=${f3(s.d)}s | ${sceneLine(s.id)}`);
+  status('全量字幕格式与阅读时长', !subtitles.issues.length, `${subtitles.counts.captions} 句，${subtitles.issues.length} 项违规；沿用模板：加权≤22字、≥max(1.6s,加权字数/4.5)、标记配对、不重叠、在幕内`);
+  const scAt = (rt, t) => [...rt.h.scenes.values()].find(s => t >= s.start && t < s.start+s.d) || [...rt.h.scenes.values()].at(-1);
+  let cueCount = 0; const cueCounts = {}, cueStart = hard.length, expectedCues = [];
+  for (const sc of runtime.h.scenes.values()) {
+    if (!Array.isArray(sc.cues)) { hardIssue('cue 数组', 'S() 应先执行函数型 cues，再交给引擎数组', sc); continue; }
+    for (const c of sc.cues) {
+      cueCount++; cueCounts[c.type] = (cueCounts[c.type] || 0)+1;
+      expectedCues.push({t:rounded(sc.start+c.t),type:c.type,v:c.v});
+      if (!CUE_TYPES.has(c.type) || !Number.isFinite(c.t) || c.t < 0 || c.t > sc.d || !Number.isFinite(c.v) || c.v < 0)
+        hardIssue('cue 类型/数值/范围', JSON.stringify(c), sc, c.t, `cue(${c.type})`);
+    }
+  }
+  expectedCues.sort((a,b)=>a.t-b.t);
+  if (JSON.stringify(expectedCues)!==JSON.stringify(film.cues)) hardIssue('cue 导出一致性', '注册时局部数组与 FILM.cues 不一致', '<全片>');
+  status('cue 白名单与数组求值', hard.length===cueStart, `${cueCount} 个；${JSON.stringify(cueCounts)}；允许 ${[...CUE_TYPES].join(' ')}`);
+  if (runtime.h.captionConfig?.font?.s!==54) hardIssue('字幕字号配置','captions.font.s 应为 54','<全片>',0,'字幕字体','film.js:18');
+  if (film.W!==WIDTH || film.H!==HEIGHT || !Number.isFinite(film.FPS) || film.FPS<=0) throw new Error('逻辑画布或 FPS 与检查坐标系不兼容');
+  const duration = timeline.duration;
+  if (!Number.isFinite(duration) || duration<=0 || duration>3600) throw new Error(`无法扫描总时长 ${duration}`);
+  const schedule = step => {
+    const ts = new Set([0,duration]);
+    const add = t => { if (t>=0 && t<=duration) ts.add(Number(t.toFixed(9))); };
+    for (let i=0;i*step<duration;i++) add(i*step);
+    for (const sc of runtime.h.scenes.values()) {
+      const events = [0,sc.d,...sc.cs,...sc.ce,...sc.cues.map(c=>c.t),...(sc.card!=null?[1.95]:[])];
+      for (const lt of events) for (const d of [-1/film.FPS,0,1/film.FPS]) add(sc.start+lt+d);
+    }
+    return [...ts].sort((a,b)=>a-b);
+  };
+  let layoutFrames=0, textCount=0, segCount=0;
+  const checksBySize=[];
   console.log('\n数值健康与几何扫描：');
-  console.log('globalAlpha 超出[0,1]仍记数值 FAIL，但按 Canvas 语义忽略该赋值、保留前值并继续扫描；非有限数/栈错误等仍中断该帧。');
-  for (const [w, h] of [[WIDTH, HEIGHT], [WIDTH*2, HEIGHT*2]]) {
-    let runtime = makeRuntime(), canvas = runtime.h.canvas(w, h, true), errors = [], checked = 0;
-    runtime.h.phase = `数值健康 ${w}×${h}`;
-    for (const [index, t] of times.entries()) {
+  console.log('1080p 按 FILM.FPS 全帧网格；4K 按0.25s网格；另加幕/字幕/cue/转场边界及前后1帧。非有限数、栈失衡或非法透明度均 FAIL。');
+  for (const [w,h,step] of [[WIDTH,HEIGHT,1/film.FPS],[WIDTH*2,HEIGHT*2,STEP]]) {
+    const times=schedule(step); let rt=makeRuntime(),canvas=rt.h.canvas(w,h,true),finished=0,errors=0;
+    const numeric = new Map();
+    for (const [i,t] of times.entries()) {
+      rt.h.phase=`扫描 ${w}×${h}`;
+      const sc=scAt(rt,t),lt=t-sc.start;
       try {
-        const out = runtime.h.frame(runtime.film, canvas, t, { text: w === WIDTH }); checked++;
-        if (out.numericIssues.length) {
-          const groups = new Map();
-          for (const issue of out.numericIssues) {
-            const key = issue.message + issue.source, old = groups.get(key);
-            if (old) { old.count++; old.min = Math.min(old.min, issue.value); old.max = Math.max(old.max, issue.value); }
-            else groups.set(key, { ...issue, count: 1, min: issue.value, max: issue.value });
-          }
-          errors.push({ t, scene: sceneAt(t), message: [...groups.values()].map(e => `${e.message} ${e.min}～${e.max}（${e.count}次）；${e.source || '无源码位置'}；无关联文字`).join('；') });
+        const out=rt.h.frame(rt.film,canvas,t,{text:w===WIDTH});finished++;
+        for(const e of out.numericIssues) {
+          errors++; const key=JSON.stringify([sc.id,e.message,e.source]);let a=numeric.get(key);
+          if(!a) {a={...e,sc,lt,count:0,min:Infinity,max:-Infinity};numeric.set(key,a);}
+          a.count++;a.min=Math.min(a.min,e.value);a.max=Math.max(a.max,e.value);a.lastLT=lt;
         }
-        if (w !== WIDTH) continue;
-        const fills = out.texts.filter(x => x.method === 'fillText');
-        layoutFrames++; visibleTexts += fills.length; strokeTexts += out.texts.length-fills.length;
-        overlap.add(index, t, overlapHits(fills), sceneAt(t));
-        outside.add(index, t, fills.filter(x => x.bounds.left < 0 || x.bounds.top < 0 || x.bounds.right > WIDTH || x.bounds.bottom > HEIGHT).map(x => ({
-          key: JSON.stringify([x.text, x.caption]), texts: [x.text], bounds: x.bounds, caption: x.caption,
-          ratio: 1-intersection(x.bounds, { left: 0, top: 0, right: WIDTH, bottom: HEIGHT })/area(x.bounds),
-        })), sceneAt(t));
-        subtitle.add(index, t, zoneHits(out.texts, { left: 0, right: WIDTH, top: 890, bottom: HEIGHT }, 'caption'), sceneAt(t));
-        header.add(index, t, zoneHits(out.texts, { left: 0, right: WIDTH, top: 0, bottom: 110 }, 'chrome'), sceneAt(t));
-        small.add(index, t, smallTextHits(out.texts), sceneAt(t));
-      } catch (error) {
-        errors.push({ t, scene: sceneAt(t), message: error.message });
-        // Resume with a clean VM so one bad frame cannot contaminate the remaining scan.
-        runtime = makeRuntime(); canvas = runtime.h.canvas(w, h, true); runtime.h.phase = `数值健康 ${w}×${h}`;
+        if(w===WIDTH) {
+          layoutFrames++;textCount+=out.texts.length;segCount+=out.primitives.filter(x=>x.kind==='seg7').length;
+          const camera=rt.context.camAt(sc.cam,lt);
+          ledger.add(i,t,sc,geometryHits(out,sc,lt,camera));
+        }
+      } catch(e) {
+        errors++;hardIssue('渲染/数值异常',`${w}×${h} t=${f3(t)}s；${e.stack}`,sc,lt);
+        if(w===WIDTH) ledger.add(i,t,sc,[]);
+        rt=makeRuntime();canvas=rt.h.canvas(w,h,true);
       }
     }
-    status(`数值健康 ${w}×${h}`, !errors.length, `${checked}/${times.length} 帧完成；异常/非有限参数/栈失衡 ${errors.length} 帧（含离屏画布）`);
-    for (const e of errors) console.log(`  ${f3(e.t)} s ${e.scene}：${e.message}`);
+    for(const a of numeric.values()) hardIssue(a.message,`${w}×${h}，lt=${f3(a.lt)}–${f3(a.lastLT)}s（非连续保证），${a.count} 次，范围 ${a.min}～${a.max}；按 Canvas 忽略非法赋值继续扫描`,a.sc,a.lt,'<数值属性>',a.source);
+    status(`数值健康 ${w}×${h}`,!errors,`${finished}/${times.length} 次完成，${errors} 次异常`);
+    checksBySize.push({w,h,frames:times.length});
   }
+  console.log(`  几何覆盖 ${layoutFrames} 帧；可见文字绘制 ${textCount} 次；七段数码管框 ${segCount} 次。`);
 
-  console.log('\n确定性：');
-  let seed = SEED;
-  const random = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0)/4294967296; };
-  const samples = Array.from({ length: SAMPLE_COUNT }, (_, i) => Number(((i+random())/SAMPLE_COUNT*duration).toFixed(6)));
-  console.log(`固定种子 0x${SEED.toString(16)}，${SAMPLE_COUNT} 个分层随机时刻；按方法名/参数/属性写入记录，数字四舍五入至 3 位小数。`);
-  console.log('离屏构建不混入主画布序列；drawImage/createPattern 引用离屏指令及真实 ImageData 字节的内容哈希，兼顾冷启动与缓存复用。');
-  console.log('Math.random、无参 Date/new Date、Date.now、performance.now 被禁止；没有用固定值掩盖非确定性。');
-  console.log('非法透明度写入也纳入指令比较；其数值FAIL单列在数值健康中，不阻断本项的渲染顺序比较。');
-  console.log(`采样秒数：${samples.join(', ')}`);
-  for (const [w, h] of [[WIDTH, HEIGHT], [WIDTH*2, HEIGHT*2]]) {
-    const runtime = makeRuntime(), canvas = runtime.h.canvas(w, h, true), baseline = new Map(), errors = [], numericErrors = new Map();
-    let renders = 0, comparisons = 0, matches = 0;
-    const draw = (rt, cv, t, label) => {
-      rt.h.phase = `确定性 ${w}×${h} ${label}`;
+  console.log('\n乱序渲染确定性：');
+  let seed=SEED;
+  const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
+  const samples=Array.from({length:SAMPLE_COUNT},(_,i)=>Number(((i+random())/SAMPLE_COUNT*duration).toFixed(6)));
+  console.log(`种子 0x${SEED.toString(16)}，${SAMPLE_COUNT} 个分层随机时刻；顺序基准 vs 倒序 / 固定打乱顺序 / 独立 VM 冷启动首帧。`);
+  console.log('比较主画布完整指令，数字保留3位小数；离屏使用指令和 ImageData 字节内容哈希。禁用 Math.random / 时钟。');
+  console.log(`采样 t：${samples.join(', ')}`);
+  for(const [w,h] of [[WIDTH,HEIGHT],[WIDTH*2,HEIGHT*2]]) {
+    const rt=makeRuntime(),canvas=rt.h.canvas(w,h,true),baseline=new Map();let comparisons=0,matches=0,renders=0;
+    const before=hard.length,numeric=new Map();
+    const draw=(r,cv,t,mode)=>{
+      r.h.phase=`确定性 ${w}×${h} ${mode}`;
       try {
-        const out = rt.h.frame(rt.film, cv, t, { trace: true }); renders++;
-        for (const issue of out.numericIssues) {
-          const key = label + issue.message + issue.source, old = numericErrors.get(key);
-          if (old) { old.times.add(t); old.count++; old.min = Math.min(old.min, issue.value); old.max = Math.max(old.max, issue.value); }
-          else numericErrors.set(key, { ...issue, label, times: new Set([t]), count: 1, min: issue.value, max: issue.value });
+        const out=r.h.frame(r.film,cv,t,{trace:true});renders++;
+        for(const e of out.numericIssues) {
+          const sc=scAt(r,t),key=JSON.stringify([sc.id,e.message,e.source]);
+          if(!numeric.has(key)) { numeric.set(key,true);hardIssue(e.message,`${mode} ${w}×${h}：${e.value}`,sc,t-sc.start,'<数值属性>',e.source); }
         }
         return out.commands;
-      }
-      catch (e) { errors.push(`${label} ${f3(t)} s：${e.message}`); return null; }
+      } catch(e) {const sc=scAt(r,t);hardIssue('确定性渲染异常',`${mode} ${w}×${h}；${e.stack}`,sc,t-sc.start);return null;}
     };
-    for (const t of samples) baseline.set(t, draw(runtime, canvas, t, '顺序'));
-    const compare = (t, commands, label) => {
-      comparisons++; const expectedCommands = baseline.get(t);
-      if (!commands || !expectedCommands) return;
-      const first = expectedCommands.findIndex((line, i) => line !== commands[i]);
-      if (first < 0 && expectedCommands.length === commands.length) { matches++; return; }
-      const at = first < 0 ? expectedCommands.length : first;
-      errors.push(`${label} ${f3(t)} s ${sceneAt(t)}：指令 #${at}，总数 ${expectedCommands.length}/${commands.length}\n    顺序：${expectedCommands[at] ?? '<结束>'}\n    实际：${commands[at] ?? '<结束>'}`);
+    for(const t of samples) baseline.set(t,draw(rt,canvas,t,'顺序'));
+    const compare=(t,actual,mode)=>{
+      comparisons++;const expected=baseline.get(t);if(!actual||!expected) return;
+      let i=expected.findIndex((s,j)=>s!==actual[j]);
+      if(i<0&&expected.length===actual.length) {matches++;return;}
+      if(i<0)i=expected.length;
+      const sc=scAt(rt,t);hardIssue('乱序渲染不确定',`${mode} ${w}×${h} 指令#${i}，长度${expected.length}/${actual.length}；期望${expected[i]??'<结束>'}；实际${actual[i]??'<结束>'}`,sc,t-sc.start);
     };
-    for (const t of samples.slice().reverse()) compare(t, draw(runtime, canvas, t, '倒序'), '倒序');
-    for (const t of samples) {
-      const single = makeRuntime(), cv = single.h.canvas(w, h, true);
-      compare(t, draw(single, cv, t, '独立 VM 首帧'), '独立 VM 首帧');
+    for(const t of samples.slice().reverse()) compare(t,draw(rt,canvas,t,'倒序'),'倒序');
+    const shuffled=samples.slice();
+    for(let i=shuffled.length-1;i>0;i--) {const j=Math.floor(random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+    for(const t of shuffled) compare(t,draw(rt,canvas,t,'打乱'),'打乱');
+    for(const t of samples) {const r=makeRuntime(),cv=r.h.canvas(w,h,true);compare(t,draw(r,cv,t,'冷启动'),'冷启动');}
+    status(`确定性 ${w}×${h}`,hard.length===before&&matches===SAMPLE_COUNT*3,`${renders} 次渲染，${matches}/${comparisons} 次比较一致`);
+  }
+  for(const e of fontFindings.values()) {
+    const sc=e.t==null?null:scAt(runtime,e.t);
+    hardIssue('字体族',`${quote(e.font)} 首族 ${quote(e.family)}，${e.phase}，${e.count} 次`,sc,e.t==null?0:e.t-sc.start,e.text||'<字体赋值/测宽>',e.source);
+  }
+  status('字体首族白名单',!fontFindings.size,`${fontChecks} 次检查，实际 ${[...families].sort().join(' / ')}；非法组合 ${fontFindings.size}`);
+  console.log(`  沿用模板检查首族，只允许 ${[...FONT_FAMILIES].join(' / ')}；后续系统回退族不算违规。无浏览器无法确认实际字形回退。`);
+  const changed=sources.filter(s=>sha(fs.readFileSync(path.join(__dirname,s.name),'utf8'))!==s.hash).map(s=>s.name);
+  if(sha(fs.readFileSync(htmlPath))!==htmlHash) changed.push('film.html');
+  for(const name of changed) hardIssue('输入版本变化',`${name} 在执行期间变化，请重跑`,'<全片>',0,name,name+':1');
+  status('输入版本一致性',!changed.length,`${sources.length+1-changed.length}/${sources.length+1} 份文件哈希不变`);
+
+  const bySeverity=s=>ledger.groups.filter(g=>g.severity===s);
+  const failures=bySeverity('FAIL'),warnings=bySeverity('WARN'),expected=bySeverity('EXPECTED');
+  const order=(a,b)=>a.start-b.start||a.rule.localeCompare(b.rule)||a.key.localeCompare(b.key);
+  const summary=(groups,label)=>{
+    console.log(`\n${label}：${groups.length} 个连续区间，${groups.reduce((n,g)=>n+g.occurrences,0)} 次命中。`);
+    const rules=[...new Set(groups.map(g=>g.rule))].sort();
+    if(!rules.length) console.log('  无。');
+    for(const rule of rules) {
+      const xs=groups.filter(g=>g.rule===rule).sort((a,b)=>(b.end-b.start)-(a.end-a.start)||order(a,b));
+      console.log(`  ${rule}：${xs.length} 个区间 / ${xs.reduce((n,g)=>n+g.occurrences,0)} 次；代表 ${Math.min(3,xs.length)} 例：`);
+      for(const g of xs.slice(0,3)) console.log('  '+episodeLabel(g));
     }
-    status(`确定性 ${w}×${h}`, !errors.length && !numericErrors.size && matches === SAMPLE_COUNT*2, `${renders}/${SAMPLE_COUNT*3} 次 render；${matches}/${comparisons} 组逐指令完全一致；差异/中断 ${errors.length}；数值异常 ${numericErrors.size} 组（数值非法仍使本项FAIL）`);
-    for (const error of errors) console.log(`  ${error}`);
-    for (const e of numericErrors.values()) {
-      const hitTimes = [...e.times].sort((a, b) => a-b);
-      console.log(`  ${e.label}：${f3(hitTimes[0])}–${f3(hitTimes.at(-1))} s 的 ${hitTimes.length} 个采样时刻（非连续区间），${e.message} ${e.min}～${e.max}（${e.count}次）；${e.source || '无源码位置'}；无关联文字`);
-    }
+  };
+  console.log(`\nFAIL 完整清单：硬规则 ${hard.length} 条，几何 ${failures.length} 个区间（不截断）。`);
+  let ordinal=0;
+  for(const e of hard) console.log(`F${++ordinal}. ${e.id} | lt=${Number.isFinite(e.lt)?f3(e.lt):e.lt}s | ${e.rule}\n    ${quote(e.text)} | ${e.source}\n    ${e.detail}`);
+  for(const g of failures.sort(order)) console.log(`F${++ordinal}. ${episodeLabel(g)}`);
+  if(!ordinal) console.log('  无。');
+  console.log('\n文字重点规则命中（排除 EXPECTED 后）：');
+  for(const rule of ['文字压文字','文字进入字幕区','越过顶部外框区','字幕字号','正文字号不足','七段数码管包围框相交']) {
+    const xs=[...failures,...warnings].filter(g=>g.rule===rule);
+    console.log(`  ${rule}：${xs.length} 个区间 / ${xs.reduce((n,g)=>n+g.occurrences,0)} 次。`);
   }
-
-  console.log('\n字体首族（所有实际执行的 ctx.font 赋值及文字绘制，含离屏/测宽/低透明度路径）：');
-  status('字体白名单', !fontFindings.size, `${fontChecks} 次检查；首族 ${[...usedFamilies].map(x => x ?? '<无法解析>').sort().join(', ')}；非法组合 ${fontFindings.size}`);
-  console.log(`  允许：${[...FONT_FAMILIES].join(' / ')}；只查首族，允许后续回退族。Canvas 初始默认值不算赋值，未设置字体就绘字仍会被检查。`);
-  for (const e of fontFindings.values()) {
-    const times = [...e.times].filter(x => x !== null).sort((a, b) => a-b);
-    console.log(`  ${quote(e.font)}；首族 ${quote(e.family)}；${e.main ? '主画布' : '离屏'}；${e.count} 次；${times.length ? `首末命中 ${f3(times[0])}–${f3(times.at(-1))} s（不表示连续）` : '加载阶段，无帧时刻'}${e.times.has(null) && times.length ? '，另含加载阶段' : ''}；文字 ${[...e.texts].map(quote).join('、') || '<仅赋值/测宽>'}`);
+  summary(warnings,'WARN 分类汇总（不影响退出码）');
+  summary(expected,'EXPECTED 已知动画效果（不计 FAIL / WARN）');
+  console.log(`  镜头推拉出画：${expected.filter(g=>g.rule==='镜头推拉出画').length} 区间；0 条时没有可列代表例。`);
+  console.log('\n按明确规则确认的前 10 条问题（按源码位置去重，持续性优先；全部附 film.js 调用行）：');
+  console.log('判断：字号下限是实际计算值，不依赖估算字宽，低于24px属确定的规则违规；短时弹出过程的小字保留WARN，不等同于静态排版错误。');
+  // Avoid filling the top ten with different times of the same code-level defect.
+  const priority=g=>({文字压文字:100,文字进入字幕区:90,越过顶部外框区:85,正文字号不足:70,字幕字号:110}[g.rule]||0)+(g.end-g.start);
+  const candidates=[...failures,...warnings].filter(g=>['文字压文字','文字进入字幕区','越过顶部外框区','正文字号不足','字幕字号'].includes(g.rule));
+  candidates.sort((a,b)=>priority(b)-priority(a)||order(a,b));
+  const seen=new Set(),top=[];
+  for(const g of candidates) {
+    const key=JSON.stringify([g.id,g.rule,g.items.map(x=>x.site).sort()]);
+    if(seen.has(key)) continue;seen.add(key);top.push(g);if(top.length===10)break;
   }
-  console.log('\n文字几何规则：');
-  console.log(`1920×1080；成功扫描 ${layoutFrames}/${times.length} 帧；有效 fillText ${visibleTexts} 次、strokeText ${strokeTexts} 次；globalAlpha < ${ALPHA} 或空白文本忽略。`);
-  console.log('宽度：ASCII 0.6×字号，CJK/其他非 ASCII 1.0×字号，加 (字符数−1)×letterSpacing；高度 1.2×字号。');
-  console.log('按 textAlign/textBaseline 放置，将四角经当前仿射矩阵变换后取屏幕 AABB；alphabetic 为基线−1em 至+0.2em。');
-  console.log('相交比例 = 交集面积 / 较小框面积；比例 ≥15% 才报告。只排除同一次调用自身，同名但不同调用照查。');
-  console.log('按无序文字对/相邻采样点聚合；中间一个采样点消失即分段。跨度=末次−首次命中，单点跨度为0，不推断两次采样之间持续可见。');
-  console.log('同一帧同一内容对只计一个区间采样点；“命中次数”保留全部调用对。按跨度降序、开始时间升序排序。');
-  console.log('重叠/出画延续上一期只检查 fillText；新增字号和分区检查 fillText/strokeText，避免把同一字的填充+描边新增为重叠 FAIL。');
-  console.log('以下时刻均为当前已注册样片的全局时间；全量字幕规则单独标注幕内局部时间。');
-  status('文字重叠', layoutFrames === times.length && !overlap.hits, `${overlap.hits} 对次，${overlap.frames} 帧，${overlap.groups.length} 个连续区间；以下前 ${Math.min(40, overlap.groups.length)} 条`);
-  for (const [i, g] of overlap.sorted().slice(0, 40).entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])} ↔ ${quote(g.texts[1])} | 相交 ${(g.minRatio*100).toFixed(1)}%–${(g.maxRatio*100).toFixed(1)}%`);
-  if (!overlap.groups.length) console.log('  无。');
-
-  console.log('\n超出画面边界的文字（全部区间）：');
-  status('文字越界', layoutFrames === times.length && !outside.hits, `${outside.hits} 次，${outside.frames} 帧，${outside.groups.length} 个区间；边界 [0,1920]×[0,1080]，不套用15%阈值`);
-  for (const [i, g] of outside.sorted().entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])}${g.caption ? ' [字幕]' : ''} | 越界 ${(g.minRatio*100).toFixed(1)}%–${(g.maxRatio*100).toFixed(1)}% | ${f3(g.sampleTime)} s 框 ${boxLabel(g.bounds)}`);
-  if (!outside.groups.length) console.log('  无。');
-
-  console.log('\n字号告警（全部区间，不算 FAIL）：');
-  warn('非字幕字号', small.hits, `${small.hits} 次，${small.frames} 帧，${small.groups.length} 个区间；换算至1920×1080后 <24 px`);
-  console.log('逻辑字号 = px字号 × 去除画布分辨率缩放后矩阵的最小奇异值（包含 maxWidth 压缩）；非等比缩放/斜切取最小倍率，旋转不改变字号。');
-  for (const [i, g] of small.sorted().entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])} | 字号 ${f3(g.minSize)}–${f3(g.maxSize)} px | 最小字号采样 ${f3(g.sampleTime)} s`);
-  if (!small.groups.length) console.log('  无。');
-
-  console.log('\n页眉区/字幕区告警（全部区间，不算 FAIL）：');
-  console.log('身份由 FilmKit.create 的 drawChrome/drawCaption 实际钩子调用期间标记；屏幕内保留区任意正面积进入即报告，即使钩子当时没有画字。');
-  for (const [name, intervals, rule] of [['页眉区', header, 'y < 110，仅 drawChrome 文字豁免'], ['字幕区', subtitle, 'y > 890，仅 drawCaption 文字豁免']]) {
-    warn(name, intervals.hits, `${intervals.hits} 次，${intervals.frames} 帧，${intervals.groups.length} 个区间；${rule}`);
-    for (const [i, g] of intervals.sorted().entries()) console.log(`${i+1}. ${intervalLabel(g)}\n   ${quote(g.texts[0])} | 入区 ${(g.minRatio*100).toFixed(1)}%–${(g.maxRatio*100).toFixed(1)}% | ${f3(g.sampleTime)} s 框 ${boxLabel(g.bounds)}`);
-    if (!intervals.groups.length) console.log('  无。');
-  }
-  if (layoutFrames !== times.length) console.log('  扫描存在失败帧，字号/分区覆盖不完整；对应数值健康/文字几何项已记 FAIL。');
-
-  const changed = sources.filter(s => sha(fs.readFileSync(path.join(__dirname, s.name), 'utf8')) !== s.hash);
-  status('输入版本一致性', !changed.length, `${sources.length-changed.length}/${sources.length} 份输入在检查期间未变；本报告使用开头哈希标识的源码快照`);
-  for (const s of changed) console.log(`  检查期间 ${s.name} 已变化，请针对当前源码重跑。`);
-
-  console.log('\n误报风险与覆盖限制：');
-  console.log('1. 字号估宽没有读取 fonts.css 的真实字形度量、字距调整和字形墨迹；font weight/回退字体/中英标点会改变实际宽高，也会改变字幕换行。');
-  console.log('2. 旋转后的文字使用轴对齐外接框，空白角落也算面积；1.2em 高度和基线位置是估算，邻近文字可能被多算或漏算。');
-  console.log('3. clip/Path2D/遮罩仅记录指令，未执行像素裁切；后绘不透明底板、遮挡、擦除、合成模式和滤镜未做可见性消除。转场/屏幕裁切/故意交叉淡化会产生告警。');
-  console.log('4. 仅按 globalAlpha 过滤，fillStyle/strokeStyle 的 rgba 透明度不相乘；描边按相同字框估算、不额外膨胀线宽；阴影、离屏/图片中的字和字形缺失不纳入文字几何框。离屏字体赋值仍查白名单。');
-  console.log('5. 字幕富文本按每次 fillText 分段；逐字动画可能只显示单个字。相同文字的多个位置会按内容合并到同一连续区间。');
-  console.log('6. y<110/y>890 只检查屏幕内的预留区，不要求与当前页眉/字幕真正相交；完全在屏幕外的字由出画规则报告。字号与分区沿用0.15透明度门槛；小字号不因处于画外而豁免。');
-  console.log('7. 0.25s 网格可能漏掉更短的瞬时冲突；确定性是两种尺寸各120个时间点的抽检、3位小数指令一致性，不是数学纯函数证明或像素一致性证明。');
-  console.log('8. 不同尺寸分别验证，未交替切换尺寸/穿插 drawCover；离屏哈希按构建指令保守判断，不模拟复杂像素覆盖，冗余的重复离屏绘制可能触发差异。');
-  console.log('9. 此假画布对未知方法不提供静默 no-op；当前脚本用到的 API 已实现。Canvas 的浏览器容错、抗锯齿、裁切等语义仍需沙箱外关键帧验收。');
-  console.log('10. 字体/几何为实际执行路径审计，不静态推断未注册场景和未采样分支；未提供自定义 drawCaption 时，引擎默认字幕无法由该钩子标记，按普通文字保守报告。当前片使用自定义钩子。');
-  console.log('11. 时间线逐项按引擎毫秒导出精度比较；总时长容差0.05s，边界计算仅用1e-9抵消浮点误差。章节范围取 CHAPTERS.length，允许跳过尚未注册章节，保留章节时间从0严格递增检查。');
-  console.log('12. 全注册时仍用同一逻辑：FILM顺序须为SCRIPT键序的子序列；每幕源时长累计生成字幕期望，集合差变空即可；不存在样片id、固定幕数、固定字幕数或固定总时长分支。');
-  console.log('13. 非法 globalAlpha 不放宽[0,1]阈值，仍使报告FAIL；忽略赋值仅模拟浏览器的继续执行语义，以保留后续文字/确定性覆盖，不改源代码，也不将数值问题隐藏为通过。');
-  const failures = statuses.filter(s => !s.pass);
-  console.log(`\n总结果：[${failures.length ? '失败' : '通过'}] ${statuses.length-failures.length}/${statuses.length} 项硬检查通过，${failures.length} 项失败${failures.length ? '（'+failures.map(s => s.name).join('、')+'）' : ''}；${warnings.length} 类告警${warnings.length ? '（'+warnings.map(s => s.name).join('、')+'）' : ''}不影响退出码。退出码 ${failures.length ? 1 : 0}。`);
-  process.exitCode = failures.length ? 1 : 0;
+  top.forEach((g,i)=>console.log(`${i+1}. [${g.severity}] ${episodeLabel(g)}\n    判断：${g.rule==='正文字号不足'?(g.end-g.start>=.5?'持续低于24px，优先修正。':'仅短时低于24px；结合源码中的缩放入场评估是否调整。'):'按规则命中；文字框仍需考虑真实字形度量。'}`));
+  if(top.length<10)console.log(`  当前只有 ${top.length} 个独立候选，不虚构补足 10 条。`);
+  console.log('\nWARN 完整明细（便于按幕定位）：');
+  warnings.sort(order).forEach((g,i)=>console.log(`W${i+1}. ${episodeLabel(g)}`));
+  if(!warnings.length)console.log('  无。');
+  console.log('\n检查口径与限制：');
+  console.log('1. 文字宽度 ASCII=0.6em，非ASCII=1em，另加 letterSpacing；高度1.2em。真实字体度量、字距、抗锯齿/阴影不模拟。旋转取AABB，可能高估相交。');
+  console.log('2. 字号=当前仿射变换最小奇异值×px字号，扣除输出分辨率倍率，包含 maxWidth 压缩。字幕应54px；正文<24px记WARN；drawChrome不套正文门槛。缩放入场会出现短时小字，需结合持续时间。');
+  console.log('3. 透明度=globalAlpha×rgba颜色alpha，低于0.15忽略几何；字体/数值检查不忽略。矩形clip精确到AABB，圆角/Path2D只保守包围，不处理后绘不透明物体遮挡。');
+  console.log('4. fillText框相交≥较小框15%为文字压文字FAIL；strokeText参与分区与字号，不与同一次描边填充重复比较。文字/数码管框相交记WARN，不把多边形冒充font。');
+  console.log('5. y<110仅实际drawChrome钩子允许；y>890仅实际drawCaptionBackground/drawCaption钩子允许。分区只检查文字的屏幕内正面积。四角取景器括线、背景/面板不是文字，未纳入文字分区。');
+  console.log('6. card存在且lt<1.95的几何命中单列章节转场色带；相邻调用、同位置、互补alpha的文字对单列交叉淡化；撤销镜头后框完全在画内的出画单列镜头推拉。');
+  console.log('7. 仅追踪flyIcon内icon包围框经过字框（s05/s06），以及touch圆圈经过开发板屏幕（s01）；已知动作单列EXPECTED。并非通用文字/任意图元遮挡检测器。');
+  console.log('8. seg7已登记数字单元外接框，包含-0.08斜切；不检查其字体或字号；不模拟段间空洞/辉光。出画文字仅在仍有部分屏内可见时记录。');
+  console.log('9. 连续区间按幕、规则、源码完整调用栈和同一调用的序号聚合，动态数字不会拆成数百条；代表点取相交/违规程度最大者。次数是命中次数，区间跨度不是精确持续时长。');
+  console.log('10. 主画布覆盖输出帧时间点及事件邻帧；不证明任意实数时刻。确定性为两尺寸各120时刻抽检，不是像素一致性证明；没有交替尺寸、插入封面或音频试听检查。');
+  console.log('11. 源文件加载超时10s；当前渲染没有独立超时隔离。未知Canvas API直接报错，不静默跳过；只输出报告，由作者修改画面。');
+  const failed=hasFailures(hard,ledger.groups,statuses);
+  console.log(`\n最终结果：[${failed?'FAIL':'PASS'}]；硬规则 ${hard.length} 条；几何 FAIL ${failures.length} 区间；WARN ${warnings.length} 区间；EXPECTED ${expected.length} 区间；退出码 ${failed?1:0}。`);
+  process.exitCode=failed?1:0;
+  return {hard,failures,warnings,expected,top,statuses,checksBySize};
 }
-if (require.main === module) {
-  try { main(); }
-  catch (error) { console.log(`\n[失败] 检查器/加载中止：${error.stack}`); process.exitCode = 1; }
+if(require.main===module) {
+  try {main();}
+  catch(error) {console.log(`\n[FAIL] 检查器/加载中止：${error.stack}\n退出码 1；报告覆盖不完整。`);process.exitCode=1;}
 }
-module.exports = { Harness, load, AuditPath, overlapHits, Intervals, selfTest, auditTimeline, auditScript,
-  firstFontFamily, logicalFontSize, markerError, weightedLength, zoneHits, smallTextHits };
+module.exports={Harness,load,AuditPath,overlapHits,Intervals,selfTest,auditTimeline,auditCompleteTimeline,auditScript,
+  firstFontFamily,logicalFontSize,markerError,weightedLength,zoneHits,smallTextHits,geometryHits,Ledger,fpsSelfTest,main};
+

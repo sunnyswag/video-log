@@ -364,7 +364,7 @@ function phone(g, x, y, s, lt, o = {}) {
       const rec = Math.floor(lt * 2) % 2 === 0;
       dot(g, -56, -166, 9, C.red, rec ? 1 : .3);
       seg7(g, '240', 70, -166, 30, C.amber, { a: 'right', glow: false });
-      text(g, '×8', 0, 152, { f: 'mono', s: 28, w: 700, c: C.amber });
+      text(g, '×8', 0, 152, { f: 'mono', s: 32, w: 700, c: C.amber });
       dot(g, 0, 166 + 0, 0, C.ink);
     }
     g.restore();
