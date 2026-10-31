@@ -231,7 +231,7 @@ function flipBook(g, x, y, w, h, page, o = {}) {
   if (f > 0 && f < 1) {
     g.save(); g.translate(x0, y0); g.transform(cs, Math.sin(th) * .18, 0, 1, 0, 0);
     if (cs > 0) { g.save(); shadow(g, .35, 24, 8); rr(g, 0, 0, w, h, 6); g.fillStyle = C.paper; g.fill(); g.restore(); cardFrame(g, pi, 10, 10, w - 20, h - 20, { sc: o.sc, num: false }); }
-    else { rr(g, 0, 0, w, h, 6); g.fillStyle = '#E9DCC3'; g.fill(); }
+    else if (cs > -.45) { g.globalAlpha *= 1 + cs / .45; rr(g, 0, 0, w, h, 6); g.fillStyle = '#E9DCC3'; g.fill(); }
     const sh = g.createLinearGradient(0, 0, w, 0); sh.addColorStop(0, rgba('#000000', .25 * Math.sin(th))); sh.addColorStop(1, rgba('#000000', 0));
     g.fillStyle = sh; g.fillRect(0, 0, w, h);
     g.restore();

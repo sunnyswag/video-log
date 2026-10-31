@@ -326,7 +326,7 @@ S('s03', {
       for (let i = 0; i <= 25; i++) path(g, [[rx + i * rw / 25, ry], [rx + i * rw / 25, ry + (i % 5 ? 12 : 22)]], { c: rgba(C.paper, .6), w: 2.5 });
       const mk = rx + (frac(page / 25)) * rw;
       arrowHead(g, mk, ry - 4, Math.PI / 2, C.amber, 18);
-      text(g, '每帧 40ms', rx + rw / 2, ry + 56, { s: 26, w: 700, c: rgba(C.paper, .8) });
+      text(g, '每帧 40ms', rx + rw / 2, ry + 56, { s: 30, w: 700, c: rgba(C.paper, .8) });
     }, { al: fa(lt, 1.6, .5) });
     // 三个参数
     const nums = [['2 秒', '时长', 6.4], ['25 帧/秒', '帧率', 7.3], ['50 帧', '2 × 25', 8.2]];
@@ -343,7 +343,7 @@ S('s03', {
       const al = fa(lt, 10.2, .5);
       text(g, '一帧 = 一张图', 1360, 330, { s: 34, w: 900, c: C.paper, al });
       filmStrip(g, 920, 390, 1000, 200, { foff: (lt - 10.2) * 60 + 1200 * (1 - eo(seg(lt, 10.2, 11))), al, frame: (g2, idx, fx, fy, fw, fh) => cardFrame(g2, idx, fx, fy, fw, fh) });
-      text(g, '00 → 49', 1420, 640, { f: 'mono', s: 30, w: 700, c: C.amber, al });
+      text(g, '00 → 49', 1420, 640, { f: 'mono', s: 30, w: 700, c: C.amber, al: fa(lt, 10.9) });
     }
   },
 });
@@ -454,7 +454,7 @@ S('s05', {
 S('s06', {
   demo: demoWin(11.6, 16),
   cues: [[.2, 'tick'], [.7, 'tick'], [1.2, 'draw'], [2.6, 'blip', .5], [2.8, 'blip', .5], [3.0, 'blip', .5], [3.3, 'pop'], [4.4, 'pop'], [8.4, 'pop', .6], [11.8, 'whoosh'], [13.0, 'stamp', .4]],
-  cam: [[0, 960, 540, 1], [11.6, 960, 540, 1], [13.2, 900, 560, 2.1], [16, 900, 560, 2.15]],
+  cam: [[0, 960, 540, 1], [11.6, 960, 540, 1], [13.2, 900, 650, 1.8], [16, 900, 650, 1.85]],
   draw(g, lt) {
     const G = s1Chart(g, 1, seg(lt, 1.2, 3.8), { breakAl: fa(lt, .4), labelBAl: fa(lt, .4) });
     // 上一幕的读数淡出
@@ -534,42 +534,42 @@ S('s07', {
 const S08X = [300, 680, 1060, 1440];
 S('s08', {
   card: 4,
-  cues: [[0, 'leader'], [2.2, 'pop', .6], [6.3, 'pop'], [7.2, 'success', .6], [10.1, 'click'], [10.4, 'whoosh'], [10.6, 'tick', .5], [11.2, 'tick', .5], [11.8, 'success', .5]],
+  cues: [[0, 'leader'], [2.2, 'pop', .6], [6.1, 'pop'], [7.0, 'success', .6], [9.7, 'click'], [10.0, 'whoosh'], [10.2, 'tick', .5], [10.8, 'tick', .5], [11.4, 'success', .5]],
   draw(g, lt) {
     S08X.forEach((x, i) => {
       const p = seg(lt, 1.7 + i * .12, 2.2 + i * .12);
-      const tapped = i === 2 && lt > 10.1;
+      const tapped = i === 2 && lt > 9.7;
       at(g, x, 300, pop(p), () => {
-        sceneCard(g, 0, 0, 300, 196, i + 1, { glow: tapped ? Math.max(0, 1 - (lt - 10.1) * 1.5) : 0 });
+        sceneCard(g, 0, 0, 300, 196, i + 1, { glow: tapped ? Math.max(0, 1 - (lt - 9.7) * 1.5) : 0 });
         // 只贴一格封面（帧 00）
-        if (!tapped || lt < 10.3) {
+        if (!tapped || lt < 9.9) {
           filmStrip(g, 40, 64, 130, 96, { shadow: false, frame: (g2, idx, fx, fy, fw, fh) => cardFrame(g2, 0, fx, fy, fw, fh, { sc: i + 1, num: false }), fw: 52 });
           text(g, '封面 00', 105, 186, { s: 24, w: 700, c: C.dim, al: fa(lt, 2.4) });
         }
       });
     });
     // 第一帧 = 封面；首末帧相同
-    const pc = win(lt, 6, 9.9, .4, .4);
+    const pc = win(lt, 5.8, 9.5, .4, .4);
     if (pc > 0) {
       g.save(); g.globalAlpha *= pc;
       const y = 600;
       for (const [x, idx, lab] of [[560, 0, '第一帧 00'], [820, 49, '最后一帧 49']]) {
-        at(g, x, y, ap(lt, idx ? 6.5 : 6.2), () => { g.save(); shadow(g, .45, 18, 6); g.fillStyle = C.paper; g.fillRect(-100, -74, 200, 148); g.restore(); cardFrame(g, idx, -92, -66, 184, 132, { sc: 2 }); });
+        at(g, x, y, ap(lt, idx ? 6.3 : 6.0), () => { g.save(); shadow(g, .45, 18, 6); g.fillStyle = C.paper; g.fillRect(-100, -74, 200, 148); g.restore(); cardFrame(g, idx, -92, -66, 184, 132, { sc: 2 }); });
         text(g, lab, x, y + 110, { s: 26, w: 700, c: C.paper });
       }
       text(g, '=', 690, y, { f: 'disp', s: 70, w: 900, c: C.amber });
-      badge(g, 690, y - 110, 26, C.teal, 'check', seg(lt, 7.2, 7.6));
+      badge(g, 690, y - 110, 26, C.teal, 'check', seg(lt, 7.0, 7.4));
       g.restore();
     }
     // 点击才加载：整条 50 帧抽出来
-    if (lt > 10.1) {
-      finger(g, 1100, 330, lt - 10.1);
-      const k = eo(seg(lt, 10.3, 11.3));
-      filmStrip(g, 900, 520, 940 * k, 200, { foff: (lt - 10.3) * 40, frame: (g2, idx, fx, fy, fw, fh) => cardFrame(g2, idx, fx, fy, fw, fh, { sc: 3 }) });
-      tag(g, '50 帧', 1060, 450, C.amber, seg(lt, 11.0, 11.4), { tc: C.ink, fs: 28 });
-      stopwatch(g, 1745, 300, 70, clamp((lt - 10.3) / 1.4), lt > 11.6 ? '约 100ms' : '', C.amber);
+    if (lt > 9.7) {
+      finger(g, 1100, 330, lt - 9.7);
+      const k = eo(seg(lt, 9.9, 10.9));
+      filmStrip(g, 900, 520, 940 * k, 200, { foff: (lt - 9.9) * 40, frame: (g2, idx, fx, fy, fw, fh) => cardFrame(g2, idx, fx, fy, fw, fh, { sc: 3 }) });
+      tag(g, '50 帧', 1060, 450, C.amber, seg(lt, 10.6, 11.0), { tc: C.ink, fs: 28 });
+      stopwatch(g, 1745, 300, 70, clamp((lt - 9.9) / 1.4), lt > 11.2 ? '约 100ms' : '', C.amber);
     }
-    if (lt > 13.4) tag(g, '按需占用', 690, 600, C.teal, seg(lt, 13.5, 13.9), { fs: 34 });
+    if (lt > 12.9) tag(g, '按需占用', 690, 600, C.teal, seg(lt, 13.0, 13.4), { fs: 34 });
   },
 });
 
@@ -657,7 +657,7 @@ S('s10', {
       cardFrame(g, fi * 5, -200, -140, 400, 280, { sc: 3 });
       text(g, '帧 ' + String(Math.min(49, fi * 5)).padStart(2, '0'), 0, 196, { f: 'mono', s: 28, w: 700, c: C.paper });
     });
-    if (lt > 12) tag(g, '25 帧/秒', 1490, 560, C.teal, seg(lt, 12.2, 12.6), { fs: 34 });
+    if (lt > 12) tag(g, '25 帧/秒', 1490, 600, C.teal, seg(lt, 12.2, 12.6), { fs: 34 });
     // 时间轴
     const ty = 700, tx = 110;
     text(g, '40ms', tx + SLW / 2, ty - 80, { f: 'mono', s: 26, w: 700, c: C.paper, al: fa(lt, .6) });
@@ -701,9 +701,9 @@ S('s11', {
     if (lt > 4.6) finger(g, 870, 720, lt - 4.6);
     // 局部刷新：信号飞向旧卡片
     for (const i of [0, 1]) {
-      const p = seg(lt, 5.0 + i * .2, 6.2 + i * .2);
+      const p = seg(lt, 5.0 + i * .35, 6.2 + i * .2);
       if (p > 0 && p < 1) {
-        const a = [960, 690], b = [960, rows[i] + 12], u = eio(p), x = lerp(a[0], b[0], u) + Math.sin(u * Math.PI) * 120, y = lerp(a[1], b[1], u);
+        const a = [960, 690], b = [960, rows[i] + 12], u = eio(p), x = lerp(a[0], b[0], u) + Math.sin(u * Math.PI) * (i ? -150 : 150), y = lerp(a[1], b[1], u);
         at(g, x, y, 1, () => { card(g, -80, -24, 160, 48, { r: 24, fill: C.blue, sa: .4 }); text(g, '局部刷新', 0, 1, { s: 24, w: 900, c: '#fff' }); });
       }
     }
@@ -790,7 +790,7 @@ S('s13', {
         g.save(); g.globalAlpha *= 1 - seg(lt, SWEEP + .8, SWEEP + 1.2);
         rr(g, bx - 16, y + 70, 32, h - 90, 12); g.fillStyle = C.amber; g.fill();
         for (let i = 0; i < 8; i++) path(g, [[bx + 16, y + 100 + i * 64], [bx + 60, y + 120 + i * 64]], { c: C.amber, w: 5 });
-        tag(g, 'GC', bx, y + 50, C.red, 1, { f: 'disp', fs: 32 });
+        tag(g, 'GC', bx, y + h + 34, C.red, 1, { f: 'disp', fs: 32 });
         g.restore();
       }
       // 右侧小锯齿：块数 → 内存
@@ -832,7 +832,7 @@ S('s14', {
     filmStrip(g, 0, 700, W, 150, { foff: (lt * 1.1 / 1.1) * 150 * .95, frame: (g2, i, fx, fy, fw, fh) => cardFrame(g2, ((i % 10) + 10) % 10 * 5, fx, fy, fw, fh) });
     if (k >= 0 && f < .5) { // 当前帧升入画布
       const u = eo(clamp(f / .45));
-      at(g, 960, lerp(775, 600, u), lerp(1, .6, u), () => cardFrame(g, Math.min(49, idx), -80, -55, 160, 110), { al: 1 - u });
+      at(g, 960, lerp(775, 600, u), lerp(1, .6, u), () => cardFrame(g, Math.min(49, idx), -80, -55, 160, 110, { num: false }), { al: 1 - u });
     }
     // 代码片
     at(g, 330, 420, ap(lt, .5), () => {
@@ -879,11 +879,11 @@ S('s15', {
 const TRIO = [['s1', 90], ['s2', 690], ['s3', 1290]];
 const TRIO_END = { s1: '1.2 GB → 1.1 GB', s2: '310.2 → 229.1 MB', s3: '298.8 → 253.5 MB' }, TRIO_CPU = { s1: 'App 7%', s2: 'App 6%', s3: 'App 6%' };
 S('s16', {
-  cues: [[.4, 'draw'], [1.4, 'draw'], [2.4, 'draw'], [4.6, 'blip'], [5.2, 'success', .6], [8.8, 'pop', .6], [9.1, 'pop', .6], [9.4, 'pop', .6], [12.6, 'success']],
+  cues: [[.3, 'draw'], [1.1, 'draw'], [1.9, 'draw'], [4.6, 'blip'], [5.2, 'success', .6], [8.8, 'pop', .6], [9.1, 'pop', .6], [9.4, 'pop', .6], [12.6, 'success']],
   draw(g, lt) {
     TRIO.forEach(([key, x], i) => {
-      const b = { x, y: 150, w: 560, h: 560 }, t0 = .4 + i * 1.0;
-      const G = memChart(g, b, { scheme: key, max: 1200, ticks: [0, 400, 800, 1200], pA: seg(lt, t0, t0 + 1.0), pB: seg(lt, t0 + 1.0, t0 + 1.5), title: ['方案一', '方案二', '方案三'][i], legend: false, labels: ['操作中', '6～7 分钟后'], segX: [[0, .52], [.6, 1]], padL: 96, padR: 30, al: ap(lt, t0 - .3, .4) });
+      const b = { x, y: 150, w: 560, h: 560 }, t0 = .3 + i * .8;
+      const G = memChart(g, b, { scheme: key, max: 1200, ticks: [0, 400, 800, 1200], pA: seg(lt, t0, t0 + .9), pB: seg(lt, t0 + .9, t0 + 1.3), title: ['方案一', '方案二', '方案三'][i], legend: false, labels: ['操作中', '6～7 分钟后'], segX: [[0, .52], [.6, 1]], padL: 96, padR: 30, al: ap(lt, t0 - .3, .4) });
       dot(g, x + 160, 192, 9, SCHEME[key].col);
       text(g, TRIO_END[key], x + 280, 755, { f: 'mono', s: 28, w: 700, c: SCHEME[key].col === C.amber ? C.amber : SCHEME[key].col === C.red ? '#F07A6C' : '#5CC8BE', al: fa(lt, t0 + 1.4) });
       if (lt > 4.4) { // GC 一行高亮
@@ -948,7 +948,7 @@ S('s17', {
 /* =====================================================================
  * 6 总结
  * ===================================================================== */
-const LESSONS = [['一', '自己管生命周期', 'proj', 2.0], ['二', '缓存选粒度：复用像素', 'pix', 7.2], ['三', '只播一个，一块画布', 'one', 12.6]];
+const LESSONS = [['1', '自己管生命周期', 'proj', 2.0], ['2', '缓存选粒度：复用像素', 'pix', 7.2], ['3', '只播一个，一块画布', 'one', 12.6]];
 S('s18', {
   card: 6,
   cues: [[0, 'leader'], [1.8, 'whoosh', .6], [2.2, 'latch'], [7.4, 'latch'], [12.8, 'latch'], [16.5, 'success', .7]],
@@ -962,7 +962,7 @@ S('s18', {
       if (on <= 0) return;
       g.save(); g.globalAlpha *= eo(on);
       if (on < 1) { g.fillStyle = rgba(C.amber, .5 * (1 - on)); g.fillRect(x - fw / 2, y - fh / 2, fw, fh); }
-      text(g, n, x - fw / 2 + 30, y - fh / 2 + 44, { s: 40, w: 900, c: C.amber, a: 'left' });
+      text(g, n, x - fw / 2 + 30, y - fh / 2 + 48, { f: 'disp', s: 56, w: 900, c: C.amber, a: 'left' });
       if (kind === 'proj') projector(g, x - 40, y - 10, .62, lt, { beamLen: 160, beamH: 90, body: '#5A4A3D' });
       if (kind === 'pix') pixelCanvas(g, x - 110, y - 100, 220, 150, Math.floor(lt * 25) % 50, { cols: 16, rows: 11 });
       if (kind === 'one') { for (let j = 0; j < 3; j++) { const yy = y - 90 + j * 60, lit = j === Math.floor(lt * 1.5) % 3; path(g, [[x - 150, yy], [x + 40, y - 30]], { c: lit ? C.amber : rgba(C.ink, .25), w: lit ? 6 : 3 }); dot(g, x - 160, yy, 14, lit ? C.amber : C.ink2); } rr(g, x + 40, y - 70, 110, 80, 6); g.fillStyle = C.ink; g.fill(); }
@@ -997,7 +997,7 @@ function drawCover(g, frame) {
   path(g, st, { c: C.red, w: 10 });
   path(g, [[b.x + 440, b.y + 300], [b.x + 740, b.y + 300]], { c: C.teal, w: 10 });
   arrow(g, [[b.x + 410, b.y + 110], [b.x + 520, b.y + 250]], { c: C.ink2, w: 5, hs: 22 });
-  text(g, '1.2 GB', b.x + 300, b.y + 56, { f: 'mono', s: 44, w: 700, c: C.red });
+  text(g, '1.2 GB', b.x + 240, b.y + 56, { f: 'mono', s: 44, w: 700, c: C.red });
   text(g, '一条平线', b.x + 590, b.y + 360, { s: 44, w: 900, c: C.teal });
   text(g, '1.2GB →', 90, 300, { f: 'disp', s: 150, w: 900, c: C.paper, a: 'left' });
   text(g, '一条平线', 90, 480, { s: 150, w: 900, c: C.amber, a: 'left' });
