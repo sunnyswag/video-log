@@ -559,7 +559,6 @@ S('s08', {
       tag(g, '(18.8 − 15) ÷ 2 ≈ 1.9ms/张', 1290, 480, C.amber, seg(lt, k[2] + .2, k[2] + .6), { fs: 28, f: 'mono' });
       tag(g, '(41.7 − 15) ÷ 8 ≈ 3.3ms/张', 1110, 562, C.amber, seg(lt, k[2] + 1.0, k[2] + 1.4), { fs: 28, f: 'mono' });
       const m = seg(lt, k[2] + 1.8, k[2] + 2.4);
-      if (m > 0 && m < 1) { const e = eio(m); dot(g, lerp(1290, 1420, e), lerp(480, 320, e), 10, C.amber); dot(g, lerp(1110, 1420, e), lerp(562, 320, e), 10, C.amber); }
       if (m >= 1) {
         readout(g, 1420, 316, 440, 156, '2.6', { s: ap(lt, k[2] + 2.4), label: '平均每张', unit: 'ms/张', c: C.green, dh: 60 });
         ripple(g, 1420, 320, lt - k[2] - 2.4, C.green, 60, 220, .8);
