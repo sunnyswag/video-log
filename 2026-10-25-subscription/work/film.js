@@ -241,11 +241,11 @@ S('s01', {
   cam: [[0, 960, 500, 1.06], [12.6, 960, 480, 1]],
   cues: [[.3, 'draw'], [1.4, 'blip', .4], [4.4, 'blip'], [5.0, 'whoosh'], [7.2, 'confirm'], ...CATS.map((_, k) => [8.6 + k * .28, 'blip', .6]), [10.6, 'tick']],
   draw(g, lt) {
-    const ln = [[SCR[0] + 140, 480], [GW[0] - 130, 480]];
+    const ln = [[SCR[0] + 160, 480], [GW[0] - 150, 480]];
     metroLine(g, ln, C.grey, { p: eo(seg(lt, .3, 1.3)), w: 12 });
     [760, 960, 1160].forEach((x, k) => { if (lt > .6 + k * .2) tickSt(g, x, 480, C.grey); });
-    screenIcon(g, SCR[0], SCR[1], ap(lt, .1, .6), lt, { label: '智能屏' });
-    gatewayIcon(g, GW[0], GW[1], ap(lt, .35, .6), lt, { label: '家庭网关', busy: win(lt, 5.8, 8.2) });
+    screenIcon(g, SCR[0], SCR[1], ap(lt, .1, .6) * 1.2, lt, { label: '智能屏' });
+    gatewayIcon(g, GW[0], GW[1], ap(lt, .35, .6) * 1.2, lt, { label: '家庭网关', busy: win(lt, 5.8, 8.2) });
     // 变化推回屏：网关 → 屏的小脉冲
     const push = win(lt, 1.3, 4.3) + win(lt, 7.6, 12.6) * .7;
     if (push > 0) for (let i = 0; i < 5; i++) {
@@ -255,11 +255,11 @@ S('s01', {
     // JSON 车票
     const jt = ap(lt, 4.3, .5);
     if (lt < 5.1) jsonTicket(g, SCR[0] + 10, 330, jt);
-    if (lt >= 5.0 && lt < 7.6) {
+    if (lt >= 5.0 && lt < 7.25) {
       const u = eio(seg(lt, 5.0, 7.2));
       train(g, ln, u, C.navy2, { len: 74, cargo: gg => jsonTicket(gg, 0, -52, .55) });
     }
-    if (lt >= 7.2) { ripple(g, GW[0], GW[1], lt - 7.2, C.navy2, 40, 160, .8); if (lt < 8.4) jsonTicket(g, GW[0], 330, fo(lt, 7.9, .5) * .8); }
+    if (lt >= 7.2) { ripple(g, GW[0], GW[1], lt - 7.2, C.navy2, 40, 160, .8); if (lt < 8.4) jsonTicket(g, GW[0], 290, fo(lt, 7.9, .5) * .8); }
     // 六类订阅
     CATS.forEach(([s, c], k) => { const p = ap(lt, 8.6 + k * .28, .5); if (p > 0) catPill(g, s, 380 + k * 232, 236, c, { s: p }); });
     if (lt > 10.6) catPill(g, '更多…', 960, 168, C.grey, { s: ap(lt, 10.6, .5), dash: [8, 6], tc: C.ink2 });
@@ -430,7 +430,7 @@ S('s06', {
     }
     plusSt(g, A, Y, ap(lt, 2.6, .5) * 1.5); plusSt(g, B, Y, ap(lt, 2.9, .5) * 1.5);
     platform(g, 'T', A, Y - 86, { s: 34, al: fa(lt, 3.2) }); platform(g, 'R', B, Y - 86, { s: 34, al: fa(lt, 3.5) });
-    text(g, '吃进', A, Y + 66, { s: 28, w: 900, c: C.ink2, al: fa(lt, 3.4) }); text(g, '吐出', B, Y + 66, { s: 28, w: 900, c: C.ink2, al: fa(lt, 3.7) });
+    text(g, '吃进', A, Y + 66, { s: 28, w: 900, c: C.ink2, al: fa(lt, 3.4) * fo(lt, 12.9) }); text(g, '吐出', B, Y + 66, { s: 28, w: 900, c: C.ink2, al: fa(lt, 3.7) * fo(lt, 12.9) });
     flipSign(g, 'Stage<T, R>', (A + B) / 2, 340, seg(lt, 6.1, 6.6), { s: 42, f: 'mono', c: col });
     // 生产者：始发站 + 数据源
     if (lt > 9.5) {
@@ -538,13 +538,13 @@ S('s08', {
     sign(g, '全是 Any', 500, 170, { s: 30, c: C.grey });
     const xsL = miniPipe(g, 150, 400, [C.grey, C.grey, C.grey], { p: eo(seg(lt, .5, 1.6)) });
     ['Any', 'Any'].forEach((s, k) => platform(g, s, xsL[k + 1], 340, { s: 24, al: fa(lt, 1.4 + k * .2) }));
-    if (lt > 3.0 && lt < 7.8) tag(g, '能编译 ✓', 500, 520, C.green, seg(lt, 3.0, 3.4), { fs: 26 });
+    if (lt > 3.0 && lt < 6.3) tag(g, '能编译 ✓', 500, 500, C.green, seg(lt, 3.0, 3.4), { fs: 26 });
     if (lt > 4.6) {
       const u = eio(seg(lt, 4.6, 6.4)), shakeK = seg(lt, 6.0, 6.4);
       const pts = [[xsL[0], 400], [xsL[3], 400]];
       if (lt < 6.5) { g.save(); g.translate(Math.sin(lt * 70) * 5 * shakeK, 0); train(g, pts, u * .8, C.grey, { cargo: gg => { if (shakeK > 0) dot(gg, 0, -30, 12 * shakeK, C.coral, shakeK); } }); g.restore(); }
       burst(g, xsL[2] + 50, 400, lt - 6.4, C.coral, 16, 130);
-      if (lt > 6.4) tag(g, '运行时才发现', xsL[2] + 50, 300, C.coral, seg(lt, 6.4, 6.8), { fs: 28 });
+      if (lt > 6.4) tag(g, '运行时才发现', xsL[2] + 50, 500, C.coral, seg(lt, 6.4, 6.8), { fs: 28 });
     }
     miniTimeline(g, 220, 660, lt > 6.4 ? 2 : null, C.coral, fa(lt, 1.0));
     // 右：带类型
@@ -643,7 +643,7 @@ S('s10', {
 
 S('s11', {
   cam: [[0, 960, 520, 1]],
-  cues: [...[0, 1, 2, 3, 4, 5, 6].map(k => [.6 + k * .35, 'tick', .6]), [4.6, 'stamp', .6], [5.0, 'stamp', .6], [5.4, 'stamp', .6], [8.7, 'blip'], [12.2, 'latch'], [12.6, 'blip']],
+  cues: [...[0, 1, 2, 3, 4, 5, 6].map(k => [.6 + k * .2, 'tick', .6]), [4.6, 'stamp', .6], [5.0, 'stamp', .6], [5.4, 'stamp', .6], [8.7, 'blip'], [12.2, 'latch'], [12.6, 'blip']],
   draw(g, lt) {
     const PROD = [0, 1, 2, 3, 4, 5, 6]; // 7 种生产者：第 8 条复用第 3 条的“设备卡片”
     const dev = win(lt, 4.1, 12.0, .4, .5), reuse2 = fa(lt, 12.0);
@@ -651,17 +651,17 @@ S('s11', {
     drawMap(g, lt, {
       al: focus,
       glowSrc: i => {
-        const k = PROD.indexOf(i === 7 ? 2 : i); const f = k >= 0 ? clamp(1 - Math.abs(lt - (.6 + k * .35) - .15) / .3) : 0;
+        const k = PROD.indexOf(i === 7 ? 2 : i); const f = k >= 0 ? clamp(1 - Math.abs(lt - (.6 + k * .2) - .15) / .3) : 0;
         return Math.max(f, (i === 2 || i === 7) ? win(lt, 12.4, 15.1) : 0);
       },
       glowSeg: (i, k) => {
         if ([4, 5, 6].includes(i)) return win(lt, 4.6 + (i - 4) * .4, 12.2);
         if ((i === 2 && k >= 1) || i === 3) return win(lt, 12.0, 15.1);
-        return clamp(1 - Math.abs(lt - 3.2) / .5) * .6;
+        return clamp(1 - Math.abs(lt - 2.2) / .5) * .6;
       },
     });
     // 计数牌
-    const n1 = Math.min(7, Math.floor(seg(lt, .6, 3.0) * 7.99)), n2 = Math.min(8, Math.floor(seg(lt, 2.6, 3.8) * 8.99));
+    const n1 = Math.min(7, Math.floor(seg(lt, .5, 1.9) * 7.99)), n2 = Math.min(8, Math.floor(seg(lt, 1.4, 2.4) * 8.99));
     if (lt > .5) { const a = fa(lt, .5) * fo(lt, 4.2, .4); sign(g, `生产者 ${n1} 种 · 通道 ${n2} 种`, 960, 150, { s: 28, c: C.amber, al: a }); }
     // 同一种通道，盖出三个实例
     if (dev > 0) {
@@ -869,17 +869,17 @@ S('s15', {
     const k0 = ap(lt, .4, .6);
     at(g, 960, 500, k0, () => {
       card(g, -720, -340, 1440, 660, { r: 30, fill: '#fff', lw: 4, sb: 34, so: 14 });
-      text(g, '{', -680, -250, { f: 'mono', s: 90, w: 700, c: rgba(C.navy, .25) });
+      text(g, '{', -680, 200, { f: 'mono', s: 90, w: 700, c: rgba(C.navy, .25) });
       text(g, '}', 680, 250, { f: 'mono', s: 90, w: 700, c: rgba(C.navy, .25) });
     });
     if (k0 > .5) sign(g, '订阅 JSON · 一份', 960, 160, { s: 30, c: C.amber, al: fa(lt, .7) });
     const lit = k => k < 2 ? win(lt, 3.6, 8.0, .3, .4) : win(lt, 8.0, 16.7, .3, .4);
     BUCKETS.forEach(([key, desc, col], k) => {
-      const x = 330 + k * 420, rise = eo(seg(lt, 1.0 + k * .4, 1.6 + k * .4)), y = 300 + (1 - rise) * 40;
+      const x = 420 + k * 360, rise = eo(seg(lt, 1.0 + k * .4, 1.6 + k * .4)), y = 300 + (1 - rise) * 40;
       const on = lit(k), dim = lt > 3.6 ? .45 + .55 * on : 1;
       g.save(); g.globalAlpha *= rise * dim;
-      card(g, x - 180, y - 70, 360, 240, { r: 18, fill: rgba(col, .08 + .1 * on), lw: 3.5, stroke: on > .5 ? col : C.ink });
-      g.save(); rr(g, x - 180, y - 70, 360, 240, 18); g.clip(); g.fillStyle = col; g.fillRect(x - 180, y - 70, 360, 12); g.restore();
+      card(g, x - 160, y - 70, 320, 240, { r: 18, fill: rgba(col, .08 + .1 * on), lw: 3.5, stroke: on > .5 ? col : C.ink });
+      g.save(); rr(g, x - 160, y - 70, 320, 240, 18); g.clip(); g.fillStyle = col; g.fillRect(x - 160, y - 70, 320, 12); g.restore();
       text(g, key, x, y - 20, { f: 'mono', s: 32, w: 700, c: C.ink });
       if (k === 0) gatewayIcon(g, x, y + 60, .42, lt, { led: col });
       if (k === 1) screenIcon(g, x, y + 58, .42, lt);
@@ -891,13 +891,13 @@ S('s15', {
     // 样例值
     if (lt > 3.9 && lt < 8.2) {
       const a = fa(lt, 3.9) * fo(lt, 7.8, .4);
-      platform(g, '["hub-1", "hub-2"]', 330, 600, { s: 24, al: a, stroke: LC[0] });
-      platform(g, '["panel-1"]', 750, 600, { s: 24, al: a, stroke: LC[1] });
+      platform(g, '["hub-1", "hub-2"]', 420, 600, { s: 24, al: a, stroke: LC[0] });
+      platform(g, '["panel-1"]', 780, 600, { s: 24, al: a, stroke: LC[1] });
     }
     // 两桶同一种结构：网关 → 设备 → 资源
     if (lt > 12.0) {
       const tx = 990, ty = 590, a = fa(lt, 12.0);
-      path(g, partial([[1170, 520], [1170, 556], [1590, 556], [1590, 520]], eo(seg(lt, 12.0, 12.6))), { c: C.navy2, w: 4 });
+      path(g, partial([[1140, 520], [1140, 556], [1500, 556], [1500, 520]], eo(seg(lt, 12.0, 12.6))), { c: C.navy2, w: 4 });
       const L3 = [['hub-1', 0, 12.8, LC[2]], ['dev-7', 1, 13.4, LC[5]], ['["0.1.9", "0.2.4"]', 2, 14.0, C.amber]];
       L3.forEach(([s, d, t0, c]) => {
         const x = tx + d * 190, y = ty + 6 + d * 58, k = fa(lt, t0, .5);
@@ -938,14 +938,14 @@ S('s16', {
       if (lt < t0 + .45) return;
       const next = trig[i + 1], cancelAt = next ? next[1] + .45 : Infinity, cancelled = lt > cancelAt;
       const fillEnd = i === 2 ? 10.6 : cancelAt, fill = clamp((Math.min(lt, fillEnd) - (t0 + .45)) / (i === 2 ? 10.6 - (t0 + .45) : 3.0));
-      const a = cancelled ? fo(lt, cancelAt + .6, .6) * .7 : 1;
+      const a = cancelled ? fo(lt, cancelAt + .6, .6) * .7 : 1, hideTrain = i === 2 && lt > 10.8;
       if (a <= 0) return;
       g.save(); g.globalAlpha *= a;
       dot(g, tx, y, 12, DSRC[k][2]); ring(g, tx, y, 12, C.ink, 3);
       rr(g, tx, y - 140, WN, 22, 11); g.fillStyle = rgba(C.ink, .08); g.fill();
       rr(g, tx, y - 140, WN * (cancelled ? Math.min(fill, .45) : fill), 22, 11); g.fillStyle = cancelled ? C.grey : C.amber; g.fill();
       if (!cancelled) text(g, '200 ms', tx + WN / 2, y - 172, { f: 'mono', s: 24, w: 700, c: C.ink2 });
-      train(g, [[tx, y - 76], [tx + 100, y - 76]], .4, cancelled ? C.grey : LC[0], { trail: false, s: .9 });
+      if (!hideTrain) train(g, [[tx, y - 76], [tx + 100, y - 76]], .4, cancelled ? C.grey : LC[0], { trail: false, s: .9 });
       if (cancelled) icCross(g, tx + 40, y - 76, 40, C.coral, eo(seg(lt, cancelAt, cancelAt + .3)), 7);
       g.restore();
     });
@@ -967,7 +967,7 @@ S('s17', {
   draw(g, lt) {
     const ln = [[REPO[0], REPO[1]], [GW2[0] - 130, REPO[1]]];
     metroLine(g, ln, C.navy2, { p: eo(seg(lt, .3, 1.2)), w: 14 });
-    plusSt(g, REPO[0], REPO[1], 1.5); sign(g, '订阅仓库', REPO[0], REPO[1] - 76, { s: 28, c: C.sky });
+    plusSt(g, REPO[0], REPO[1], 1.5); sign(g, '订阅仓库', REPO[0] - 150, REPO[1], { s: 28, c: C.sky });
     tickSt(g, 950, REPO[1], C.navy2); sign(g, '网关服务接口', 950, REPO[1] + 70, { s: 26, c: C.grey, al: fa(lt, .9) });
     const fail = lt > 5.0 && lt < 10.3, ok = lt >= 10.3;
     gatewayIcon(g, GW2[0], GW2[1], 1, lt, { label: '网关', led: fail ? C.coral : ok ? C.green : null });
@@ -1085,7 +1085,7 @@ S('s19', {
 });
 const FAC = [['聚合', 0.6], ['下发', 1.2], ['重试', 1.8], ['回读', 2.4]];
 S('s20', {
-  cam: [[0, 960, 500, 1], [1.0, 1180, 470, 1.08], [7.4, 1180, 470, 1.08]],
+  cam: [[0, 960, 500, 1], [7.4, 1000, 490, 1.03]],
   cues: FAC.map(([, t]) => [t, 'tick']).concat([[4.6, 'stamp']]),
   draw(g, lt) {
     newLineState(g, 18.9 + lt);
@@ -1097,7 +1097,7 @@ S('s20', {
         text(g, s, 0, 1, { s: 28, w: 900, c: on > .5 ? '#fff' : C.ink2 });
       });
     });
-    if (lt > 4.5) at(g, 860, 800, 1 + 1.2 * (1 - eo(seg(lt, 4.5, 4.8))), () => {
+    if (lt > 4.5) at(g, 900, 760, 1 + 1.2 * (1 - eo(seg(lt, 4.5, 4.8))), () => {
       g.rotate(-.06); rr(g, -230, -46, 460, 92, 14); g.lineWidth = 6; g.strokeStyle = C.coral; g.stroke();
       rr(g, -218, -34, 436, 68, 8); g.lineWidth = 2.5; g.stroke();
       text(g, '其余代码 0 改动', 0, 2, { s: 40, w: 900, c: C.coral });
@@ -1144,7 +1144,7 @@ S('s21', {
     });
     // 列车跟着镜头跑
     const [cx] = camAt(sc.cam, lt);
-    train(g, [[cx - 300, Y], [cx + 300, Y]], .5 + .03 * Math.sin(lt * 3), C.amber, { len: 90, trail: false });
+    train(g, [[cx - 460, Y], [cx + 140, Y]], .5 + .03 * Math.sin(lt * 3), C.amber, { len: 90, trail: false });
   },
 });
 
@@ -1167,7 +1167,7 @@ function drawCover(g, frame) {
   g.save(); g.translate(120, 290); g.scale(.86, .86);
   drawMap(g, 3, { labels: false, glowSeg: (i) => [4, 5, 6].includes(i) ? .7 : 0 });
   g.restore();
-  at(g, 400, 640, 4.2, () => plusSt(g, 0, 0, 1, { glow: 1 }));
+  at(g, 210, 700, 4.6, () => plusSt(g, 0, 0, 1, { glow: 1 }));
   text(g, '一个 + 号，串起八条管道', 960, 140, { s: 116, w: 900 });
   sign(g, '设备订阅模块重构 · Kotlin', 960, 262, { s: 46, c: C.amber });
   postFX(g, { ...frame, t: 0 });
