@@ -261,7 +261,7 @@ S('s02', {
 /* =====================================================================
  * 第一章：一部手机当帧率计
  * ===================================================================== */
-const PH = { x: 300, y: 300, s: .72 }, BD = { x: 1450, y: 320, s: .78 };
+const PH = { x: 300, y: 300, s: .85 }, BD = { x: 1450, y: 320, s: .78 };
 const STRIP = { x: 120, w: 1680, y: 742, fw: 120, fh: 104 };
 /* 胶片第 i 帧：240fps 下屏幕每 3.6 帧刷新一次，同一组帧内容相同 */
 const refreshOf = i => Math.floor(i / 3.6);
@@ -635,7 +635,7 @@ S('s10', {
       // 直接画：矢量描线
       tag(g, '直接画', -150, 116, C.green, seg(l, 1.6, 1.9), { fs: 26 });
       const dp = eo(seg(l, 1.8, 2.9)), cx = -150, cy = 210;
-      ring(g, cx, cy, 42, C.cyan, 7, 1, -TAU / 4, -TAU / 4 + TAU * clamp(dp * 1.6));
+      if (dp > 0) ring(g, cx, cy, 42, C.cyan, 7, 1, -TAU / 4, -TAU / 4 + TAU * clamp(dp * 1.6));
       path(g, partial([[cx - 22, cy + 6], [cx - 4, cy + 24], [cx + 26, cy - 16]], clamp(dp * 2.4 - 1.4)), { c: C.cyan, w: 7 });
       if (dp > 0 && dp < 1) { const a = -TAU / 4 + TAU * clamp(dp * 1.6); dot(g, cx + Math.cos(a) * 42, cy + Math.sin(a) * 42, 6, '#fff'); }
       text(g, '0 解码 · 0 缓存', 90, 210, { s: 28, w: 700, c: C.green, al: fa(l, 2.8) });

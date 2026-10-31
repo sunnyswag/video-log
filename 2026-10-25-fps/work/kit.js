@@ -349,7 +349,7 @@ const boardPt = (x, y, s, u, v) => [x + (BOARD_SCR.x + u * BOARD_SCR.w) * s, y +
 function phone(g, x, y, s, lt, o = {}) {
   at(g, x, y, s, () => {
     // 三脚架
-    path(g, [[0, 200], [-90, 420]], { c: '#3A4956', w: 10 }); path(g, [[0, 200], [90, 420]], { c: '#3A4956', w: 10 }); path(g, [[0, 200], [0, 430]], { c: '#2C3944', w: 9 });
+    path(g, [[0, 200], [-80, 330]], { c: '#3A4956', w: 10 }); path(g, [[0, 200], [80, 330]], { c: '#3A4956', w: 10 }); path(g, [[0, 200], [0, 340]], { c: '#2C3944', w: 9 });
     rr(g, -60, 196, 120, 22, 8); g.fillStyle = '#2C3944'; g.fill();
     // 机身
     rr(g, -110, -210, 220, 420, 34); shadow(g, .6, 36, 14); g.fillStyle = '#1A222A'; g.fill(); noShadow(g); g.lineWidth = 3; g.strokeStyle = '#3B4A57'; g.stroke();
