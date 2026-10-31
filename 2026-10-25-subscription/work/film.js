@@ -357,7 +357,7 @@ S('s04', {
       if (lt > 8.1) {
         const x = k % 2 ? 1000 : 820, sp = ap(lt, 8.2 + k * .14, .4);
         plusSt(g, x, y, sp);
-        if (TYPES6[k]) platform(g, TYPES6[k], x, y - 40, { s: 22, al: fa(lt, 8.5 + k * .14) });
+        if (TYPES6[k]) platform(g, TYPES6[k], x, y - 40, { s: 24, al: fa(lt, 8.5 + k * .14) });
       }
     });
     if (ext > 0) terminal(g, 1500, 360, 210, 340, { al: fa(lt, 12.9, .5), label: '一份订阅数据' });
@@ -552,8 +552,8 @@ S('s08', {
     card(g, 990, 170, 860, 650, { r: 26, fill: rgba('#ffffff', .85), lw: 3, stroke: C.navy2 });
     sign(g, '带类型', 1420, 170, { s: 30, c: LC[4] });
     const xsR = miniPipe(g, 1070, 400, [LC[2], LC[2], LC[4]], { bad: lt > 8.2 ? 2 : null });
-    platform(g, 'List<设备卡片>', xsR[1], 340, { s: 22 });
-    platform(g, '三元组集合', xsR[2], 340, { s: 22, stroke: lt > 8.2 ? C.coral : C.ink });
+    platform(g, 'List<设备卡片>', xsR[1], 340, { s: 24 });
+    platform(g, '三元组集合', xsR[2], 340, { s: 24, stroke: lt > 8.2 ? C.coral : C.ink });
     const wv = eo(seg(lt, 8.2, 8.9));
     if (wv > 0) { const pts = []; for (let i = 0; i <= 40; i++) pts.push([xsR[2] - 80 + i * 4, 372 + Math.sin(i * 1.4) * 5]); path(g, partial(pts, wv), { c: C.coral, w: 4 }); }
     if (lt > 9.0) tag(g, '写下时就报错', xsR[2], 520, C.coral, seg(lt, 9.0, 9.4), { fs: 26 });
@@ -579,7 +579,7 @@ S('s09', {
     metroLine(g, [[xs[0], y], [xs[4], y]], col, { w: 18 });
     names.forEach((s, k) => {
       const mid = (xs[k] + xs[k + 1]) / 2;
-      text(g, s, mid, y - 46, { s: 28, w: 900 });
+      text(g, s, mid, y - 100, { s: 28, w: 900 });
     });
     srcSt(g, xs[0], y, col, 1.3);
     [1, 2, 3].forEach(k => plusSt(g, xs[k], y, 1.3));
@@ -590,7 +590,7 @@ S('s09', {
     for (let i = 1; i < hops.length; i++) {
       const [xa] = hops[i - 1], [xb2, t0] = hops[i], k = eio(seg(lt, t0 - .6, t0));
       if (lt >= t0 - .6) { bx = lerp(xa, xb2, k); by = y - 130 - Math.sin(k * Math.PI) * 60; }
-      if (lt >= t0) { ripple(g, xb2, y, lt - t0, C.amber, 24, 80, .7); text(g, 'produce()', xb2, y - 104, { f: 'mono', s: 22, w: 700, c: C.ink2, al: .5 * fo(lt, 8.0, .4) }); }
+      if (lt >= t0) { ripple(g, xb2, y, lt - t0, C.amber, 24, 80, .7); text(g, 'produce()', xb2, y - 66, { f: 'mono', s: 24, w: 700, c: C.ink2, al: .5 * fo(lt, 8.0, .4) }); }
     }
     if (ba > 0) at(g, bx, by, ap(lt, .6, .5), () => { const w = 190; card(g, -w / 2, -26, w, 52, { r: 26, fill: C.navy, lw: 0 }); text(g, 'produce()', 0, 1, { f: 'mono', s: 26, w: 700, c: '#fff' }); }, { al: ba });
     if (lt > 6.8) { ripple(g, xs[0], y, lt - 6.8, LC[1], 30, 120, .9); storageIcon(g, xs[0], y - 200, .55, { al: fa(lt, 6.9) }); }
@@ -624,11 +624,11 @@ S('s10', {
   cam: [[0, 960, 520, 1]],
   cues: [[0, 'whoosh'], [2.2, 'type'], ...GEO.map((_, i) => [5.6 + i * .3, 'draw', .5]), [9.2, 'blip'], [9.5, 'blip']],
   draw(g, lt) {
-    const ca = fa(lt, 1.6, .4) * fo(lt, 5.6, .7), cur = Math.floor(seg(lt, 5.3, 5.3 + .3 * 8) * 8);
+    const ca = fa(lt, 1.6, .4) * fo(lt, 5.2, .5), cur = Math.floor(seg(lt, 5.3, 5.3 + .3 * 8) * 8);
     if (ca > 0) codeCard(g, REG_BOX.x, REG_BOX.y, REG_BOX.w, REG, { title: 'SubscribeLines.kt（示意）', fs: 26, lh: 48, p: eo(seg(lt, 2.1, 4.6)), al: ca, hl: lt > 5.3 ? [cur + 1] : [], cursor: false });
     // 每一行抽出一根色条，飞到线路图上对应位置
     GEO.forEach((L, i) => {
-      const t0 = 5.4 + i * .3, k = eio(seg(lt, t0, t0 + .55));
+      const t0 = 5.7 + i * .3, k = eio(seg(lt, t0, t0 + .55));
       if (lt < t0 || k >= 1) return;
       const fy = REG_BOX.y + 70 + (i + 1) * 48 + 24, a = [lerp(REG_BOX.x + 120, MAP.x0, k), lerp(fy, L.y, k)];
       path(g, [a, [a[0] + lerp(500, 120, k), a[1]]], { c: L.col, w: lerp(30, 14, k), al: 1 - k * .3 });
@@ -669,7 +669,7 @@ S('s11', {
       [4, 5, 6].forEach((i, k) => {
         const t0 = 4.6 + k * .4, s = GEO[i].segs[0], kf = eio(seg(lt, t0 - .45, t0));
         if (lt > t0 - .45 && lt < t0 + .1) { const p = [lerp(900, s.mid, kf), lerp(170, GEO[i].y, kf)]; at(g, p[0], p[1], 1 - kf * .4, () => { rr(g, -60, -18, 120, 36, 8); g.fillStyle = rgba(LC[4], .5); g.fill(); }); }
-        if (lt > t0) tag(g, `实例 ${k + 1}`, s.mid + 150, GEO[i].y, LC[4], seg(lt, t0, t0 + .4), { fs: 24, al: dev });
+        if (lt > t0) tag(g, `实例 ${k + 1}`, s.mid + 275, GEO[i].y + 36, LC[4], seg(lt, t0, t0 + .4), { fs: 24, al: dev });
       });
       if (lt > 8.6) tag(g, '同一种通道 × 3 条管道', 1240, 150, C.navy2, seg(lt, 8.6, 9.0), { fs: 26, al: dev });
     }
@@ -755,7 +755,7 @@ S('s13', {
       const y = TRK(i), r = RUN.find(q => q.i === i);
       metroLine(g, [[340, y], [1420, y]], LC[i], { w: 10, al: .45, p: eo(seg(lt, 2.0 + i * .08, 3.0 + i * .08)) });
       lineBadge(g, i + 1, 150, y, LC[i], ap(lt, 2.0 + i * .08, .4));
-      platform(g, 'Flow', 250, y, { s: 22, al: fa(lt, 2.3 + i * .08) });
+      platform(g, 'Flow', 250, y, { s: 24, al: fa(lt, 2.3 + i * .08) });
       // 结果格
       const sy = 250 + r.slot * 70;
       rr(g, 1560, sy - 26, 180, 52, 10); g.fillStyle = rgba(C.ink, .05 * fa(lt, 2.4)); g.fill();
@@ -804,7 +804,7 @@ function gwCard(g, x, y, w, title, rows, o = {}) {
 function chipFly(g, s, a, b, k, col) {
   if (k <= 0 || k >= 1) return;
   const p = [lerp(a[0], b[0], eio(k)), lerp(a[1], b[1], eio(k)) - Math.sin(k * Math.PI) * 80];
-  platform(g, s, p[0], p[1], { s: 22, stroke: col });
+  platform(g, s, p[0], p[1], { s: 24, stroke: col });
 }
 S('s14', {
   cam: [[0, 960, 500, 1], [11.0, 960, 500, 1], [12.0, 1430, 470, 1.22], [15.6, 1430, 470, 1.22]],
@@ -1003,11 +1003,11 @@ S('s18', {
     // 支线小列车：去程查询，回程带安全等级
     if (lt > 3.6 && lt < 6.3) {
       const go = lt < 4.9, u = go ? eio(seg(lt, 3.7, 4.9)) : 1 - eio(seg(lt, 5.0, 6.2));
-      train(g, br, u, C.sky, { s: .85, cargo: go ? null : gg => platform(gg, '安全等级', 0, -44, { s: 22, stroke: LC[5] }) });
+      train(g, br, u, C.sky, { s: .85, cargo: go ? null : gg => platform(gg, '安全等级', 0, -48, { s: 29, stroke: LC[5] }) });
     }
     if (lt > 4.9 && lt < 5.4) ripple(g, CLOUD[0], CLOUD[1], lt - 4.9, C.sky, 40, 120, .5);
     storageIcon(g, 640, 790, .6, { al: fa(lt, 3.6) }); text(g, '本地', 720, 790, { s: 24, w: 700, c: C.ink2, a: 'left', al: fa(lt, 3.6) });
-    if (lt > 6.2) { const k = eio(seg(lt, 6.2, 6.7)); if (k < 1) platform(g, '安全等级', lerp(REPO3[0], 640, k), lerp(REPO3[1] - 40, 760, k), { s: 22, stroke: LC[5] }); else dot(g, 640, 768, 9, LC[5]); }
+    if (lt > 6.2) { const k = eio(seg(lt, 6.2, 6.7)); if (k < 1) platform(g, '安全等级', lerp(REPO3[0], 640, k), lerp(REPO3[1] - 40, 760, k), { s: 24, stroke: LC[5] }); else dot(g, 640, 768, 9, LC[5]); }
     // 事件广播 → 界面刷新
     if (lt > 7.3) {
       for (let k = 0; k < 3; k++) { const ph = ((lt - 7.3) * .8 + k / 3) % 1; ring(g, REPO3[0], REPO3[1], 40 + ph * 520, LC[5], 4, (1 - ph) * .55 * fa(lt, 7.3)); }
