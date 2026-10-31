@@ -9,9 +9,9 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 
 const STEP = 0.25, WIDTH = 1920, HEIGHT = 1080, ALPHA = 0.15, OVERLAP = 0.15;
-const SEED = 0x43555254, SAMPLE_COUNT = 120;
+const SEED = 0x4A535254, SAMPLE_COUNT = 120;
 const EPS = 1e-9;
-const CUE_TYPES = new Set('draw tick blip latch stamp whoosh type success error snip'.split(' '));
+const CUE_TYPES = new Set('whoosh thunk ding drop tick blip latch stamp tear shred type success error'.split(' '));
 const FONT_FAMILIES = new Set(['FCJK', 'FDisp', 'FSup', 'FMono', 'FMonoCJK']);
 const FILES = ['../../tools/film-kit/engine.js', 'script.js', 'kit.js', 'film.js'];
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -550,8 +550,8 @@ function selfTest() {
     g.font = '24px serif'; g.fillText('错误字体', 0, 0);
     h.canvas(10, 10).context.font = '24px serif';
     assert.equal(events.filter(x => !FONT_FAMILIES.has(x.family)).length, 3);
-    for (const cue of ['draw', 'blip', 'snip']) assert.ok(CUE_TYPES.has(cue));
-    for (const cue of ['send', 'ring', 'unknown']) assert.ok(!CUE_TYPES.has(cue));
+    for (const cue of ['ding', 'blip', 'shred']) assert.ok(CUE_TYPES.has(cue));
+    for (const cue of ['snip', 'draw', 'send', 'ring', 'unknown']) assert.ok(!CUE_TYPES.has(cue));
   });
   check(() => {
     const h = new Harness(), g = h.canvas(3840, 2160, true).context; h.collectText = true;
@@ -601,7 +601,7 @@ function main() {
   const statuses = [], warnings = [];
   const status = (name, pass, detail) => { statuses.push({ name, pass }); console.log(`[${pass ? '通过' : '失败'}] ${name}：${detail}`); };
   const warn = (name, hits, detail) => { if (hits) warnings.push({ name, hits }); console.log(`[${hits ? '告警' : '通过'}] ${name}：${detail}`); };
-  console.log('窗帘单双电机与 spec 隔离 — 自动检查完整报告');
+  console.log('JSRuntime 用 Ubus 转发消息 — 自动检查完整报告');
   console.log(`Node ${process.version}；逻辑画布 ${WIDTH}×${HEIGHT}；采样间隔 ${STEP} s（包含 0 和片尾）`);
   console.log('检查只读取源文件。FAIL 导致退出码 1；字号/页眉区/字幕区告警不算 FAIL。几何结果需真实浏览器复核。\n');
   status('检查器自检', true, `${selfTest()} 组：原有8组 + 全量字幕/标记、子集与全量时间线/错误注入、字体与cue白名单、4K逻辑字号/strokeText、分区边界、双钩子归属与异常恢复、非法透明度记FAIL后继续审计`);

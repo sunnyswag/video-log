@@ -81,9 +81,9 @@ function card(g, x, y, w, h, o = {}) {
   if (o.lw !== 0) { g.lineWidth = o.lw ?? 3; g.strokeStyle = o.stroke || C.ink; if (o.dash) g.setLineDash(o.dash); g.stroke(); }
   g.restore();
 }
-function dot(g, x, y, r, c, al = 1) { if (r <= 0) return; g.save(); g.globalAlpha *= al; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = c; g.fill(); g.restore(); }
+function dot(g, x, y, r, c, al = 1) { if (r <= 0 || al <= 0) return; g.save(); g.globalAlpha *= clamp(al); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = c; g.fill(); g.restore(); }
 function ring(g, x, y, r, c, lw = 3, al = 1, a0 = -TAU / 4, a1 = a0 + TAU) {
-  if (r <= 0) return; g.save(); g.globalAlpha *= al; g.beginPath(); g.arc(x, y, r, a0, a1); g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.stroke(); g.restore();
+  if (r <= 0 || al <= 0) return; g.save(); g.globalAlpha *= clamp(al); g.beginPath(); g.arc(x, y, r, a0, a1); g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.stroke(); g.restore();
 }
 function path(g, pts, o = {}) {
   if (pts.length < 2) return;
@@ -210,7 +210,7 @@ function postOffice(g, x, y, s, o = {}) {
     clockFace(g, 0, -318, 40, o.ang ?? 0, { c: col, arc: o.arc });
     // 招牌
     card(g, -128, -252, 256, 54, { r: 10, fill: C.paper, lw: 3, sb: 8, so: 3 });
-    text(g, o.sign || R.sign, 0, -224, { s: 32, w: 900, c: colD });
+    text(g, o.sign || R.sign, 0, -224, { s: 36, w: 900, c: colD });
     // 窗户
     for (const sx of [-1, 1]) {
       const wx = sx * 118 - 44, wy = -178;
@@ -452,7 +452,7 @@ function ticket(g, x, y, st, o = {}) {
       g.restore();
     } else if (st === 'ok') icCheck(g, -100, 2, 34, C.green, 1, 7); else icCross(g, -100, 0, 34, C.red, 1, 7);
     text(g, 'Promise', 30, -16, { f: 'mono', s: 28, w: 700 });
-    text(g, lab, 30, 22, { s: 26, w: 900, c });
+    text(g, lab, 30, 22, { s: 30, w: 900, c });
   }, { rot: o.rot, al: o.al, sy: o.sy });
 }
 
