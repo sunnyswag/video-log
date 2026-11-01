@@ -54,9 +54,11 @@ function chapterWipe(g, { sc, lt }) {
   g.shadowColor = rgba(C.red, .9); g.shadowBlur = 30 * SCX; g.fillStyle = C.red; g.fill(); g.restore();
   g.clip(band);
   for (let y = 30; y < H; y += 60) path(g, [[x0 - 200, y], [x0 + W + 440, y]], { c: 'rgba(255,255,255,.03)', w: 2 });
+  for (let k = -2; k < 40; k++) { const xx = x0 - 200 + k * 64; path(g, [[xx, H], [xx + 200, 0]], { c: rgba(C.red, .07), w: 18 }); }
+  const eg = g.createLinearGradient(x0 + W + 40, 0, x0 + W + 420, 0); eg.addColorStop(0, rgba(C.red, 0)); eg.addColorStop(1, rgba(C.red, .32)); g.fillStyle = eg; g.fillRect(x0 + W - 200, 0, 640, H);
   const a = eo(seg(lt, .28, .55)) * (1 - eo(seg(lt, 1.36, 1.58)));
   const drop = 1 - spring(seg(lt, .16, 1.1), 7, 1.1), open = 1 - eo(seg(lt, .62, .72));
-  const tc = tcStr(sc.start + lt), scn = String(film.scenes.indexOf(sc) + 1).padStart(2, '0');
+  const tc = tcStr(sc.start + lt), scn = String(parseInt(sc.id.slice(1), 10)).padStart(2, '0');
   clapper(g, 560 - x0 * 0, 560 - drop * 700, 1.05, open, { ch: num, scene: scn, tc }, { al: a > 0 ? 1 : 0, rot: -.04 + .04 * (1 - open) });
   const dx = (1 - eo(seg(lt, .3, .7))) * 80;
   text(g, zh, 860 + dx, 500, { s: 92, w: 900, c: C.ink, a: 'left', al: a });
@@ -197,7 +199,7 @@ function who(g, role, x, y, o = {}) {
 const DAYS = [24, 25, 26, 27, 28, 29, 30, 31];
 S('s01', {
   fi: .6,
-  cam: [[0, 320, 262, 2.75], [1.0, 320, 262, 2.75], [4.6, 960, 505, 1], [22.3, 960, 492, 1.02]],
+  cam: [[0, 320, 262, 2.75], [1.0, 320, 262, 2.75], [4.6, 960, 540, 1], [22.3, 960, 540, 1.015]],
   cues: (() => { const c = CS('s01'); return [[.2, 'whoosh', .6], ...EP.map((_, i) => [c[0] + 1.2 + i * .32, 'blip', .7]), ...EP.map((_, i) => [c[2] + .3 + i * .3, 'tick', .6]), [c[2] + 2.8, 'latch'], ...DAYS.map((_, i) => [c[3] + .5 + i * .38, 'tick', .5]), [c[4] + .3, 'hit']]; })(),
   draw(g, lt) {
     const c = CS('s01');
@@ -275,7 +277,7 @@ S('s02', {
  * ===================================================================== */
 const ROWY = { me: 200, lead: 360, sub: 552, ex: 770 }, SPX = 250;
 S('s03', {
-  cam: [[0, 960, 520, 1.05], [10, 960, 505, 1.0], [31, 960, 500, 1]],
+  cam: [[0, 960, 540, 1.015], [10, 960, 540, 1], [31, 960, 540, 1]],
   cues: (() => { const c = CS('s03'); return [[c[0], 'blip'], [c[0] + .8, 'latch', .6], [c[1], 'blip'], ...[0, 1, 2, 3].map(i => [c[2] + .2 + i * .35, 'latch', .6]), [c[3], 'blip'], ...[0, 1, 2, 3].map(i => [c[4] + .2 + i * .35, 'latch', .6]), [c[5], 'blip'], ...[0, 1, 2, 3].map(i => [c[6] + .2 + i * .35, 'latch', .6])]; })(),
   draw(g, lt) {
     const c = CS('s03');
@@ -327,7 +329,7 @@ S('s03', {
 });
 
 S('s04', {
-  cam: [[0, 960, 520, 1.0], [12, 960, 510, 1.03], [17, 960, 520, 1.0]],
+  cam: [[0, 960, 540, 1], [12, 960, 540, 1.015], [17, 960, 540, 1]],
   cues: (() => { const c = CS('s04'); return [[c[0] + .2, 'hit'], [c[1], 'blip'], [c[2] + .4, 'error'], [c[3], 'blip'], [c[3] + 1.2, 'success'], [c[4], 'whoosh'], [c[4] + .6, 'latch'], [c[5] + .2, 'latch']]; })(),
   draw(g, lt) {
     const c = CS('s04');
@@ -353,7 +355,7 @@ S('s04', {
     const quote = (s, x, col, t0) => { const p = ap(lt, t0, .5); if (p <= 0) return; at(g, x, 700, p, () => {
       const w = textW(g, s, { s: 40, w: 900 }) + 80; card(g, -w / 2, -46, w, 92, { r: 12, fill: '#10151D', lw: 3, stroke: col }); text(g, s, 0, -2, { s: 40, w: 900, c: col });
       text(g, '—— 我', w / 2 - 20, 66, { s: 24, w: 700, c: C.ink2, a: 'right' }); }); };
-    quote('“差距很远”', 520, C.red, c[2] + .3);
+    quote('“差距很大”', 520, C.red, c[2] + .3);
     quote('“动画效果没有任何问题”', 1400, C.green, c[3] + 1.1);
     g.restore();
     // 两栏：留给 Claude / 交给执行者
@@ -401,7 +403,7 @@ function pipeModule(g, i, lit, lt, o = {}) {
   }, { al: o.al });
 }
 S('s05', {
-  cam: [[0, 960, 480, 1.0], [34.8, 960, 470, 1.02]],
+  cam: [[0, 960, 540, 1], [34.8, 960, 540, 1.015]],
   cues: (() => { const c = CS('s05'); return [[c[0] + .2, 'whoosh', .6], [c[1] + .6, 'blip'], [c[2] + .6, 'blip'], [c[2] + 2.2, 'blip'], [c[3] + .6, 'blip'], [c[4] + .6, 'blip'], [c[5] + .6, 'blip'], [c[5] + 2.4, 'blip'], [c[6] + .6, 'blip'], ...[0, 1, 2].map(k => [c[6] + 1.4 + k * .7, 'tick', .6])]; })(),
   draw(g, lt) {
     const c = CS('s05');
@@ -445,7 +447,7 @@ function frame6(g, i, x, y, o = {}) { // 一格画面：小球位置只由 t = i
   }, { al: o.al });
 }
 S('s06', {
-  cam: [[0, 960, 520, 1.0], [18.4, 960, 510, 1.02]],
+  cam: [[0, 960, 540, 1], [18.4, 960, 540, 1.015]],
   cues: (() => { const c = CS('s06'); return [...CODE6.map((_, i) => [c[0] + .2 + i * .42, 'type', .45]), [c[1] + .4, 'blip'], [c[1] + 1.6, 'error', .5], ...[0, 1, 2, 3, 4, 5].map(k => [c[2] + .5 + k * .45, 'tick', .55]), [c[2] + 3.4, 'success', .6], ...Array.from({ length: 9 }, (_, k) => [c[3] + .4 + k * .16, 'snip', .5]), [c[3] + 2.4, 'whoosh', .6]]; })(),
   draw(g, lt) {
     const c = CS('s06');
@@ -484,7 +486,7 @@ S('s06', {
         const t0 = c[2] + .5 + ord * .45, [x] = FR6(i), y = 440, p = seg(lt, t0, t0 + .35);
         if (p <= 0) return;
         frame6(g, i, x, y + (1 - eo(p)) * 40, { al: eo(p) * k3 });
-        at(g, x + 14, y + 12, pop(p), () => { dot(g, 0, 0, 16, C.violet); text(g, String(ord + 1), 0, 1, { f: 'disp', s: 22, w: 900, c: '#10151C' }); }, { al: k3 });
+        at(g, x + 16, y + 14, pop(p), () => { dot(g, 0, 0, 19, C.violet); text(g, String(ord + 1), 0, 1, { f: 'disp', s: 26, w: 900, c: '#10151C' }); }, { al: k3 });
         if (lt > t0 + .4) { g.save(); g.globalAlpha *= k3; dot(g, x + 118, y + 80, 15, C.green); icCheck(g, x + 118, y + 81, 18, '#10151C', seg(lt, t0 + .4, t0 + .6), 4); g.restore(); }
       });
     }
@@ -503,7 +505,7 @@ S('s06', {
         const rp = ap(lt, c[3] + 2.2 + k * .05, .4);
         if (rp > 0) at(g, rx + 66, ry + 22, rp, () => {
           card(g, -66, -24, 132, 66, { r: 10, fill: C.slot, lw: 2, stroke: '#3A4656' });
-          text(g, String(k + 1), -34, 9, { f: 'disp', s: 30, w: 900, c: C.ink });
+          text(g, String(k + 1), -32, 9, { f: 'disp', s: 34, w: 900, c: C.ink });
           lamp(g, 30, 9, 7, C.blue, fl > .95 ? .6 + .4 * Math.sin(lt * 8 + k) : .15, { halo: 2.5 });
         });
       }
@@ -515,7 +517,7 @@ S('s06', {
 const SEGS = [275, 381, 335, 244, 249, 337, 291, 349, 365, 252], ASM_END = 809;
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 S('s07', {
-  cam: [[0, 960, 500, 1.02], [16.3, 960, 510, 1.0]],
+  cam: [[0, 960, 540, 1.015], [16.3, 960, 540, 1]],
   cues: (() => { const c = CS('s07'); const r = []; SEGS.slice().sort((a, b) => a - b).forEach(d => r.push([c[0] + .2 + (d + 29 - 27) / 360 * 3.4, 'tick', .5])); return [...r, [c[1] + .2, 'whoosh', .6], [c[1] + 2.0, 'latch'], ...[0, 1, 2, 3].map(k => [c[2] + .3 + k * .55, 'latch', .6]), [c[3] + .9, 'success']]; })(),
   draw(g, lt) {
     const c = CS('s07');
@@ -523,8 +525,8 @@ S('s07', {
     const out = fo(lt, c[2] - .2, .5);
     g.save(); g.globalAlpha *= out;
     steel(g, 120, 140, 1680, 600, { r: 14 });
-    text(g, '试点 v2 · 4K 全片 · 10 段', 160, 186, { s: 30, w: 900, a: 'left' });
-    text(g, 'GitHub Actions', 600, 188, { f: 'mono', s: 24, w: 700, c: C.blue, a: 'left' });
+    text(g, '试点 v2 · 4K 全片 · 10 段（示例运行）', 160, 186, { s: 30, w: 900, a: 'left' });
+    text(g, 'GitHub Actions', 760, 188, { f: 'mono', s: 24, w: 700, c: C.blue, a: 'left' });
     rr(g, 1600, 160, 170, 52, 8); g.fillStyle = '#07090D'; g.fill();
     text(g, mmss(real), 1755, 188, { f: 'mono', s: 34, w: 700, c: real >= ASM_END ? C.green : C.amber, a: 'right' });
     const col = eio(seg(lt, c[1] - .1, c[1] + .5));
@@ -545,7 +547,7 @@ S('s07', {
     g.restore();
     // 成片带
     const chipP = ap(lt, c[1] + 2.0, .5), mv = eio(seg(lt, c[3] + .1, c[3] + .9));
-    if (chipP > 0) at(g, lerp(960, 1560, mv), lerp(800, 790, mv), chipP * lerp(1, .72, mv), () => {
+    if (chipP > 0 && mv < 1) at(g, lerp(960, 1525, mv), lerp(800, 795, mv), chipP * lerp(1, .3, mv), () => {
       card(g, -330, -40, 660, 80, { r: 12, fill: '#10151D', lw: 3, stroke: C.amber });
       dot(g, -290, 0, 16, C.amber); dot(g, -290, 0, 6, '#10151D');
       text(g, '成片 mp4 · 3840×2160 · 30 fps', 16, 2, { s: 30, w: 900, c: C.ink });
@@ -566,8 +568,8 @@ S('s07', {
       steel(g, 1380, 740, 360, 110, { r: 12 });
       rr(g, 1410, 772, 230, 46, 8); g.fillStyle = '#07090D'; g.fill();
       text(g, 'D 盘', 1690, 796, { s: 32, w: 900, c: on ? C.green : C.ink });
-      lamp(g, 1426, 795, 0, C.green, 0);
-      lamp(g, 1705, 760, 7, C.green, on ? 1 : 0, { halo: 3 });
+      if (on) text(g, '成片 ✓', 1525, 796, { s: 26, w: 900, c: C.green, al: fa(lt, c[3] + .9) });
+      lamp(g, 1398, 756, 6, C.green, on ? 1 : 0, { halo: 3 });
       g.restore();
       badge(g, 'me', 1560, 620, 40, { s: ap(lt, c[3] + 1.0), glow: .6 });
       tag(g, '看过再上传', 1560, 545, ROLE.me[1], seg(lt, c[3] + 1.3, c[3] + 1.7), { fs: 28 });
@@ -585,14 +587,14 @@ function handbook(g, x, y, s, o = {}) {
     rr(g, -120, -160, 34, 320, 8); g.fillStyle = '#1D2636'; g.fill();
     for (let k = 0; k < 4; k++) ring(g, -103, -112 + k * 74, 10, '#B8C4D4', 4, 1, 0, TAU);
     rr(g, -70, -120, 170, 6, 3); g.fillStyle = C.red; g.fill();
-    text(g, 'WorkArchive', 15, -80, { f: 'mono', s: 24, w: 700, c: C.ink2 });
+    if (!o.mini) text(g, 'WorkArchive', 15, -80, { f: 'mono', s: 24, w: 700, c: C.ink2 });
     text(g, '批量制作', 15, -18, { s: 40, w: 900, c: C.ink });
     text(g, '手册', 15, 36, { s: 40, w: 900, c: C.ink });
     for (let k = 0; k < 3; k++) rr(g, -60, 84 + k * 22, 150 - k * 30, 8, 4), g.fillStyle = rgba(C.steel, .25), g.fill();
   }, { al: o.al, rot: o.rot });
 }
 S('s08', {
-  cam: [[0, 960, 500, 1.0], [19.1, 960, 505, 1.02]],
+  cam: [[0, 960, 540, 1], [19.1, 960, 540, 1.015]],
   cues: (() => { const c = CS('s08'); return [[c[0] - .4, 'draw', .5], ...EP.map((_, i) => [c[0] + .2 + i * .18, 'blip', .5]), ...Array.from({ length: 10 }, (_, k) => [c[1] + .3 + k * .3, 'tick', .45]), [c[2] + .5, 'hit', .7], ...[0, 1, 2, 3].map(k => [c[3] + .3 + k * .45, 'latch', .6])]; })(),
   draw(g, lt) {
     const c = CS('s08');
@@ -622,7 +624,7 @@ S('s08', {
 
 /* 8 种画风：镜头扫过监视墙 */
 S('s09', {
-  cam: (() => { const c = CS('s09'); return [[0, 960, 470, 1], [c[1] - .3, 960, 470, 1], [c[1] + .3, 520, 300, 1.55], [c[1] + 4.6, 1400, 300, 1.55], [c[2] + .2, 520, 600, 1.55], [c[2] + 4.4, 1400, 600, 1.55], [SCRIPT.s09.dur, 960, 470, 1]]; })(),
+  cam: (() => { const c = CS('s09'); return [[0, 960, 540, 1], [c[1] - .3, 960, 540, 1], [c[1] + .3, 520, 300, 1.55], [c[1] + 4.6, 1400, 300, 1.55], [c[2] + .2, 520, 600, 1.55], [c[2] + 4.4, 1400, 600, 1.55], [SCRIPT.s09.dur, 960, 540, 1]]; })(),
   cues: (() => { const c = CS('s09'); return [...[0, 1, 2, 3].map(i => [c[1] + .3 + i * 1.25, 'blip']), ...[0, 1, 2, 3].map(i => [c[2] + .3 + i * 1.2, 'blip'])]; })(),
   draw(g, lt) {
     const c = CS('s09');
@@ -638,7 +640,7 @@ S('s09', {
 /* 停止点：第一批的节目单 */
 const RUN_STEPS = ['稿', '核对', '样片', '全部画面', '配乐', '成片'];
 S('s10', {
-  cam: [[0, 960, 500, 1.02], [13.1, 960, 500, 1]],
+  cam: [[0, 960, 540, 1.015], [13.1, 960, 540, 1]],
   cues: (() => { const c = CS('s10'); return [...RUN_STEPS.map((_, j) => [c[1] + .2 + j * .32, 'tick', .55]), [c[1] + 2.2, 'success', .6], [c[2] + 1.1, 'latch'], [c[2] + 1.3, 'latch'], [c[2] + 1.5, 'latch'], [c[2] + 2.2, 'blip']]; })(),
   draw(g, lt) {
     const c = CS('s10');
@@ -715,17 +717,18 @@ function tallyAt(D, i, M) {
   for (const [s, e] of tr.wait || []) if (M >= s && M < e) a1 = true;
   return a0 ? 'red' : a1 ? 'amber' : 'red';
 }
-const TWORD = { red: '制作中', amber: '等执行者', grey: '停住', green: 'D 盘 ✓' };
+const TWORD = { red: '制作中', amber: '等结果', grey: '停住', green: '到盘 ✓' };
 const TRK_Y = i => 540 + i * 80;
 const LEG = ['稿', '核对', '画面', '检查', '配乐', '审阅', '推送', '云端', '收尾'];
 /* 时间线面板：ax 轴、D 数据、M 播放头（分钟） */
 function nle(g, ax, D, M, lt, o = {}) {
   steel(g, 120, 440, 1680, 430, { r: 14 });
   // 图例
-  let lx = 150;
+  let lx = 150; g.save(); g.globalAlpha *= o.legendAl ?? 1;
   LEG.forEach(k => { const lab = k === '推送' ? '提交' : k; rr(g, lx, 452, 26, 20, 4); g.fillStyle = PH[k]; g.fill(); text(g, lab, lx + 34, 463, { s: 24, w: 700, c: C.ink2, a: 'left' }); lx += 34 + textW(g, lab, { s: 24, w: 700 }) + 24; });
   hatchRect(g, lx, 452, 26, 20, C.grey, { step: 8, lw: 2.5, r: 4 }); text(g, '中断', lx + 34, 463, { s: 24, w: 700, c: C.ink2, a: 'left' });
   text(g, '每轨上半 Claude · 下半执行者与云端', 1780, 463, { s: 24, w: 700, c: C.ink3, a: 'right' });
+  g.restore();
   // 标尺
   path(g, [[370, 526], [1790, 526]], { c: rgba(C.steel, .35), w: 2 });
   ax.ticks.forEach(m => { const x = xOf(ax, m); path(g, [[x, 518], [x, 526]], { c: rgba(C.steel, .5), w: 2 }); text(g, hm(m), x, 504, { f: 'mono', s: 24, w: 700, c: C.ink3 }); });
@@ -746,18 +749,17 @@ function nle(g, ax, D, M, lt, o = {}) {
     if (tr.trig != null && M >= tr.trig) { const x = xOf(ax, tr.trig); g.beginPath(); g.moveTo(x, y + 30); g.lineTo(x - 9, y + 16); g.lineTo(x + 9, y + 16); g.closePath(); g.fillStyle = C.amber; g.fill(); }
     if (tr.done != null && M >= tr.done) { const x = xOf(ax, tr.done); dot(g, x, y + 49, 11 * pop(seg(M - tr.done, 0, 1.5)), C.green); icCheck(g, x, y + 50, 13, '#10151C', 1, 3); }
   });
+  // 断轴
+  ax.segs.filter(sg => sg[4] === 1).forEach(([, , x0, x1]) => {
+    g.save(); rr(g, x0, 530, x1 - x0, 320, 0); g.clip(); g.fillStyle = 'rgba(5,8,12,.35)'; g.fillRect(x0, 530, x1 - x0, 320); g.restore();
+    for (const x of [x0 + 6, x1 - 6]) { const pts = []; for (let k = 0; k <= 32; k++) pts.push([x + (k % 2 ? 5 : -5), 494 + k * 11]); path(g, pts, { c: rgba(C.steel, .55), w: 2 }); }
+  });
   // 中断：横跨各轨的斜线阴影块
   D.pauses.forEach(([s, e, lab]) => {
     if (M <= s) return;
     const x0 = xOf(ax, s), x1 = xOf(ax, Math.min(e, M));
     hatchRect(g, x0, 536, x1 - x0, 312, C.grey, { off: lt * 12, fa: .3, la: .75, r: 6 });
-    if (x1 - x0 > 60 && o.pauseLabel !== false) { const w = textW(g, lab, { s: 24, w: 700 }) + 28, cx = Math.min((x0 + x1) / 2, 1790 - w / 2); card(g, cx - w / 2, 670, w, 44, { r: 8, fill: 'rgba(14,19,26,.92)', lw: 2, stroke: C.grey }); text(g, lab, cx, 693, { s: 24, w: 700, c: C.ink }); }
-  });
-  // 断轴
-  ax.segs.filter(sg => sg[4] === 1).forEach(([, , x0, x1]) => {
-    g.save(); rr(g, x0, 530, x1 - x0, 320, 0); g.clip(); g.fillStyle = 'rgba(5,8,12,.35)'; g.fillRect(x0, 530, x1 - x0, 320); g.restore();
-    for (const x of [x0 + 6, x1 - 6]) { const pts = []; for (let k = 0; k <= 32; k++) pts.push([x + (k % 2 ? 5 : -5), 494 + k * 11]); path(g, pts, { c: rgba(C.steel, .55), w: 2 }); }
-    text(g, '⋯', (x0 + x1) / 2, 504, { s: 30, w: 900, c: C.ink3 });
+    if (x1 - x0 > 60 && o.pauseLabel !== false) { const w = textW(g, lab, { s: 24, w: 700 }) + 28, cx = Math.min((x0 + x1) / 2, 1790 - w / 2); card(g, cx - w / 2, 532, w, 40, { r: 8, fill: 'rgba(14,19,26,.94)', lw: 2, stroke: C.grey }); text(g, lab, cx, 553, { s: 24, w: 700, c: C.ink }); }
   });
   // 未到的部分压暗
   if (o.future) { const xm = xOf(ax, M); g.fillStyle = 'rgba(10,13,18,.45)'; g.fillRect(xm, 490, 1790 - xm, 362); }
@@ -775,7 +777,7 @@ function monRow(g, D, M, lt, keys, o = {}) {
     const i = EPI[tr.slug], st = o.state ? o.state(k) : tallyAt(D, k, M);
     let freeze = null, dim = 0;
     if (st === 'grey') { const p = D.pauses.find(([s, e]) => M >= s && M < e), s0 = p ? p[0] : (tr.stop ? tr.stop[0] : M); freeze = pkInv(s0, keys) + i * 1.7; dim = .5; }
-    cellMon(g, i, MONX(k), 150, 320, 180, lt, { tally: st || 'grey', off: st == null, freeze, dim, right: st ? (st === 'amber' && tr.trig != null && M >= tr.trig ? '云端渲染' : TWORD[st]) : '待派发', bw: 4, ...(o.cell ? o.cell(k) : {}) });
+    cellMon(g, i, MONX(k), 150, 320, 180, lt, { tally: st || 'grey', off: st == null, freeze, dim, right: st ? (st === 'amber' && tr.trig != null && M >= tr.trig ? '云端中' : TWORD[st]) : '待派发', bw: 4, ...(o.cell ? o.cell(k) : {}) });
   });
 }
 function clockModule(g, M, o = {}) {
@@ -787,7 +789,7 @@ function clockModule(g, M, o = {}) {
 
 /* 10-25 15:08 派出 4 路 */
 S('s11', {
-  cam: [[0, 960, 500, 1.0], [15.7, 960, 505, 1.02]],
+  cam: [[0, 960, 540, 1], [15.7, 960, 540, 1.015]],
   cues: (() => { const c = CS('s11'); return [...[0, 1, 2, 3].map(k => [c[0] + .9 + k * .25, 'clap', .7]), [c[0] + 2.0, 'whoosh', .5], [c[2] + .7, 'success']]; })(),
   draw(g, lt) {
     const c = CS('s11'), keys = [[0, 902], [c[0] + .8, 908], [c[0] + 1.9, 908], [c[2] + .7, 935], [SCRIPT.s11.dur, 941]];
@@ -807,7 +809,7 @@ S('s11', {
  * ===================================================================== */
 const S12K = id => { const c = CS(id), d = SCRIPT[id].dur; return [[0, 941], [c[0] + .3, 955], [c[2] - .1, 955], [c[2] + .9, 1202], [c[3], 1206], [c[5] - .2, 1229], [c[5] + .6, 1232], [d - .4, 1262], [d, 1262]]; };
 S('s12', {
-  cam: [[0, 960, 505, 1.02], [29.4, 960, 500, 1.0]],
+  cam: [[0, 960, 540, 1.015], [29.4, 960, 540, 1]],
   cues: (() => { const c = CS('s12'); return [[c[0] + .3, 'error'], [c[1] + .4, 'draw', .5], [c[2] + .9, 'success', .6], [c[3] + .3, 'blip'], [c[4] + .4, 'whoosh', .5], [c[5] + .6, 'error']]; })(),
   draw(g, lt) {
     const c = CS('s12'), keys = S12K('s12'), M = pk(lt, keys);
@@ -818,14 +820,14 @@ S('s12', {
     text(g, '会话额度', 196, 300, { s: 26, w: 900, a: 'left', c: out ? C.red : C.ink2 });
     text(g, out ? '用尽' : '可用', 196, 334, { s: 24, w: 700, a: 'left', c: out ? C.red : C.green });
     monRow(g, TL1, M, lt, keys);
-    nle(g, AX1, TL1, M, lt, { future: true });
-    // 47 分钟量尺
     const mk = fa(lt, c[1] + .2) * fo(lt, c[2] + .4);
+    nle(g, AX1, TL1, M, lt, { future: true, legendAl: 1 - mk });
+    // 47 分钟量尺
     if (mk > 0) { const x0 = xOf(AX1, 908), x1 = xOf(AX1, 955); g.save(); g.globalAlpha *= mk; card(g, x0 - 8, 444, x1 - x0 + 16, 40, { r: 8, fill: 'rgba(14,19,26,.96)', lw: 0, shadow: false });
       path(g, partial([[x0, 456], [x0, 472], [x1, 472], [x1, 456]], eo(seg(lt, c[1] + .3, c[1] + .9))), { c: C.amber, w: 3 });
       text(g, '47 分钟', (x0 + x1) / 2, 462, { s: 24, w: 900, c: C.amber, al: fa(lt, c[1] + .8) }); g.restore(); }
     // 我：不用再做样片
-    if (lt > c[3] - .2 && lt < c[5]) { const a = fo(lt, c[5] - .4); badge(g, 'me', 1050, 262, 40, { s: ap(lt, c[3]), glow: .7, al: a }); speech(g, '不用再做样片，直接出成片', 1100, 222, seg(lt, c[3] + .2, c[3] + .6), { fs: 30, al: a }); }
+    if (lt > c[3] - .2 && lt < c[5]) { const a = fo(lt, c[5] - .4); badge(g, 'me', 1010, 262, 40, { s: ap(lt, c[3]), glow: .7, al: a }); speech(g, '“不用考虑制作样片了……可以直接出成片”', 1060, 222, seg(lt, c[3] + .2, c[3] + .6), { fs: 28, al: a }); }
     // 样片代码接着用：从样片段跨过中断连到全片段
     const ak = fa(lt, c[4] + .3, .6) * fo(lt, c[5] + .2);
     if (ak > 0) {
@@ -842,7 +844,7 @@ S('s12', {
 
 /* pre-push 钩子误报（⚠ 机制演绎：文件卡与扫描为重画示意） */
 S('s13', {
-  cam: (() => { const c = CS('s13'); return [[0, 960, 470, 1], [c[1] - .2, 960, 470, 1], [c[1] + .6, 430, 420, 1.75], [c[4] - .2, 430, 420, 1.75], [c[4] + .7, 960, 470, 1], [SCRIPT.s13.dur, 960, 470, 1]]; })(),
+  cam: (() => { const c = CS('s13'); return [[0, 960, 540, 1], [c[1] - .2, 960, 540, 1], [c[1] + .6, 430, 420, 1.75], [c[4] - .2, 430, 420, 1.75], [c[4] + .7, 960, 540, 1], [SCRIPT.s13.dur, 960, 540, 1]]; })(),
   cues: (() => { const c = CS('s13'); return [[c[0] + .3, 'whoosh', .5], [c[0] + 1.0, 'error'], [c[1] + .9, 'blip'], [c[2] + .3, 'scan'], [c[2] + 1.4, 'error', .6], [c[3] + .6, 'success', .6], [c[4] + .9, 'latch'], [c[4] + 1.6, 'whoosh', .5], [c[4] + 2.4, 'success']]; })(),
   draw(g, lt) {
     const c = CS('s13'), fixed = lt > c[4] + 1.1;
@@ -855,7 +857,7 @@ S('s13', {
     const pe = eo(seg(lt, c[1] + .7, c[1] + 1.2));
     if (pe > 0) {
       g.save(); g.globalAlpha *= pe; rr(g, 150, 386, 540, 56 * pe, 8); g.fillStyle = '#07090D'; g.fill(); rr(g, 150, 386, 540, 56 * pe, 8); g.lineWidth = 2; g.strokeStyle = '#3A4656'; g.stroke();
-      const pre = 'gitdir: /home/', post = '/…/worktrees/cards', o = { f: 'mono', s: 24, w: 700 }, w1 = textW(g, pre, o);
+      const pre = 'gitdir: /home/', post = '/…/cards', o = { f: 'mono', s: 24, w: 700 }, w1 = textW(g, pre, o);
       text(g, pre, 166, 415, { ...o, a: 'left', c: C.ink2 });
       const hit = seg(lt, c[2] + 1.3, c[2] + 1.6), bx = 166 + w1;
       rr(g, bx + 2, 402, 92, 26, 4); g.fillStyle = hit > 0 ? rgba(C.red, .55 + .45 * Math.abs(Math.sin(lt * 6))) : '#3A4656'; g.fill();
@@ -887,6 +889,7 @@ S('s13', {
     if (lt > c[4] + 1.4) { const u = seg(lt, c[4] + 1.4, c[4] + 2.4); px = lerp(790, 1560, eio(u)); if (u >= 1) px = null; }
     if (px != null) at(g, px, 420, 1, () => { card(g, -60, -26, 120, 52, { r: 10, fill: C.coral, lw: 0 }); text(g, '推送', 0, 1, { s: 26, w: 900, c: '#10151C' }); });
     if (lt > c[0] + .9 && lt < c[0] + 1.6) { const k = lt - c[0] - 1.0; ripple(g, 960, 420, k, C.red, 20, 90, .6); }
+    if (lt > c[0] + .95 && lt < c[1] + .3) tag(g, '拦下', 1010, 196, C.red, seg(lt, c[0] + .95, c[0] + 1.3), { fs: 28, tc: '#fff', al: fo(lt, c[1]) });
     if (lt > c[4] + 2.4) { dot(g, 1640, 360, 24 * pop(seg(lt, c[4] + 2.4, c[4] + 2.8)), C.green); icCheck(g, 1640, 361, 28, '#10151C', seg(lt, c[4] + 2.5, c[4] + 2.8), 5); }
   },
 });
@@ -899,7 +902,7 @@ const GUARD = [
 ];
 function chip(g, s, x, y, col, p, o = {}) { tag(g, s, x, y, col, p, { fs: o.fs || 28, r: 10, al: o.al, tc: o.tc }); }
 S('s14', {
-  cam: (() => { const c = CS('s14'); return [[0, 960, 500, 1], [c[1] - .3, 960, 500, 1], [c[1] + .4, 640, 500, 1.18], [c[3] - .3, 640, 500, 1.18], [c[3] + .4, 960, 500, 1.18], [c[5] - .3, 960, 500, 1.18], [c[5] + .4, 1280, 500, 1.18], [SCRIPT.s14.dur - 1.2, 1280, 500, 1.18], [SCRIPT.s14.dur, 960, 500, 1]]; })(),
+  cam: (() => { const c = CS('s14'); return [[0, 960, 540, 1], [c[1] - .3, 960, 540, 1], [c[1] + .4, 640, 520, 1.12], [c[3] - .3, 640, 520, 1.12], [c[3] + .4, 960, 520, 1.12], [c[5] - .3, 960, 520, 1.12], [c[5] + .4, 1280, 520, 1.12], [SCRIPT.s14.dur - 1.2, 1280, 520, 1.12], [SCRIPT.s14.dur, 960, 540, 1]]; })(),
   cues: (() => { const c = CS('s14'); return [[c[0] + .4, 'error', .5], [c[0] + .7, 'error', .5], [c[0] + 1.0, 'error', .5], [c[1] + .3, 'error'], [c[2] + .5, 'blip'], [c[2] + 1.6, 'success', .6], [c[3] + .3, 'error'], [c[4] + .5, 'whoosh', .5], [c[4] + 1.6, 'success', .6], [c[5] + .4, 'error', .6], [c[6] + .3, 'error'], [c[7] + .6, 'whoosh', .5], [c[7] + 1.6, 'success']]; })(),
   draw(g, lt) {
     const c = CS('s14');
@@ -962,7 +965,7 @@ function gauge(g, cx, cy, r, v, max, o = {}) {
   dot(g, cx, cy, 14, o.col || C.amber); dot(g, cx, cy, 6, '#0B0F14');
 }
 S('s15', {
-  cam: [[0, 960, 500, 1.02], [14.3, 960, 500, 1]],
+  cam: [[0, 960, 540, 1.015], [14.3, 960, 540, 1]],
   cues: (() => { const c = CS('s15'); return [[c[0] + .6, 'tick'], [c[0] + 1.4, 'tick'], [c[1] + .6, 'error'], ...Array.from({ length: 8 }, (_, k) => [c[2] + .3 + k * .42, 'tick', .4])]; })(),
   draw(g, lt) {
     const c = CS('s15');
@@ -995,7 +998,7 @@ S('s15', {
  * ===================================================================== */
 const RULES = ['钩子误报已修好，pre-push 正常放行', '投稿 json 加视频号短标题', 'zsh 不分词，多参数循环用 bash 跑', '本地渲染一次只开一个进程', '额度约 45 分钟，每做完一阶段就提交', '停止点：触发全片就停'];
 S('s16', {
-  cam: [[0, 960, 500, 1.0], [25.3, 960, 505, 1.02]],
+  cam: [[0, 960, 540, 1], [25.3, 960, 540, 1.015]],
   demo: lt => { const c = CS('s16'); return lt > c[4] - .1 ? 1 : 0; },
   cues: (() => { const c = CS('s16'); return [...[0, 1, 2, 3].map(k => [c[0] + .5 + k * .2, 'blip', .6]), ...[0, 1, 2, 3, 4].map(k => [c[1] + .3 + k * .75, 'type', .5]), [c[2] + .3, 'type', .5], [c[2] + 1.6, 'latch'], [c[3] + .4, 'whoosh', .6], [c[4] + .2, 'clap', .5]]; })(),
   draw(g, lt) {
@@ -1004,6 +1007,7 @@ S('s16', {
     monitor(g, 140, 150, 1000, 500, { lt, label: swap ? '上下文成本' : 'batch2-common.md', right: swap ? '' : '共用约定', umdH: 44, lfs: 26, lf: swap ? 'cjk' : 'mono', tally: 'red' }, (gg, ww, hh) => {
       gg.fillStyle = '#0B0F14'; gg.fillRect(0, 0, ww, hh);
       if (!swap) {
+        if (lt < c[1] + .3 && Math.floor(lt * 2.4) % 2) { gg.fillStyle = C.ink2; gg.fillRect(48, 44, 16, 34); }
         RULES.forEach((s, k) => {
           const t0 = k < 5 ? c[1] + .3 + k * .75 : c[2] + .3, n = Math.round(Array.from(s).length * seg(lt, t0, t0 + .6)); if (n <= 0) return;
           const y = 62 + k * 74;
@@ -1030,7 +1034,7 @@ S('s16', {
       g.save(); g.globalAlpha *= a; steel(g, 140, 712, 1640, 150, { r: 14 }); g.restore();
       badge(g, 'sub', 230, 772, 40, { al: a }); text(g, '子 agent', 230, 836, { s: 24, w: 700, c: ROLE.sub[1], al: a });
       badge(g, 'lead', 1690, 772, 40, { al: a }); text(g, '总负责人', 1690, 836, { s: 24, w: 700, c: ROLE.lead[1], al: a });
-      ['取回', '校验', '拷 D 盘'].forEach((s, k) => { const m = eio(seg(lt, c[3] + .4 + k * .15, c[3] + 1.4 + k * .15)); chip(g, s, lerp(420 + k * 170, 1180 + k * 170, m), 786, C.steel, a, { fs: 28 }); });
+      ['取回', '校验', '拷 D 盘'].forEach((s, k) => { const m = eio(seg(lt, c[3] + .4, c[3] + 1.5)); chip(g, s, lerp(420 + k * 170, 1180 + k * 170, m), 786, C.steel, a, { fs: 28 }); });
       text(g, '触发全片就停 →', 960, 742, { s: 24, w: 700, c: C.ink3, al: a });
     }
   },
@@ -1046,7 +1050,7 @@ function rack(g, x, y, title, lt, alive, o = {}) {
   if (o.cross) icCross(g, x + 200, y + 141, 30, C.red, o.cross, 6);
 }
 S('s17', {
-  cam: [[0, 960, 500, 1.0], [18.2, 960, 505, 1.02]],
+  cam: [[0, 960, 540, 1], [18.2, 960, 540, 1.015]],
   cues: (() => { const c = CS('s17'); return [[c[0] + .3, 'blip'], [c[1] + .3, 'clap'], ...[0, 1, 2, 3].map(k => [c[1] + .6 + k * .2, 'cut', .6]), [c[2] + .6, 'error'], [c[3] + .3, 'clap'], [c[3] + .8, 'whoosh', .6]]; })(),
   draw(g, lt) {
     const c = CS('s17'), offAt = k => c[1] + .6 + k * .2, onAt = c[3] + .6;
@@ -1069,24 +1073,24 @@ S('s17', {
     const alive = lt < c[2] + .4 ? 1 : lt > onAt ? 1 : 0, cross = lt > c[2] + .5 && lt < onAt ? seg(lt, c[2] + .5, c[2] + .9) : 0;
     rack(g, 1520, 452, 'Codex · 检查', lt, alive, { cross });
     rack(g, 1520, 666, 'Codex · 配乐', lt, alive, { cross });
-    if (lt > c[2]) text(g, '没留下完成标记', 1660, 870, { s: 24, w: 700, c: C.red, al: fa(lt, c[2] + .6) * fo(lt, onAt) });
+    if (lt > c[2]) text(g, '没留下完成标记', 1660, 645, { s: 24, w: 700, c: C.red, al: fa(lt, c[2] + .6) * fo(lt, onAt) });
     badge(g, 'me', 230, 760, 46, { s: ap(lt, c[0]), glow: .7 });
     speech(g, '停一下', 290, 700, seg(lt, c[0] + .2, c[0] + .6), { fs: 36, al: fo(lt, c[2]) });
-    text(g, '16:19', 230, 840, { f: 'mono', s: 26, w: 700, c: C.ink2, al: fa(lt, c[0] + .3) * fo(lt, c[3]) });
-    text(g, '20:55', 230, 840, { f: 'mono', s: 26, w: 700, c: C.green, al: fa(lt, c[3] + .1) });
+    text(g, '16:19', 230, 832, { f: 'mono', s: 26, w: 700, c: C.ink2, al: fa(lt, c[0] + .3) * fo(lt, c[3]) });
+    text(g, '20:55', 230, 832, { f: 'mono', s: 26, w: 700, c: C.green, al: fa(lt, c[3] + .1) });
   },
 });
 
 /* 当晚到盘：第二批时间线 */
 S('s18', {
-  cam: [[0, 960, 505, 1.0], [SCRIPT.s18.dur, 960, 500, 1.02]],
+  cam: [[0, 960, 540, 1], [SCRIPT.s18.dur, 960, 540, 1.015]],
   cues: (() => { const c = CS('s18'); const keys = S18K(); return [...TL2.tracks.map(tr => [pkInv(tr.trig, keys), 'latch', .7]), ...TL2.tracks.map(tr => [pkInv(tr.done, keys), 'success', .6])]; })(),
   draw(g, lt) {
     const c = CS('s18'), keys = S18K(), M = pk(lt, keys);
     clockModule(g, M, { date: '10-31' });
     steel(g, 140, 268, 250, 92, { r: 10, screws: false, shadow: false });
     text(g, '全片', 160, 314, { s: 26, w: 900, a: 'left', c: C.ink2 });
-    TL2.tracks.forEach((tr, k) => lamp(g, 252 + k * 36, 314, 10, M >= tr.done ? C.green : M >= tr.trig ? C.amber : C.grey, M >= tr.trig ? 1 : 0, { halo: 3 }));
+    TL2.tracks.forEach((tr, k) => lamp(g, 264 + k * 34, 314, 10, M >= tr.done ? C.green : M >= tr.trig ? C.amber : C.grey, M >= tr.trig ? 1 : 0, { halo: 3 }));
     monRow(g, TL2, M, lt, keys, { cell: k => ({ flash: (M >= TL2.tracks[k].done ? .5 * (1 - seg(lt, pkInv(TL2.tracks[k].done, keys), pkInv(TL2.tracks[k].done, keys) + .35)) : 0) }) });
     nle(g, AX2, TL2, M, lt, { future: true });
     if (M >= 1317) { const x = xOf(AX2, 1317), p = seg(lt, pkInv(1317, keys), pkInv(1317, keys) + .4); path(g, [[x, 494], [x, 852]], { c: C.green, w: 3, al: p }); at(g, x - 100, 618, pop(p), () => { const s = '21:57 全部到盘', w = textW(g, s, { s: 26, w: 900 }) + 32; card(g, -w / 2, -24, w, 48, { r: 8, fill: C.green, lw: 0 }); text(g, s, 0, 1, { s: 26, w: 900, c: '#10151C' }); }); }
@@ -1095,7 +1099,7 @@ S('s18', {
 function S18K() { const c = CS('s18'), d = SCRIPT.s18.dur; return [[0, 952], [1.0, 979], [1.8, 1255], [c[0] - .2, 1266], [c[0] + 3.8, 1286], [c[1] + 3.4, 1300], [c[2] + 2.6, 1318], [d, 1320]]; }
 
 /* 这几期的账 */
-const B2 = [['subscription', 70], ['jsruntime', 71], ['frameanim', 53], ['fps', 39]];
+const B2 = [['subscription', 54], ['jsruntime', 49], ['frameanim', 38], ['fps', 37]];
 function flap(g, x, y, ch, flip, col) { // 翻牌：flip∈[0,1] 翻动进度
   rr(g, x - 46, y - 64, 92, 128, 10); g.fillStyle = '#0B0F14'; g.fill();
   const sq = flip < 1 ? Math.abs(Math.cos(flip * Math.PI)) : 1;
@@ -1103,8 +1107,7 @@ function flap(g, x, y, ch, flip, col) { // 翻牌：flip∈[0,1] 翻动进度
   path(g, [[x - 46, y], [x + 46, y]], { c: '#05070A', w: 3 });
 }
 S('s19', {
-  cam: [[0, 960, 500, 1.0], [SCRIPT.s19.dur, 960, 505, 1.02]],
-  demo: lt => { const c = CS('s19'); return lt > c[2] - .1 ? 1 : 0; },
+  cam: [[0, 960, 540, 1], [SCRIPT.s19.dur, 960, 540, 1.015]],
   cues: (() => { const c = CS('s19'); return [...[0, 1, 2, 3].map(k => [c[0] + .3 + k * .25, 'flap', .6]), [c[1] + .3, 'whoosh', .5], [c[1] + 1.6, 'latch'], [c[2] + .3, 'whoosh', .6], [c[2] + 1.6, 'success']]; })(),
   draw(g, lt) {
     const c = CS('s19');
@@ -1121,9 +1124,9 @@ S('s19', {
     top('codex', 'Codex', '25', 600, c[0] + .3);
     top('zcode', 'ZCode', '18', 1320, c[0] + .55);
     if (lt > c[1] - .1) {
-      const k = 6.2, par = eio(seg(lt, c[2] + .2, c[2] + 1.4)), x0 = 960 - 233 * k / 2, bx = 960 - 86 * k / 2;
-      if (par > 0) { g.save(); g.globalAlpha *= par; rr(g, bx - 10, 505, 86 * k + 20, 332, 10); g.fillStyle = 'rgba(5,8,12,.6)'; g.fill(); rr(g, bx - 10, 505, 86 * k + 20, 332, 10); g.lineWidth = 2; g.strokeStyle = C.green; g.stroke(); g.restore();
-        text(g, '墙上时钟 86 分钟', 960, 870 - 4, { s: 24, w: 700, c: C.green, al: par }); }
+      const k = 8, par = eio(seg(lt, c[2] + .2, c[2] + 1.4)), x0 = 960 - 178 * k / 2, bx = 960 - 54 * k / 2;
+      if (par > 0) { g.save(); g.globalAlpha *= par; rr(g, bx - 10, 505, 54 * k + 20, 332, 10); g.fillStyle = 'rgba(5,8,12,.6)'; g.fill(); rr(g, bx - 10, 505, 54 * k + 20, 332, 10); g.lineWidth = 2; g.strokeStyle = C.green; g.stroke(); g.restore();
+        text(g, '墙上时钟 54 分钟', 960, 482, { s: 24, w: 700, c: C.green, al: par }); }
       let acc = 0;
       B2.forEach(([slug, m], j) => {
         const p = eo(seg(lt, c[1] + .1 + j * .2, c[1] + .6 + j * .2)); if (p <= 0) { acc += m; return; }
@@ -1133,7 +1136,7 @@ S('s19', {
         acc += m;
       });
       const ta = fa(lt, c[1] + 1.4) * (1 - par);
-      if (ta > 0) { path(g, [[x0, 690], [x0, 706], [x0 + 233 * k, 706], [x0 + 233 * k, 690]], { c: C.amber, w: 3, al: ta }); text(g, '合计 233 分钟', 960, 742, { s: 30, w: 900, c: C.amber, al: ta }); }
+      if (ta > 0) { path(g, [[x0, 690], [x0, 706], [x0 + 178 * k, 706], [x0 + 178 * k, 690]], { c: C.amber, w: 3, al: ta }); text(g, '合计 178 分钟', 960, 742, { s: 30, w: 900, c: C.amber, al: ta }); }
     }
   },
 });
@@ -1143,7 +1146,7 @@ S('s19', {
  * ===================================================================== */
 const LESSON = ['创意留在\n主模型手里', '流程写成手册\n坑写进约定', '在哪停、怎么交接\n谁拍板，先设计好'];
 S('s20', {
-  cam: [[0, 960, 500, 1.02], [SCRIPT.s20.dur, 960, 500, 1.0]],
+  cam: [[0, 960, 540, 1.015], [SCRIPT.s20.dur, 960, 540, 1]],
   cues: (() => { const c = CS('s20'); return [[c[0] + .3, 'clap'], [c[1] + .3, 'clap'], [c[2] + .3, 'clap'], ...EP.map((_, i) => [c[2] + 3.0 + i * .12, 'blip', .5]), [c[2] + 4.2, 'success']]; })(),
   draw(g, lt) {
     const c = CS('s20');
@@ -1163,7 +1166,7 @@ S('s20', {
           at(gg, 360, 130, 1, () => { gg.rotate(-.6 + Math.sin(lt * 3) * .25); rr(gg, -10, -10, 20, 90, 6); gg.fillStyle = C.cyan; gg.fill(); ring(gg, 0, -26, 26, C.cyan, 12, 1, .9, TAU - .9); }, {});
           text(gg, '执行者', 360, 244, { s: 24, w: 700, c: C.cyan });
         } else if (k === 1) {
-          handbook(gg, 140, 135, .62);
+          handbook(gg, 140, 135, .62, { mini: true });
           card(gg, 260, 40, 180, 190, { r: 8, fill: '#F3EEE4', lw: 0, shadow: false });
           for (let q = 0; q < 4; q++) { const qp = seg(lt, t0 + .3 + q * .3, t0 + .6 + q * .3); icCheck(gg, 290, 80 + q * 42, 22, C.green, qp, 5); rr(gg, 316, 74 + q * 42, 100 * qp, 10, 4); gg.fillStyle = '#9AA3B0'; gg.fill(); }
         } else {

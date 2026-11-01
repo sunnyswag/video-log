@@ -324,7 +324,7 @@ function seg7(g, x, y, hh, str, col, ghost = .1) {
   const ww = hh * .52, th = hh * .12;
   let cx = x;
   for (const ch of str) {
-    if (ch === '.') { dot(g, cx - ww * .12, y + hh / 2 - th / 2, th * .6, col); continue; }
+    if (ch === '.') { dot(g, cx - hh * .08, y + hh / 2 - th * .55, th * .85, col); cx += hh * .12; continue; }
     const on = SEG7[ch] || '';
     const segs = { a: [0, -1, 1], b: [1, -.5, 0], c: [1, .5, 0], d: [0, 1, 1], e: [-1, .5, 0], f: [-1, -.5, 0], g: [0, 0, 1] };
     for (const k in segs) {
