@@ -5,10 +5,12 @@
 仅写指定 WAV；实测响度、静音窗口、转场、SHA-256 输出到 stdout。
 所有随机声源使用固定整数种子；导入不渲染、不产生字节码缓存。
 
-节拍从 0 秒连续运行，不随章节重置。A 段连续循环；B/C/D 在章节
-边界换和声，边界所在的不完整小节按章节裁切，其余每和弦一小节。
-第六章采用 C 低音踏板。片尾干声 4 秒，额外留 5 秒容纳完整混响。
-CI 仍会按视频时长裁音频，完整尾音保留在本地 WAV 中。
+所有声部沿从 0 秒起算的全局网格排入乐器总线，音符不按章节裁切。
+章节编制从最近小节线开始用一小节过渡；A 连续循环，B/C/D 从该
+小节线起换和声。第六章保留 C 低音踏板，片名保留原时长的渐强。
+剪刀留白只收干声，斜坡 30 ms；和声总线只混响一次，尾音跨章延续。
+转场、片名落点和片尾和弦保持画面锚点。片尾干声 4 秒，内部预留
+5 秒供释音与混响计算，最终按时间线时长、末尾 0.8 秒淡出后归一。
 """
 
 import argparse
@@ -36,7 +38,7 @@ TAIL = 5.0
 OUTRO_DRY = 4.0
 REVERB_DUR = 2.2
 PREDELAY = .022
-SNIP_FADE = .020
+SNIP_FADE = .030
 DUCK_DB = 3.5
 
 # bass 的第一、第三拍；电钢声部均只用三和弦音。B♭/D 的低音是 D，
@@ -99,9 +101,15 @@ def prepare(info):
     return duration, sections, cues
 
 
-def chord_at(section, t):
+def bar_start(section):
+    return math.floor(section["start"] / BAR + .5) * BAR
+
+
+def chord_at(section, t, anchored=False):
     family = PATTERNS[section["n"]]["prog"]
-    origin = 0 if family == "A" else math.floor(section["start"] / BAR + 1e-9)
+    # 画面锚定的低音重音沿用原来的音高；编曲的进行从最近小节线起算。
+    origin = 0 if family == "A" else math.floor(
+        section["start"] / BAR + (1e-9 if anchored else .5))
     bar = math.floor(t / BAR + 1e-9) - origin
     prog = PROGRESSIONS[family]
     return prog[bar % len(prog)]
@@ -127,96 +135,140 @@ def warm_pad(notes, dur, cut):
     return ak.pad_chord(notes, dur, cut=cut)
 
 
-def section_audio(section):
-    """先合成各章并混响，再淡收章界，避免第六章残留上一章琶音。"""
+def layer_level(section, layer):
     n = section["n"]
     p = PATTERNS[n]
-    start, end = section["start"], section["end"]
-    first_sample = round(start * SR)
-    length = round(end * SR) - first_sample
-    tail_frames = math.ceil((OUTRO_DRY + REVERB_DUR + PREDELAY + .1) * SR) if n == 9 else 0
-    frames = max(length, tail_frames)
+    if layer == "wet":
+        return .15 if n == 8 else .11
+    if n == 9:
+        return 0  # 片尾单次和弦另按画面锚点摆放。
+    if layer == "piano":
+        return p["piano"] if n != 8 else 0
+    if layer == "piano_summary":
+        return p["piano"] if n == 8 else 0
+    if layer == "bass_open":
+        return p["bass"] if n == 0 else 0
+    if layer == "bass_pedal":
+        return p["bass"] if n == 7 else 0
+    if layer == "bass":
+        return p["bass"] if 2 <= n <= 8 and n != 7 else 0
+    return p[layer]
+
+
+def layer_envelope(layer, frames, sections):
+    """整条声部的增益；章节只提供控制点，不拥有音频缓冲。"""
+    env = np.zeros(frames, dtype=np.float32)
+
+    def level(section, a, b):
+        gain = layer_level(section, layer)
+        if section["n"] == 1 and layer in ("piano", "pad"):
+            # 保留片名原来的 7.1 秒渐强，不用一小节替代。
+            start = round(section["start"] * SR)
+            span = round(section["end"] * SR) - start - 1
+            return gain * (.30 + .70 * np.clip((np.arange(a, b) - start) / span, 0, 1))
+        return gain
+
+    for i, section in enumerate(sections):
+        a = round(bar_start(section) * SR)
+        b = round(bar_start(sections[i + 1]) * SR) if i + 1 < len(sections) else frames
+        a, b = max(0, a), min(frames, b)
+        if b <= a:
+            continue
+        env[a:b] = level(section, a, b)
+        if i:
+            end = min(b, round((bar_start(section) + BAR) * SR))
+            w = np.linspace(0, 1, end - a, dtype=np.float32)
+            w = w * w * (3 - 2 * w)
+            env[a:end] = level(sections[i - 1], a, end) * (1 - w) + env[a:end] * w
+    return env
+
+
+def music_score(sections):
+    """一次遍历全局十六分网格；节奏型分别成层，章界交叉改变增益。"""
+    score = {layer: [] for layer in ("pad", "piano", "piano_summary", "pluck",
+             "bass_open", "bass", "bass_pedal", "wood", "hat", "shaker")}
+    wood = ak.woodblock(810, .10, bright=.40)
+    index = 0
+    for step in range(math.ceil(sections[-1]["start"] / STEP - 1e-9)):
+        t, slot = step * STEP, step % 16
+        if slot == 0:
+            # 片尾是原设计的画面落点，常规 D 进行在此之前继续运行。
+            while index + 1 < len(sections) - 1 and t >= bar_start(sections[index + 1]) - 1e-9:
+                index += 1
+            section = sections[index]
+            p = PATTERNS[section["n"]]
+            roots, notes = CHORDS[chord_at(section, t)]
+            pad_notes = tuple(m - 12 for m in notes[:3])
+            if section["n"] == 0:
+                pad_notes = (roots[0] + 12,)
+            elif section["n"] == 7:
+                pad_notes = (36, 39, 43)
+            score["pad"].append((t, warm_pad, (pad_notes, BAR + .45, p["cut"]), 1, 0))
+            score["bass_open"].append((t, low_note, (roots[0], BAR), 1, 0))
+        if slot % 2 == 0:
+            pick = (0, 1, 2, 3, 2, 1, 0, 2)[slot // 2]
+            score["piano"].append((t, piano, (notes[pick],),
+                1 if slot % 4 == 0 else .76, (-.20, -.08, .12, .24)[pick]))
+            score["hat"].append((t, ak.hat, (False, SEED + 10000 + step),
+                                  1 if slot % 4 else .70, .20))
+        if slot % 4 == 0:
+            pick = slot // 4
+            score["piano_summary"].append((t, piano, (notes[pick],),
+                                           1, (-.20, -.08, .12, .24)[pick]))
+            score["bass_pedal"].append((t, low_note, (36, .20), 1, 0))
+            score["wood"].append((t, None, wood, 1 if slot == 0 else .78, -.16))
+        if slot in (0, 8):
+            score["bass"].append((t, low_note, (roots[slot // 8], BEAT * 1.45),
+                                   1 if slot == 0 else .82, 0))
+            score["pluck"].append((t, ornament, (notes[0 if slot == 0 else 2] + 12,),
+                                    1 if slot == 0 else .85, .24))
+        score["shaker"].append((t, ak.shaker, (.075, .72, SEED + 20000 + step),
+                                 1 if slot % 2 else .62, -.24))
+    return score
+
+
+def music_bus(duration, sections, cues):
+    frames = math.ceil((duration + TAIL) * SR)
     harmonic = np.zeros((frames, 2), dtype=np.float32)
     rhythm = np.zeros_like(harmonic)
+    for layer, events in music_score(sections).items():
+        bus = np.zeros_like(harmonic)
+        gain = layer_envelope(layer, frames, sections)
+        for t, voice, args, strength, pan in events:
+            first = round(t * SR)
+            if not gain[min(first + 1, frames - 1)]:
+                continue
+            sig = voice(*args) if voice is not None else args
+            ak.add(bus, sig, t, strength, pan)
+        bus *= gain[:, None]
+        if layer in ("pad", "piano", "piano_summary", "pluck"):
+            harmonic += bus
+        else:
+            rhythm += bus
+        del bus, gain
 
-    def place(buf, sig, t, gain, pan=0):
-        # 先量化绝对时间，再转局部采样位置，避免章界舍入偏一帧。
-        offset = (round(t * SR) - first_sample) / SR
-        ak.add(buf, sig, offset, gain, pan)
-
-    if n == 9:
-        pad = ak.pad_chord((51, 55, 58, 63), OUTRO_DRY, cut=p["cut"])
-        pad *= np.exp(-ak.tvec(OUTRO_DRY) / 1.15)
-        place(harmonic, pad, start, p["pad"])
-        for note, pan in zip((63, 67, 70), (-.25, 0, .25)):
-            place(harmonic, piano(note, OUTRO_DRY), start, p["piano"], pan)
-    else:
-        first_bar = math.floor(start / BAR + 1e-9)
-        last_bar = math.ceil(end / BAR - 1e-9)
-        for bar in range(first_bar, last_bar):
-            t = max(start, bar * BAR)
-            stop = min(end, (bar + 1) * BAR)
-            roots, notes = CHORDS[chord_at(section, t)]
-            pad_notes = (roots[0] + 12,) if n == 0 else tuple(m - 12 for m in notes[:3])
-            if n == 7:
-                pad_notes = (36, 39, 43)
-            dur = stop - t + .45
-            pad = warm_pad(pad_notes, dur, p["cut"])
-            place(harmonic, pad, t, p["pad"])
-            if n == 0:
-                place(rhythm, low_note(roots[0], stop - t), t, p["bass"])
-
-        first = math.ceil(start / STEP - 1e-9)
-        last = math.ceil(end / STEP - 1e-9)
-        wood = ak.woodblock(810, .10, bright=.40)
-        for step in range(first, last):
-            t = step * STEP
-            slot = step % 16
-            roots, notes = CHORDS[chord_at(section, t)]
-            if p["piano"] and slot % (4 if n == 8 else 2) == 0:
-                pick = slot // 4 if n == 8 else (0, 1, 2, 3, 2, 1, 0, 2)[slot // 2]
-                strength = 1 if slot % 4 == 0 else .76
-                place(harmonic, piano(notes[pick]), t, p["piano"] * strength,
-                      (-.20, -.08, .12, .24)[pick])
-            if n == 7 and slot % 4 == 0:
-                place(rhythm, low_note(36, .20), t, p["bass"])
-            elif 2 <= n <= 8 and slot in (0, 8):
-                place(rhythm, low_note(roots[slot // 8], BEAT * 1.45), t,
-                      p["bass"] * (1 if slot == 0 else .82))
-            if p["wood"] and slot % 4 == 0:
-                place(rhythm, wood, t, p["wood"] * (1 if slot == 0 else .78), -.16)
-            if p["hat"] and slot % 2 == 0:
-                place(rhythm, ak.hat(rng=SEED + 10000 + step), t,
-                      p["hat"] * (1 if slot % 4 else .70), .20)
-            if p["shaker"]:
-                place(rhythm, ak.shaker(.075, bright=.72, rng=SEED + 20000 + step),
-                      t, p["shaker"] * (1 if slot % 2 else .62), -.24)
-            if p["pluck"] and slot in (0, 8):
-                place(harmonic, ornament(notes[0 if slot == 0 else 2] + 12),
-                      t, p["pluck"] * (1 if slot == 0 else .85), .24)
-
-    if n == 1:
-        # 标题的垫底和琶音共同从较弱电平渐强，3.6 秒落点另入音效总线。
-        harmonic *= np.linspace(.30, 1, frames, dtype=np.float32)[:, None]
-    wet = ak.reverb(harmonic, dur=REVERB_DUR, decay=.48,
-                    wet=.11 if n != 8 else .15, rng=SEED + 30001,
-                    predelay=PREDELAY)
-    wet += rhythm
-    # 章界淡变包含干/湿声，第六章一开始即只剩自己的 pad + 低音。
-    wet = ak.fade(wet, fade_in=.20 if n == 0 else .020,
-                  fade_out=.040 if n != 9 else .050)
-    return wet.astype(np.float32)
-
-
-def music_bus(duration, sections):
-    music = np.zeros((math.ceil((duration + TAIL) * SR), 2), dtype=np.float32)
-    for section in sections:
-        sig = section_audio(section)
-        first = round(section["start"] * SR)
-        if first + len(sig) > len(music):
-            raise ValueError("片尾预留长度不足")
-        music[first:first + len(sig)] += sig
-    return music
+    end = sections[-1]
+    p = PATTERNS[9]
+    pad = ak.pad_chord((51, 55, 58, 63), OUTRO_DRY, cut=p["cut"])
+    pad *= np.exp(-ak.tvec(OUTRO_DRY) / 1.15)
+    ak.add(harmonic, pad, end["start"], p["pad"])
+    for note, pan in zip((63, 67, 70), (-.25, 0, .25)):
+        ak.add(harmonic, piano(note, OUTRO_DRY), end["start"], p["piano"], pan)
+    for bus in (harmonic, rhythm):
+        fade = round(.20 * SR)
+        bus[:fade] *= np.linspace(0, 1, fade)[:, None]
+    windows = mute_snips(harmonic, rhythm, cues)
+    # 只向全局混响发送和声；保留总结 .15、其余 .11 的空间层次。
+    send = harmonic * layer_envelope("wet", frames, sections)[:, None]
+    music = ak.reverb(send, dur=REVERB_DUR, decay=.48, wet=1,
+                      rng=SEED + 30001, predelay=PREDELAY)
+    music -= send
+    music += harmonic
+    music += rhythm
+    for window in windows:
+        a, b = round(window["mute_start"] * SR), round(window["mute_end"] * SR)
+        window["tail_peak"] = float(np.max(np.abs(music[a:b])))
+    return music, windows
 
 
 @lru_cache(maxsize=10)
@@ -269,8 +321,8 @@ def effects():
     return {kind: (lambda v, kind=kind: cue_voice(kind) * v) for kind in CUE_DURATIONS}
 
 
-def mute_snips(music, cues):
-    """混响和 duck 之后拉零音乐总线；不压掉剪刀音效，也不漏湿声。"""
+def mute_snips(harmonic, rhythm, cues):
+    """剪刀处半拍留白只收干声；全局混响的既有尾音继续衰减。"""
     windows = []
     for cue in cues:
         if cue["type"] != "snip":
@@ -278,19 +330,21 @@ def mute_snips(music, cues):
         a = round(cue["t"] * SR)
         b = round((cue["t"] + BEAT / 2) * SR)
         fade = round(SNIP_FADE * SR)
-        left, right = max(0, a - fade), min(len(music), b + fade)
-        music[left:a] *= np.linspace(1, 0, a - left, endpoint=False)[:, None]
-        music[a:b] = 0
-        music[b:right] *= np.linspace(0, 1, right - b)[:, None]
+        left, right = max(0, a - fade), min(len(harmonic), b + fade)
+        for bus in (harmonic, rhythm):
+            bus[left:a] *= np.linspace(1, 0, a - left, endpoint=False)[:, None]
+            bus[a:b] = 0
+            bus[b:right] *= np.linspace(0, 1, right - b)[:, None]
         windows.append(dict(fade_out_start=left / SR, mute_start=a / SR,
                             mute_end=b / SR, fade_in_end=right / SR,
-                            music_peak=float(np.max(np.abs(music[a:b])))))
+                            dry_peak=max(float(np.max(np.abs(bus[a:b])))
+                                         for bus in (harmonic, rhythm))))
     return windows
 
 
 def render(info):
     duration, sections, cues = prepare(info)
-    music = music_bus(duration, sections)
+    music, windows = music_bus(duration, sections, cues)
     sfx = np.zeros_like(music)
     ak.place_cues(sfx, cues, effects())
     transitions = []
@@ -298,7 +352,7 @@ def render(info):
         if not 2 <= section["n"] <= 8:
             continue
         t = section["start"]
-        root = CHORDS[chord_at(section, t)][0][0]
+        root = CHORDS[chord_at(section, t, anchored=True)][0][0]
         ak.add(sfx, ak.s_whoosh(.24, d=.50, rng=SEED + 200 + section["n"]), t)
         ak.add(sfx, low_note(root - 12, .48), t, .20)
         ak.add(sfx, ak.fade(ak.lp(ak.kick(), 170), .003, .03), t, .075)
@@ -308,29 +362,35 @@ def render(info):
     landing = title["start"] + 3.6
     if landing >= title["end"]:
         raise ValueError("片名幕不足 3.6 秒，无法放置落定重音")
-    root = CHORDS[chord_at(title, landing)][0][0]
+    root = CHORDS[chord_at(title, landing, anchored=True)][0][0]
     ak.add(sfx, low_note(root - 12, .75), landing, .22)
     # times 确保极轻的 cue 也触发；key 则覆盖 type / whoosh 的整个发声期。
     triggers = [c["t"] for c in cues if c["v"] > 0]
     triggers += [tr["t"] for tr in transitions] + [landing]
     music = ak.duck(music, key=sfx, times=triggers, depth_db=DUCK_DB,
                     threshold=.008, attack=.020, hold=.060, release=.220)
-    windows = mute_snips(music, cues)
     music += sfx
     del sfx
-    mix = ak.normalize(music)
-    # 成片按画面时长裁切：最后 0.8 秒线性淡出到 0，避免片尾和弦的混响被硬切（CC 补）。
+    # 先按成片时长及原有 0.8 秒收尾，再测量归一，预留尾音不计入响度。
     end, fo = round(duration * SR), round(.8 * SR)
-    mix[end - fo:end] *= np.linspace(1, 0, fo, dtype=mix.dtype)[:, None]
-    mix[end:] = 0
+    music[end - fo:end] *= np.linspace(1, 0, fo, dtype=music.dtype)[:, None]
+    mix = ak.normalize(music[:end])
     report = dict(sample_rate=SR, channels=2, bpm=BPM, meter="4/4", seed=SEED,
                   timeline_seconds=duration, tail_reserve_seconds=TAIL,
                   target_rms_dbfs=ak.DEFAULT_RMS_DB, peak_ceiling=.89,
                   cue_counts=dict(sorted(Counter(c["type"] for c in cues).items())),
                   title_landing=round(landing * SR) / SR, transitions=transitions,
-                  snip_windows=windows, sections=[dict(n=s["n"], start=s["start"],
+                  snip_windows=windows, arrangement="global_grid_layer_automation",
+                  reverb_passes=1, transition_seconds=BAR, snip_fade_seconds=SNIP_FADE,
+                  title_crescendo_seconds=title["end"] - title["start"],
+                  outro_chord_seconds=sections[-1]["start"], final_fade_seconds=.8,
+                  sections=[dict(n=s["n"], start=s["start"],
                   end=s["end"], label=PATTERNS[s["n"]]["label"],
-                  progression=PATTERNS[s["n"]]["prog"]) for s in sections])
+                  progression=PATTERNS[s["n"]]["prog"],
+                  automation_start=round(bar_start(s) * SR) / SR,
+                  grid_shift_seconds=round(bar_start(s) * SR) / SR - s["start"],
+                  automation_end=round((bar_start(s) + BAR) * SR) / SR
+                  if s["n"] else 0) for s in sections])
     return mix, report
 
 

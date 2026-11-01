@@ -2,13 +2,16 @@
 """帧动画：温暖胶片 / 轻电子，92 BPM、4/4、48 kHz PCM16 立体声。
 
 用法：python3 audio.py /absolute/timeline.json /absolute/out.wav
-仅写指定 WAV；长度为时间线 + 1.5 秒，最终使用 audio_kit.normalize 默认目标。
+仅写指定 WAV；长度严格等于时间线，最终使用 audio_kit.normalize 默认目标。
 随机声源均用固定整数种子，导入不合成、不写缓存。
 
-按 timeline_sections(info, 'scenes') 的 id 分段；同一编配跨幕延续和弦。
-节拍从 0 秒连续运行，段界立刻换调：不足一小节的起段先保持首和弦，
-从下一完整小节开始每小节一个和弦。片名/片尾的一次性音符对齐场景起点。
-齿轮 16 分音符只在 s08–s11、s15–s17；s12–s14 保持无 hat。
+所有乐器直接排入从 0 秒连续运行的全局小节/16 分音符网格；场景组只提供
+编配参数，不单独渲染。和弦/节奏型在离组起点最近的小节线切换，各层增益
+用一小节平滑交接，同一编配跨幕延续和弦。干声汇入一次全片混响，尾音跨幕。
+片名/片尾的一次性音符及原有渐强/渐弱仍对齐场景；无节奏段、齿轮活动区间、
+s07 半音量保持原时间锚点，以至少 30 ms 干声包络处理，混响不随之截断。
+第四章 tense 的短音留空仍保留；pad 持续到小节线后释音，填住干声间隙。
+齿轮仍只在 s08–s11、s15–s17；s12–s14 无 hat。片尾在时间线内收尾。
 """
 
 import argparse
@@ -28,7 +31,6 @@ BPM = 92
 BEAT = 60 / BPM
 BAR = BEAT * 4
 STEP = BEAT / 4
-TAIL = 1.5
 SEED = 20261025
 
 # 根音为低音区 MIDI；和弦采用紧凑的中音区排列，主奏再升两个八度。
@@ -73,6 +75,10 @@ def prepare(info):
             groups[-1]["end"] = scene["end"]
         else:
             groups.append(dict(family=family, start=scene["start"], end=scene["end"]))
+    for i, group in enumerate(groups):
+        group["bar"] = round(group["start"] / BAR)
+        group["change"] = (round(groups[i + 1]["start"] / BAR) * BAR
+                           if i + 1 < len(groups) else math.inf)
     cues = info.get("cues", [])
     for cue in cues:
         t = float(cue["t"])
@@ -85,8 +91,7 @@ def prepare(info):
 
 
 def bar_index(group, t):
-    origin = math.ceil(group["start"] / BAR - 1e-9)
-    return max(0, math.floor(t / BAR + 1e-9) - origin)
+    return max(0, math.floor(t / BAR + 1e-9) - group["bar"])
 
 
 def chord_at(group, t):
@@ -126,114 +131,163 @@ def warm_pad(notes, dur, cut=1200):
     return ak.pad_chord(notes, dur, cut=cut).astype(np.float32)
 
 
-def group_audio(group):
-    family, start, end = group["family"], group["start"], group["end"]
-    first_sample = round(start * SR)
-    length = round(end * SR) - first_sample
-    frames = length + (round(TAIL * SR) if family == "outro" else 0)
-    harmonic = np.zeros((frames, 2), dtype=np.float32)
-    rhythm = np.zeros_like(harmonic)
+def smoothstep(x):
+    x = np.clip(x, 0, 1)
+    return x * x * (3 - 2 * x)
 
-    def place(buf, sig, t, gain, pan=0):
-        ak.add(buf, sig, (round(t * SR) - first_sample) / SR, gain, pan)
 
-    if family in ("title", "outro"):
-        pad = warm_pad((48, 55, 60, 64), end - start, 1400).copy()
-        if family == "title":
-            pad *= np.linspace(.12, 1, len(pad), dtype=np.float32)
-            for k, note in enumerate((84, 88, 91, 96)):
-                place(harmonic, celesta(note), start + k * BEAT / 2, .22, -.15 + k * .10)
-        else:
-            pad *= np.linspace(1, 0, len(pad), dtype=np.float32) ** 1.2
-            place(harmonic, celesta(84), start, .22)
-        place(harmonic, pad, start, .065 if family == "title" else .07)
-    else:
-        if family == "dark":
-            # A1 + E2 持续低音，与逐小节变化的和弦分开，跨 s05–s07 不重触发。
-            place(harmonic, warm_pad((33, 40), end - start, 430), start, .045)
-        for bar in range(math.floor(start / BAR), math.ceil(end / BAR)):
-            t, stop = max(start, bar * BAR), min(end, (bar + 1) * BAR)
-            if stop - t < 1 / SR:
-                continue
-            root, notes = chord_at(group, t)
-            dur = stop - t
-            pad_gain = dict(opening=.025, playful=.018, dark=.016, clock=.020,
-                            tense=.021, warm=.060, closing=.055)[family]
-            place(harmonic, warm_pad(tuple(n - 12 for n in notes), dur + .35,
-                                     650 if family in ("opening", "dark") else 1400),
-                  t, pad_gain, -.12)
-            if family in ("playful", "warm", "closing"):
-                place(harmonic, felt_chord(notes), t,
-                      .065 if family == "playful" else .12, .12)
-            if family == "opening":
-                place(rhythm, low_note(STAIRS[bar_index(group, t) % len(STAIRS)], dur), t, .11)
-                place(harmonic, celesta(notes[0] + 24), t, .085, -.1)
-            elif family in ("playful", "clock", "warm", "closing"):
-                place(rhythm, low_note(root, dur), t,
-                      .115 if family == "warm" else .09)
-
-        kick = ak.fade(ak.lp(ak.kick(), 320), .003, .04)
-        for step in range(math.ceil(start / STEP - 1e-9), math.ceil(end / STEP - 1e-9)):
-            t, slot = step * STEP, step % 16
-            root, notes = chord_at(group, t)
-            eighth = slot // 2
-            if family in ("playful", "closing") and slot % 2 == 0:
-                note = MOTIF[bar_index(group, t) % len(MOTIF)][eighth]
-                if note is not None:
-                    place(harmonic, celesta(note), t, .17 if family == "playful" else .18, .16)
-            if family in ("playful", "clock") and slot % 2 == 0:
-                note = notes[(0, 1, 2, 1, 0, 2, 1, 2)[eighth]] + 12
-                place(harmonic, plucked(note), t, .075 if family == "playful" else .105,
-                      -.22 if eighth % 2 else .22)
-            if family == "tense" and slot % 2 == 0:
-                # 四音上行后回根音；以音序制造锯齿感，音色仍是短拨弦。
-                # 按和弦实际三度取音，避免转位排列影响大小调判断。
-                third = next(n for n in notes if (n - root) % 12 in (3, 4))
-                note = (root + 36, root + 36 + (third - root) % 12,
-                        root + 43, root + 48)[eighth % 4]
-                place(harmonic, plucked(note, True), t, .13, -.12 if eighth % 2 else .12)
-            if family == "warm" and slot in (0, 8):
-                place(harmonic, celesta(notes[0 if slot == 0 else 2] + 24), t, .085, .15)
-            if family == "dark" and slot % 4 == 0:
-                place(rhythm, low_note(root + 12, .22), t, .14)
-            if family == "tense" and slot in (0, 8):
-                place(rhythm, low_note(root, BEAT * 1.25), t, .105)
-            kick_here = ((family == "opening" and t - start >= 8 and slot in (0, 8))
-                         or (family == "clock" and slot % 4 == 0)
-                         or (family == "tense" and slot in (0, 8)))
-            if kick_here:
-                place(rhythm, kick, t, .055 if family == "opening" else .065)
-            if family == "playful" and slot % 2 == 0:
-                place(rhythm, ak.shaker(.085, bright=.65, rng=SEED + 10000 + step),
-                      t, .11 if slot % 4 else .075, -.22)
-            if family in ("clock", "warm"):
-                # 低电平 16 分音符放映机齿轮：仅第三章和第四章后半。
-                hat = ak.lp(ak.hat(rng=SEED + 20000 + step), 10000)
-                place(rhythm, hat, t, (.035 if family == "clock" else .022)
-                      * (1 if slot % 4 else .65), .22)
-
-    wet = ak.reverb(harmonic, dur=1.2, decay=.34, wet=.13 if family == "warm" else .10,
-                    predelay=.018, rng=SEED + 30000)
-    wet += rhythm
-    # 段界收住混响和打击，避免齿轮泄漏到未指定段落；片尾保留 1.5s 尾音。
-    return ak.fade(wet, .12 if family == "opening" else .012,
-                   .15 if family == "outro" else .045).astype(np.float32)
+def layer_gain(group, t):
+    # 在音符上采样全局自动化，等价于各层总线乘包络；不切音符或创建段长缓冲。
+    gain = 1 if group["bar"] == 0 else smoothstep((t - group["bar"] * BAR) / BAR)
+    return gain * (1 - smoothstep((t - group["change"]) / BAR))
 
 
 def music_bus(duration, scenes, groups):
-    music = np.zeros((round((duration + TAIL) * SR), 2), dtype=np.float32)
+    frames = round(duration * SR)
+    harmonic = ("pad", "drone", "felt", "celesta", "pluck")
+    rhythmic = ("bass", "kick", "shaker", "hat")
+    buses = {name: np.zeros((frames, 2), dtype=np.float32)
+             for name in harmonic + rhythmic}
+    send = np.zeros((frames, 2), dtype=np.float32)
+    quiet = next((s for s in scenes if s["id"] == "s07"), None)
+    rests = [g for g in groups if g["family"] in ("title", "outro")]
+    gears = [g for g in groups if g["family"] in ("clock", "warm")]
+
+    def place(layer, sig, t, gain, pan=0, group=None):
+        # 片名/片尾只触发原有的一次性事件；前一编配已发出的音符仍可自然释音。
+        if group is not None and any(r["start"] <= t < r["end"] for r in rests):
+            return
+        times = (round(t * SR) + np.arange(len(sig))) / SR
+        env = layer_gain(group, times) if group is not None else np.ones(len(sig))
+        if quiet is not None:
+            start, end = quiet["start"], quiet["end"]
+            env = env * np.interp(times, [start - .03, start, end, end + .03],
+                                  [1, .5, .5, 1])
+        if layer in rhythmic or layer == "pluck":
+            for rest in rests:
+                start, end = rest["start"], rest["end"]
+                env = env * np.interp(times, [start - .03, start, end, end + .03],
+                                      [1, 0, 0, 1])
+        if layer == "hat":
+            gate = np.zeros(len(sig))
+            for gear in gears:
+                start, end = gear["start"], gear["end"]
+                gate = np.maximum(gate, np.interp(times,
+                                  [start, start + .03, end - .03, end], [0, 1, 1, 0]))
+            env = env * gate
+        sig = sig * env
+        ak.add(buses[layer], sig, t, gain, pan)
+        if layer in harmonic:
+            wet = .13 if group is not None and group["family"] == "warm" else .10
+            ak.add(send, sig, t, gain * wet, pan)
+
+    # 场景锚定的长音/重音是全局事件；片名六秒渐强、片尾两秒渐弱保持原时长。
     for group in groups:
-        sig = group_audio(group)
-        start = round(group["start"] * SR)
-        music[start:start + len(sig)] += sig
-    for scene in scenes:
-        if scene["id"] == "s07":
-            start, end = round(scene["start"] * SR), round(scene["end"] * SR)
-            ramp = min(start, round(.02 * SR))
-            if ramp:
-                music[start-ramp:start] *= np.linspace(1, .5, ramp)[:, None]
-            music[start:end] *= .5  # 包含全部干声与混响；音效不受影响。
-    return music
+        family, start, end = group["family"], group["start"], group["end"]
+        if family in ("title", "outro"):
+            dur = end - start
+            pad = warm_pad((48, 55, 60, 64), dur + (.9 if family == "title" else 0), 1400).copy()
+            phase = np.minimum(1, np.arange(len(pad)) / max(1, round(dur * SR) - 1))
+            if family == "title":
+                pad *= .12 + .88 * phase
+                for k, note in enumerate((84, 88, 91, 96)):
+                    place("celesta", celesta(note), start + k * BEAT / 2, .22, -.15 + k * .10)
+            else:
+                pad *= (1 - phase) ** 1.2
+                place("celesta", celesta(84), start, .22)
+            place("pad", pad, start, .065 if family == "title" else .07)
+        elif family == "dark":
+            # A1 + E2 持续低音，跨 s05–s07 不重触发，交接后一小节才退场。
+            t = group["bar"] * BAR
+            place("drone", warm_pad((33, 40), group["change"] + BAR - t + .9, 430),
+                  t, .045, group=group)
+
+    kick = ak.fade(ak.lp(ak.kick(), 320), .003, .04)
+    current = 0
+    for bar in range(math.ceil(duration / BAR)):
+        t = bar * BAR
+        while current + 1 < len(groups) and groups[current + 1]["bar"] <= bar:
+            current += 1
+        group = groups[current]
+        root, notes = chord_at(group, t)
+        active = [group]
+        if current and bar == group["bar"] and group["family"] not in ("title", "outro"):
+            active.insert(0, groups[current - 1])
+        for part in active:
+            t = bar * BAR
+            family = part["family"]
+            if family in ("title", "outro"):
+                continue
+            put = partial(place, group=part)
+            pad_gain = dict(opening=.025, playful=.018, dark=.016, clock=.020,
+                            tense=.021, warm=.060, closing=.055)[family]
+            pad_notes = tuple(n - 12 for n in notes)
+            if family == "tense":
+                # pad 的 900 ms 释音从小节线才开始；干声短音/空拍不变，湿声自然延续。
+                pad = warm_pad(pad_notes, BAR + .9, 1400).copy()
+                times = (round(t * SR) + np.arange(len(pad))) / SR
+                # 只从本章实际起点以 30 ms 进入，最高为 warm 的常规 pad 增益 .060。
+                pad *= 1 + (.060 / pad_gain - 1) * smoothstep((times - part["start"]) / .03)
+            else:
+                pad = warm_pad(pad_notes, BAR + .35,
+                               650 if family in ("opening", "dark") else 1400)
+            put("pad", pad, t, pad_gain, -.12)
+            if family in ("playful", "warm", "closing"):
+                put("felt", felt_chord(notes), t, .065 if family == "playful" else .12, .12)
+            # 整小节为持音时值，另留原音色的 70 ms 释音，不在小节线前提前收断。
+            if family == "opening":
+                put("bass", low_note(STAIRS[bar_index(part, t) % len(STAIRS)], BAR + .07), t, .11)
+                put("celesta", celesta(notes[0] + 24), t, .085, -.1)
+            elif family in ("playful", "clock", "warm", "closing"):
+                put("bass", low_note(root, BAR + .07), t, .115 if family == "warm" else .09)
+
+            for slot in range(16):
+                step = bar * 16 + slot
+                t = step * STEP
+                if t >= duration:
+                    break
+                eighth = slot // 2
+                if family in ("playful", "closing") and slot % 2 == 0:
+                    note = MOTIF[bar_index(part, t) % len(MOTIF)][eighth]
+                    if note is not None:
+                        put("celesta", celesta(note), t, .17 if family == "playful" else .18, .16)
+                if family in ("playful", "clock") and slot % 2 == 0:
+                    note = notes[(0, 1, 2, 1, 0, 2, 1, 2)[eighth]] + 12
+                    put("pluck", plucked(note), t, .075 if family == "playful" else .105,
+                        -.22 if eighth % 2 else .22)
+                if family == "tense" and slot % 2 == 0:
+                    # 四音上行后回根音；按和弦实际三度取音，避免转位影响大小调判断。
+                    third = next(n for n in notes if (n - root) % 12 in (3, 4))
+                    note = (root + 36, root + 36 + (third - root) % 12,
+                            root + 43, root + 48)[eighth % 4]
+                    put("pluck", plucked(note, True), t, .13, -.12 if eighth % 2 else .12)
+                if family == "warm" and slot in (0, 8):
+                    put("celesta", celesta(notes[0 if slot == 0 else 2] + 24), t, .085, .15)
+                if family == "dark" and slot % 4 == 0:
+                    put("bass", low_note(root + 12, .22), t, .14)
+                if family == "tense" and slot in (0, 8):
+                    put("bass", low_note(root, BEAT * 1.25), t, .105)
+                kick_here = ((family == "opening" and t - part["start"] >= 8 and slot in (0, 8))
+                             or (family == "clock" and slot % 4 == 0)
+                             or (family == "tense" and slot in (0, 8)))
+                if kick_here:
+                    put("kick", kick, t, .055 if family == "opening" else .065)
+                if family == "playful" and slot % 2 == 0:
+                    put("shaker", ak.shaker(.085, bright=.65, rng=SEED + 10000 + step),
+                        t, .11 if slot % 4 else .075, -.22)
+                if family in ("clock", "warm"):
+                    # 低电平 16 分音符放映机齿轮；原场景窗口只约束干声。
+                    hat = ak.lp(ak.hat(rng=SEED + 20000 + step), 10000)
+                    put("hat", hat, t, (.035 if family == "clock" else .022)
+                        * (1 if slot % 4 else .65), .22)
+
+    # 发送量也随各层自动化；只卷积一次，不在返回的湿声上套场景包络。
+    music = ak.reverb(send, dur=1.2, decay=.34, wet=1,
+                      predelay=.018, rng=SEED + 30000)
+    music -= send
+    for layer in harmonic + rhythmic:
+        music += buses.pop(layer)
+    return ak.fade(music, .12, .15)
 
 
 def noise_stroke(dur, low, high, decay, seed):
@@ -313,14 +367,14 @@ def effects():
 
 def render(info):
     duration, scenes, groups, cues = prepare(info)
-    sfx = np.zeros((round((duration + TAIL) * SR), 2), dtype=np.float32)
+    sfx = np.zeros((round(duration * SR), 2), dtype=np.float32)
     ak.place_cues(sfx, cues, effects())  # strict 默认 True；未知类型立即报错。
     music = music_bus(duration, scenes, groups)
     music = ak.duck(music, key=sfx, depth_db=5, threshold=.012,
                     attack=.018, hold=.06, release=.24)
     music += sfx
     del sfx
-    # 尾音只做很短淡出，保留片尾 pad 混响；normalize 仍使用全部默认参数。
+    # 只在整片末尾做很短淡出；片尾 pad/混响在时间线内收尾，归一参数不变。
     return ak.normalize(ak.fade(music, .015, .10))
 
 
@@ -333,7 +387,14 @@ def main():
     info = ak.read_timeline(args.timeline)
     mix = render(info)
     ak.write_wav(args.output, mix)
-    print(f"WAV: {len(mix) / SR:.3f} s (timeline {info['duration']:.3f} + tail {TAIL:.1f}), "
+    _, _, groups, _ = prepare(info)
+    for group in groups:
+        grid = group["bar"] * BAR
+        print(f"GRID {group['family']}: {group['start']:.3f} -> {grid:.3f} s "
+              f"({grid - group['start']:+.3f}); layer transition {BAR:.3f} s")
+    print("ANCHORS: title/outro notes + cresc./dim., s07 half gain, rhythm/hat windows unchanged; "
+          "dry ramps 30 ms; reverb once; ending within timeline (no appended 1.5 s)")
+    print(f"WAV: {len(mix) / SR:.3f} s (timeline {info['duration']:.3f}), "
           f"{SR} Hz, stereo PCM16; float RMS {ak.rms_db(mix):.4f} dBFS; "
           f"peak {ak.peak_db(mix):.4f} dBFS; elapsed {time.perf_counter() - started:.3f} s")
 
