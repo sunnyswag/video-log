@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""幕后制作 v2：C 大调、110 BPM、4/4，轻快而克制的 lo-fi 拨弦。
+"""幕后制作 v3：C 大调、110 BPM、4/4，一条连续的 lo-fi 配乐。
 
 用法：python3 -B audio.py timeline.json audio.wav
 保持 film-kit 导入方式；只写指定的 48 kHz 立体声 PCM16 WAV。
-常规演奏使用从零开始的绝对八分网格，cue 落点不重置节拍。
+所有声部使用从零开始的绝对节拍网格，和弦仅在小节线上变化。
 章节、入场、睡觉、合体和收工均从时间线查找，不写死章节秒数。
-睡觉与纯 pad 段单独渲染混响，旧乐队尾音不会串入；无片外尾音。
-结尾包络先作用于完整混音，再做一次整片恒定 RMS 增益；不分段归一。
+乐器总线平滑自动化；混响、延时跨章延续，睡觉保持原有和声与节拍。
+结尾包络作用于完整混音，限幅后整片对齐 −24.4 dBFS；无硬静音段。
 所有随机声源显式固定种子；导入不渲染、不写字节码。
 """
 
 import argparse
 from collections import Counter
 from functools import lru_cache
+from itertools import product
 import hashlib
 import math
 from pathlib import Path
@@ -31,8 +32,9 @@ BAR = BEAT * 4
 STEP = BEAT / 2
 SEED = 20261101
 DUCK_DB = 1.8
-SILENCE = .5
-FADE_SECONDS = 1.8
+FADE_SECONDS = 3.0
+TARGET_RMS_DB = -24.4
+PEAK_DB = -1.0
 EPS = 1e-8
 
 # root 为圆润低音，notes 为电钢和弦；拨弦通常高一个八度。
@@ -45,21 +47,24 @@ PROGRESSIONS = {n: ("C", "Am", "F", "G") for n in range(6)}
 PROGRESSIONS.update({6: ("F", "G", "Em", "Am"),
                      7: ("F", "G", "C", "C"), 8: ("C",)})
 LABELS = ("开场", "片名", "准备", "流水线", "分身", "小插曲", "第二批", "上架", "收工")
+# 各章只改变层增益；所有音符、延时和混响共用全片总线。
+LAYERS = ("pad", "keys", "pluck", "bass", "kick", "clap", "shaker", "hat", "box")
+LEVELS = dict(pad=.105, keys=.105, pluck=.073, bass=.095, kick=.080,
+              clap=.075, shaker=.18, hat=.030, box=.060)
 PATTERNS = {
-    0: dict(piano=.125, pluck=.145, bass=.105, kick=.075, shaker=.13, marimba=.060, pad=.028),
-    1: dict(piano=.125, pluck=.150, bass=.110, kick=.078, shaker=.14, marimba=.060, pad=.030),
-    2: dict(piano=.125, pluck=.145, bass=.110, kick=.078, shaker=.14, marimba=.065, pad=.028),
-    3: dict(piano=.125, pluck=.150, bass=.115, kick=.080, shaker=.15, marimba=.070, pad=.028),
-    4: dict(piano=.120, pluck=.125, bass=.115, kick=.080, shaker=.16, marimba=.055, pad=.028),
-    5: dict(piano=.095, pluck=.105, bass=.085, kick=.055, shaker=.10, marimba=.040, pad=.022),
-    6: dict(piano=.125, pluck=.145, bass=.115, kick=.080, shaker=.15, marimba=.060, pad=.030),
-    7: dict(piano=.135, pluck=.120, bass=.100, kick=.065, shaker=.10, marimba=.040, pad=.038),
-    8: dict(piano=.100, pluck=.090, bass=.085, kick=.050, shaker=.08, marimba=0, pad=.034),
+    0: (1, .7, 0, 0, 0, 0, 0, 0, 0),
+    1: (1, 1, 1, 1, 1, 1, 1, 0, 0),
+    2: (1, 1, .6, 1, 1, 1, 1, 0, 0),
+    3: (1, 1, 1, 1, 1, 1, 1, 1, 0),
+    4: (1, 1, 1, 1, 1, 1, 1, 1, 0),
+    5: (1, 1, 1, 1, 1, 1, 1, 0, 0),
+    6: (1, 1, 1, 1, 1, 1, 1, 1, 0),
+    7: (1, 1.05, 1, 1, 1, 1, 1, 0, 0),
+    8: (1, 1, .75, 1, 1, 1, 1, 0, 0),
 }
 CUE_DURATIONS = dict(type=.30, pop=.18, hop=.12, whoosh=.60, tick=.04,
                      ding=.65, snip=.14, flip=.25, zzz=1.15, bonk=.24,
                      poof=.40, bloop=.26)
-STAB_NOTES = ((60, 64, 67), (60, 64, 67), (64, 67, 72), (67, 72, 76))
 
 
 def prepare(info):
@@ -112,44 +117,83 @@ def prepare(info):
     if not wakes:
         raise ValueError("s12 zzz 之后须有 ding")
     outro = scenes["s16"]["start"]
-    silence_start = duration - SILENCE
-    fade_start = max(outro + (duration - outro) / 2, silence_start - FADE_SECONDS)
-    if fade_start >= silence_start:
-        raise ValueError("s16 太短，无法安排淡出和末尾静音")
+    fade_start = max(outro, duration - FADE_SECONDS)
     anchors = dict(entry=entry[0], sleep_start=sleeps[0]["t"], sleep_end=wakes[0]["t"],
                    clones=clones[-4:], stabs=stabs, reunions=reunions,
                    pipeline=[scenes[f"s{k:02d}"]["start"] for k in range(4, 10)],
                    reunion_start=scenes["s15"]["start"], outro=outro,
-                   fade_start=fade_start, silence_start=silence_start)
+                   fade_start=fade_start)
     return duration, sections, cues, anchors
 
 
+def bar_line(t, rounding="nearest"):
+    position = t / BAR
+    bar = (math.floor(position + .5) if rounding == "nearest" else
+           math.ceil(position - EPS) if rounding == "next" else math.floor(position + EPS))
+    return bar * BAR
+
+
 def chord_at(section, t):
-    # 章节起点的残小节与首个完整小节共用首和弦，绝对小节网格不变。
+    # 前六章共用连续的四小节循环；新进行从该章首个完整小节开始。
     bar = math.floor(t / BAR + EPS)
-    origin = math.ceil(section["start"] / BAR - EPS)
-    index = max(0, bar - origin)
+    origin = 0 if section["n"] < 6 else math.ceil(section["start"] / BAR - EPS)
     prog = PROGRESSIONS[section["n"]]
-    if section["n"] == 7:
-        index = min(index, len(prog) - 1)  # 上架 F–G–C–C 后保持 C。
-    return prog[index % len(prog)]
+    return prog[max(0, bar - origin) % len(prog)]
 
 
-def mode_at(t, anchors):
-    if t >= anchors["outro"]:
-        return "pad_only"
-    if anchors["sleep_start"] <= t < anchors["sleep_end"]:
-        return "lullaby"
-    return "intro" if t < anchors["entry"]["t"] else "normal"
+def voice_lead(notes, previous):
+    choices = [tuple(sorted(note + shift for note, shift in zip(notes, shifts)))
+               for shifts in product((-12, 0, 12), repeat=3)]
+    choices = [v for v in choices if 55 <= v[0] and v[-1] <= 76 and v[-1] - v[0] <= 12]
+    return min(choices, key=lambda v: (sum(abs(a - b) for a, b in zip(v, previous)), v))
 
 
-def segments(section, anchors):
-    points = {section["start"], section["end"]}
-    points.update(t for t in (anchors["entry"]["t"], anchors["sleep_start"],
-                              anchors["sleep_end"], anchors["outro"])
-                  if section["start"] < t < section["end"])
-    points = sorted(points)
-    return [(a, b, mode_at((a + b) / 2, anchors)) for a, b in zip(points, points[1:])]
+def envelope(frames, initial, events, offset=0):
+    """绝对时间上的余弦渐变；新事件接续当时的增益，不跳回旧目标。"""
+    t = (np.arange(frames) + offset) / SR
+    out = np.full(frames, initial, dtype=np.float32)
+    start, span, source, target = 0.0, 0.0, initial, initial
+    for when, seconds, value in sorted(events, key=lambda e: e[0]):
+        phase = np.clip((when - start) / span, 0, 1) if span else 1
+        source = source + (target - source) * (.5 - .5 * np.cos(np.pi * phase))
+        start, span, target = when, seconds, value
+        phase = np.clip((t - start) / span, 0, 1)
+        mask = t >= start
+        out[mask] = (source + (target - source) * (.5 - .5 * np.cos(np.pi * phase[mask])))
+    return out
+
+
+def automate(bus, initial, events):
+    for a in range(0, len(bus), SR * 4):
+        b = min(len(bus), a + SR * 4)
+        bus[a:b] *= envelope(b - a, initial, events, a)[:, None]
+
+
+def automation(sections, anchors):
+    events = {layer: [] for layer in LAYERS}
+    for s in sections[1:]:
+        # 片名的乐队入场取章内第一个小节线，其余章节取最近的小节线。
+        t = bar_line(s["start"], "next" if s["n"] == 1 else "nearest")
+        for layer, value in zip(LAYERS, PATTERNS[s["n"]]):
+            events[layer].append((t, BAR, value))
+    sleep = bar_line(anchors["sleep_start"], "floor")
+    wake = anchors["sleep_end"]
+    return_bar = bar_line(wake, "next")
+    for layer in ("kick", "clap", "shaker", "hat"):
+        events[layer].extend(((sleep, BAR, 0), (return_bar, BAR, 0 if layer == "hat" else 1)))
+    events["pluck"].extend(((sleep, BAR, .35), (return_bar, BAR, 1)))
+    events["box"].extend(((sleep, BAR, 1), (wake, BAR / 2, 0)))
+    outro = bar_line(anchors["outro"])
+    for layer in ("kick", "clap", "shaker", "hat", "pluck"):
+        events[layer].append((outro, BAR * 2, 0))
+    # 收束前低音也缓慢退下，留下持续的 C 和弦。
+    events["bass"].append((outro, BAR * 2, 0))
+    cutoff = [(bar_line(s["start"]), BAR, 8500 if s["n"] == 4 else 7000)
+              for s in sections[1:]]
+    cutoff.extend(((sleep, BAR, 1200), (wake, BAR / 2, 7000)))
+    lift = [(bar_line(sections[1]["start"], "next"), BAR, 1.02),
+            (bar_line(sections[7]["start"]), BAR, 1.06), (outro, BAR * 2, 1)]
+    return events, cutoff, lift
 
 
 @lru_cache(maxsize=96)
@@ -164,7 +208,7 @@ def bass(note, dur=.43):
 
 @lru_cache(maxsize=64)
 def pluck(note):
-    return ak.fade(ak.pluck(ak.mtof(note), .34, bright=.72), .003, .065)
+    return ak.fade(ak.pluck(ak.mtof(note), .95, bright=.72), .003, .12)
 
 
 @lru_cache(maxsize=32)
@@ -254,121 +298,152 @@ def cue_voice(kind):
     return ak.fade(x, .0005, .008)
 
 
-def segment_audio(section, start, end, mode, anchors):
-    first = round(start * SR)
-    frames = round(end * SR) - first
-    harmonic = np.zeros((frames, 2), dtype=np.float32)
-    rhythm = np.zeros_like(harmonic)
-    n, p = section["n"], PATTERNS[section["n"]]
+@lru_cache(maxsize=16)
+def pad(notes):
+    # 去掉工具内置的长起落，改为相邻小节重叠 0.3 秒的互补交叉淡化。
+    frames, trim = round((BAR + .3) * SR), round(.5 * SR)
+    tone = ak.pad_chord(notes, (frames + trim) / SR + .9, cut=1600)[trim:trim + frames]
+    stereo = np.column_stack((tone, np.r_[np.zeros(round(.011 * SR)), tone][:frames]))
+    return ak.fade(stereo, .3, .3)
 
-    def place(buf, sig, t, gain, pan=0):
-        ak.add(buf, sig, (round(t * SR) - first) / SR, gain, pan)
 
-    def ep_chord(notes, t, gain, dur=1.75):
-        for note, pan in zip(notes, np.linspace(-.25, .25, len(notes))):
-            place(harmonic, piano(note, dur), t, gain, pan)
+def instrument_bus(layer, frames, bars):
+    bus = np.zeros((frames, 2), dtype=np.float32)
+    rng = np.random.default_rng(SEED + 200)
+    closing = bar_line(frames / SR - FADE_SECONDS, "floor")
+    for bar, t, section, chord, voicing in bars:
+        root, notes = CHORDS[chord]
+        high = tuple(sorted(72 + note % 12 for note in notes))
+        gain = LEVELS[layer]
+        if layer == "pad":
+            ak.add(bus, pad(tuple(note - 12 for note in notes)), t, gain)
+        elif layer == "keys":
+            for beat, accent in ((0, 1), (1.5, .48), (3, .62)):
+                when = t + beat * BEAT
+                if when >= closing - EPS:
+                    continue
+                when = max(0, when + rng.uniform(-.008, .008))
+                velocity = gain * accent * rng.uniform(.9, 1.1)
+                for note, pan in zip(voicing, (-.25, 0, .25)):
+                    ak.add(bus, piano(note), when, velocity, pan)
+        elif layer == "pluck":
+            for slot, pick in enumerate((0, 1, 2, 1, 0, 1, 2, 1)):
+                when = t + (slot // 2 + .56 * (slot % 2)) * BEAT
+                ak.add(bus, pluck(high[pick]), when, gain * (.82 if slot % 2 else 1),
+                       (-.28, .08, .28)[pick])
+        elif layer == "bass":
+            ak.add(bus, bass(root, .95), t, gain)
+            octave = bar % 4 == 3
+            ak.add(bus, bass(root + 7, .25 if octave else .50), t + 2.5 * BEAT, gain * .65)
+            if octave:
+                ak.add(bus, bass(root + 12, .38), t + 3 * BEAT, gain * .45)
+        elif layer == "kick":
+            for beat, accent in ((0, 1), (1.5, .55)):
+                ak.add(bus, kick(), t + beat * BEAT, gain * accent)
+        elif layer == "clap":
+            hit = ak.lp(ak.clap(rng=SEED + 3000 + bar), 3000)
+            for beat in (1, 3):
+                ak.add(bus, hit, t + beat * BEAT, gain, -.08)
+        elif layer == "shaker":
+            for slot in range(8):
+                when = t + (slot // 2 + .56 * (slot % 2)) * BEAT
+                hit = ak.shaker(bright=.8, rng=SEED + 10000 + bar * 8 + slot)
+                ak.add(bus, hit, when, gain * (.6 if slot % 2 == 0 else 1), .20)
+        elif layer == "hat":
+            for slot in range(16):
+                hit = ak.hat(rng=SEED + 20000 + bar * 16 + slot)
+                ak.add(bus, hit, t + slot * BEAT / 4, gain * (.65 if slot % 2 == 0 else 1), -.20)
+        elif layer == "box":
+            for beat, pick in enumerate((0, 1, 2, 1)):
+                ak.add(bus, marimba(high[pick] + 12, 1.15), t + beat * BEAT, gain, -.12)
+    if layer == "keys":
+        for note, pan in zip((48, 55, 59, 64, 74), np.linspace(-.3, .3, 5)):
+            ak.add(bus, piano(note, frames / SR - closing), closing, LEVELS[layer] * .78, pan)
+    return bus
 
-    if mode == "pad_only":
-        # 连续 C 大调垫音，不再触发任何旋律/节奏，原片字幕打字 cue 另保留。
-        pad = ak.pad_chord((48, 55, 60, 64, 67), end - start + 1.0, cut=850)
-        place(harmonic, pad, start, .055)
-    elif mode == "lullaby":
-        # zzz 当下给一个 C6 起音；后续仍沿全局每两拍网格，不重置节拍。
-        place(harmonic, marimba(84, 1.15), start, .095, -.12)
-        first_note = math.ceil(start / (2 * BEAT) - EPS)
-        # 起音若恰好贴近网格，略过重复音，避免听成一次快速双击。
-        if first_note * 2 * BEAT - start < .25 * BEAT:
-            first_note += 1
-        for k in range(first_note, math.ceil(end / (2 * BEAT) - EPS)):
-            note = (79, 76, 79, 84)[(k - first_note) % 4]
-            place(harmonic, marimba(note, 1.15), k * 2 * BEAT, .095, -.12 if k % 2 else .12)
-    else:
-        for bar in range(math.floor(start / BAR + EPS), math.ceil(end / BAR - EPS)):
-            t, stop = max(start, bar * BAR), min(end, (bar + 1) * BAR)
-            notes = CHORDS[chord_at(section, t)][1]
-            place(harmonic, ak.pad_chord(tuple(m - 12 for m in notes), stop - t + .6, cut=1000),
-                  t, p["pad"])
-        if mode == "intro":
-            ep_chord(CHORDS["C"][1], start, p["piano"])
 
-        landings = [anchors["entry"]["t"], anchors["sleep_end"], *anchors["pipeline"]]
-        for step in range(math.ceil(start / STEP - EPS), math.ceil(end / STEP - EPS)):
-            t, slot = step * STEP, step % 8
-            root, notes = CHORDS[chord_at(section, t)]
-            if slot in (0, 4) and (mode != "intro" or t > start + EPS):
-                ep_chord(notes, t, p["piano"] * (1 if slot == 0 else .63))
-            if mode == "intro":
-                continue
-            # cue 附近 80 ms 内的常规 kick/bass 让给指定落点，防止双击。
-            near_landing = any(abs(t - u) < .08 for u in landings)
-            if slot in (0, 4, 6) and not near_landing:
-                note = root if slot != 6 else root + 7
-                place(rhythm, bass(note, .43 if slot != 6 else .30), t,
-                      p["bass"] * (.70 if slot == 6 else 1))
-            if slot in (0, 4) and not near_landing:
-                place(rhythm, kick(), t, p["kick"])
-            place(rhythm, ak.shaker(bright=.8, rng=SEED + 10000 + step), t,
-                  p["shaker"] * (.72 if slot % 2 == 0 else 1), .18)
-            if n == 4 or slot % 2 == 0:
-                pattern = (0, 1, 2, 1, 0, 2, 1, 2) if n == 4 else (0, 1, 2, 1)
-                pick = pattern[slot if n == 4 else slot // 2]
-                if (step // 8) % 2 and slot == 4:
-                    pick = 0
-                place(harmonic, pluck(notes[pick] + 12), t,
-                      p["pluck"] * (.78 if slot % 2 else 1), (-.22, .10, .24)[pick])
-            if slot == 7 and (step // 8) % 2 == 0 and p["marimba"]:
-                place(harmonic, marimba(notes[1] + 12), t, p["marimba"], -.23)
-            if n == 6 and slot in (3, 7):
-                place(harmonic, pluck(notes[2 if slot == 3 else 0] + 24), t, .060, .27)
+def lowpass_bus(music, events):
+    """连续滤波器组按对数截止频率交叉混合，所有滤波器保留全片状态。"""
+    centers = np.array((1200, 1800, 2700, 4000, 5500, 7000, 8500))
+    out = np.zeros_like(music)
+    for k, center in enumerate(centers):
+        filtered = ak.lp(music, center)
+        for a in range(0, len(music), SR * 4):
+            b = min(len(music), a + SR * 4)
+            cut = envelope(b - a, 7000, events, a)
+            position = np.interp(np.log(cut), np.log(centers), np.arange(len(centers)))
+            weight = np.maximum(0, 1 - np.abs(position - k))
+            out[a:b] += filtered[a:b] * weight[:, None]
+        del filtered
+    return out
 
-        if mode == "normal":
-            for t in landings:
-                if start <= t < end:
-                    root, notes = CHORDS[chord_at(section, t)]
-                    place(rhythm, kick(), t, p["kick"])
-                    place(rhythm, bass(root), t, p["bass"])
-                    if t == anchors["entry"]["t"]:
-                        place(harmonic, pluck(notes[0] + 12), t, p["pluck"])
-            if n == 1 and start == section["start"]:
-                for k, note in enumerate((72, 76, 79, 84)):
-                    place(harmonic, pluck(note), start + k * STEP, .175, -.24 + .16 * k)
-            for k, (c, note) in enumerate(zip(anchors["clones"], (72, 76, 79, 84))):
-                if start <= c["t"] < end:
-                    place(harmonic, marimba(note), c["t"], .22 * c["v"], -.24 + .16 * k)
-            for c, notes in zip(anchors["stabs"], STAB_NOTES):
-                if start <= c["t"] < end:
-                    ep_chord(notes, c["t"], .21 * c["v"], .30)
-            for k, c in enumerate(anchors["reunions"]):
-                if start <= c["t"] < end:
-                    last = k == len(anchors["reunions"]) - 1
-                    gain = (.22 if last else .13 + .008 * k) * c["v"]
-                    ep_chord((60, 64, 67), c["t"], gain, .60 if last else .23)
-                    if last:
-                        ep_chord((48, 72), c["t"], gain * .60, .68)
-                        place(rhythm, bass(36, .60), c["t"], .11 * c["v"])
 
-    # 每个状态段内完成混响，再封闭尾音，睡觉/收工边界无旧声部残留。
-    out = ak.reverb(harmonic, dur=1.20, decay=.32, wet=.075,
-                    rng=SEED + 300, predelay=.018)
-    out += rhythm
-    return ak.fade(out, .08 if mode in ("intro", "pad_only") else .002, .025).astype(np.float32)
+def texture(frames, music):
+    rng = np.random.default_rng(SEED + 400)
+    bed = ak.bp(rng.standard_normal((frames, 2)), 800, 6000).astype(np.float32)
+    # 以整片音乐为参考，底噪低 19 dB；噼啪声稀疏且使用独立固定随机流。
+    bed *= 10 ** ((ak.rms_db(music) - 19 - ak.rms_db(bed)) / 20)
+    level = 10 ** (ak.rms_db(music) / 20)
+    for t in np.arange(.8, frames / SR, 1.9):
+        if rng.random() < .6:
+            grain = ak.bp(rng.standard_normal(round(.007 * SR)), 800, 6000)
+            grain = ak.fade(grain, .0002, .006)
+            ak.add(bed, grain, t + rng.uniform(-.4, .4), level * .035, rng.uniform(-.6, .6))
+    return bed
 
 
 def music_bus(duration, sections, anchors):
-    music = np.zeros((round(duration * SR), 2), dtype=np.float32)
-    for section in sections:
-        for start, end, mode in segments(section, anchors):
-            sig = segment_audio(section, start, end, mode, anchors)
-            first = round(start * SR)
-            music[first:first + len(sig)] += sig
+    frames = round(duration * SR)
+    music = np.zeros((frames, 2), dtype=np.float32)
+    events, cutoff, lift = automation(sections, anchors)
+    bars, previous = [], CHORDS["C"][1]
+    for bar in range(math.ceil(duration / BAR)):
+        t = bar * BAR
+        section = ak.section_at(t, sections)
+        chord = chord_at(section, t)
+        previous = voice_lead(CHORDS[chord][1], previous)
+        bars.append((bar, t, section, chord, previous))
+    # 逐乐器渲染完整时间轴以控制内存；只在全局总线做一次延时和混响。
+    for layer in ("pad", "keys", "pluck", "box"):
+        bus = instrument_bus(layer, frames, bars)
+        automate(bus, PATTERNS[0][LAYERS.index(layer)], events[layer])
+        if layer == "pluck":
+            bus = ak.delay(bus, dt=BEAT * .75, fb=.28, wet=.12).astype(np.float32)
+        music += bus
+        del bus
+    for c in anchors["reunions"]:
+        for note, pan in zip((72, 76, 79), (-.2, 0, .2)):
+            ak.add(music, marimba(note, .85), c["t"], .033 * c["v"], pan)
+    music = ak.reverb(music, dur=1.5, decay=.40, wet=.09,
+                      rng=SEED + 300, predelay=.018).astype(np.float32)
+    for layer in ("bass", "kick", "clap", "shaker", "hat"):
+        bus = instrument_bus(layer, frames, bars)
+        automate(bus, PATTERNS[0][LAYERS.index(layer)], events[layer])
+        music += bus
+        del bus
+    return_bar = bar_line(anchors["sleep_end"], "next")
+    ak.add(music, ak.s_whoosh(v=.018, d=.45, rng=SEED + 500), return_bar - .45)
+    music += texture(frames, music)
+    music = lowpass_bus(music, cutoff)
+    automate(music, 1, lift)
+    # Kick 同步侧链：静音的鼓不触发；轻拍按其实际力度缩小压低量。
+    pump = np.zeros(frames, dtype=np.float32)
+    for bar, t, section, chord, voicing in bars:
+        for beat, accent in ((0, 1), (1.5, .55)):
+            when = t + beat * BEAT
+            strength = envelope(1, 0, events["kick"], round(when * SR))[0] * accent
+            a, b = max(0, round((when - .006) * SR)), min(frames, round((when + .18) * SR))
+            curve = np.interp(np.arange(a, b) / SR, (when - .006, when, when + .18), (0, strength, 0))
+            pump[a:b] = np.maximum(pump[a:b], curve)
+    music *= (10 ** (-2 * pump / 20))[:, None]
     return music
 
 
 def ending_envelope(mix, anchors):
-    """在响度对齐之前施加唯一的总线淡出，包含音效与混响。"""
-    a, b = (round(anchors[k] * SR) for k in ("fade_start", "silence_start"))
-    mix[a:b] *= (np.cos(np.linspace(0, np.pi / 2, b - a)) ** 2)[:, None]
-    mix[b:] = 0
+    """唯一的总线淡出包含音效与混响；余弦曲线在最后一个采样点归零。"""
+    a = round(anchors["fade_start"] * SR)
+    mix[a:] *= (np.cos(np.linspace(0, np.pi / 2, len(mix) - a)) ** 2)[:, None]
+    mix[-1] = 0
 
 
 def render(info):
@@ -377,21 +452,23 @@ def render(info):
     sfx = np.zeros_like(music)
     fx = {kind: (lambda v, kind=kind: cue_voice(kind) * v) for kind in CUE_DURATIONS}
     ak.place_cues(sfx, cues, fx)
-    # 分块侧链节省内存；前后 halo 足够覆盖 attack、最长 cue 和 release。
+    sfx *= 10 ** (-3 / 20)
+    # 分块侧链节省内存；halo 覆盖最长 cue，始终读取未避让的音乐。
     triggers = np.array([c["t"] for c in cues if c["v"] > 0])
     chunk, halo = SR * 20, SR * 2
     for a in range(0, len(music), chunk):
         b = min(len(music), a + chunk)
         left, right = max(0, a - halo), min(len(music), b + halo)
         times = triggers[(triggers >= left / SR) & (triggers < right / SR)] - left / SR
-        ducked = ak.duck(music[left:right], key=sfx[left:right], times=times,
-                         depth_db=DUCK_DB, threshold=.008, attack=.012, hold=.045, release=.150)
-        music[a:b] = ducked[a - left:b - left]
+        ducked = ak.duck(np.ones((right - left, 2), dtype=np.float32),
+                         key=sfx[left:right], times=times, depth_db=DUCK_DB,
+                         threshold=.008, attack=.012, hold=.045, release=.150)
+        music[a:b] *= ducked[a - left:b - left]
     music += sfx
     del sfx
     ending_envelope(music, anchors)
-    # 与 v1 一样整片 RMS 对齐；仅一个恒定增益，尾部绝无自动补偿/分段抬升。
-    mix = ak.normalize(music)
+    mix = ak.limit_bus(music, ceiling_db=PEAK_DB)
+    mix = ak.normalize(mix, target_rms_db=TARGET_RMS_DB, peak_db=PEAK_DB)
     report = dict(timeline_seconds=duration, anchors=anchors, sections=sections,
                   cue_counts=dict(sorted(Counter(c["type"] for c in cues).items())))
     return mix, report
@@ -409,6 +486,24 @@ def pcm_stats(pcm, start=0, end=None):
                 peak=peak, peak_dbfs=20 * math.log10(max(peak, 1e-12)))
 
 
+def continuity_stats(pcm, sr):
+    frames = round(.05 * sr)
+    count = len(pcm) // frames
+    db = np.empty(count)
+    for k in range(count):
+        block = pcm[k * frames:(k + 1) * frames].astype(np.float64) / 32768
+        db[k] = 10 * np.log10(max(np.mean(block * block), 1e-24))
+    times = (np.arange(count) + .5) * frames / sr
+    # 与前后各 100 ms 处的 50 ms 格比较；两侧都超过 6 dB 才算凹陷。
+    dip = np.minimum(db[:-4], db[4:]) - db[2:-2]
+    valid = (times[2:-2] >= 2) & (times[2:-2] <= len(pcm) / sr - 4)
+    candidates = np.flatnonzero(valid)
+    worst = candidates[np.argmax(dip[valid])]
+    failures = times[2:-2][valid & (dip > 6)]
+    return dict(windows=int(valid.sum()), failures=failures.tolist(),
+                max_dip_db=float(dip[worst]), worst_seconds=float(times[worst + 2]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("timeline", type=Path)
@@ -421,28 +516,32 @@ def main():
     del mix
     sr, pcm = wavfile.read(args.output, mmap=True)
     stats = pcm_stats(pcm)
-    error = stats["rms_dbfs"] - ak.DEFAULT_RMS_DB
-    silent = pcm[round(report["anchors"]["silence_start"] * sr):]
-    if (abs(error) > .3 or stats["peak"] >= 1 or np.any(silent)
-            or len(pcm) != round(report["timeline_seconds"] * sr)):
-        raise RuntimeError(f"响度、峰值、时长或静音验收失败：{stats}, RMS 差 {error:.6f} dB")
+    error = stats["rms_dbfs"] - TARGET_RMS_DB
+    continuity = continuity_stats(pcm, sr)
+    nonzero = np.flatnonzero(np.any(pcm != 0, axis=1))
+    silent_tail = (len(pcm) - nonzero[-1] - 1) / sr if len(nonzero) else len(pcm) / sr
+    if (sr != SR or pcm.dtype != np.int16 or pcm.ndim != 2 or pcm.shape[1] != 2
+            or abs(error) > .1 or stats["peak_dbfs"] > PEAK_DB
+            or len(pcm) != round(report["timeline_seconds"] * sr)
+            or continuity["failures"] or silent_tail > .2 or np.any(pcm[-1])):
+        raise RuntimeError(f"验收失败：{stats}, RMS 差 {error:.6f} dB, continuity={continuity}, tail={silent_tail}")
     print(f"format=PCM16 sample_rate={sr} channels=2 bpm={BPM} meter=4/4 beat_origin_seconds=0 seed={SEED}")
     print(f"timeline_seconds={report['timeline_seconds']:.6f} duration_seconds={len(pcm) / sr:.6f} tail_seconds=0.0")
-    print(f"target_rms_dbfs={ak.DEFAULT_RMS_DB:.6f} pcm_rms_dbfs={stats['rms_dbfs']:.6f} rms_error_db={error:+.6f}")
+    print(f"target_rms_dbfs={TARGET_RMS_DB:.6f} pcm_rms_dbfs={stats['rms_dbfs']:.6f} rms_error_db={error:+.6f}")
     print(f"peak={stats['peak']:.9f} peak_dbfs={stats['peak_dbfs']:.6f}")
     a = report["anchors"]
-    print(f"band_entry={a['entry']['t']:.3f} sleep={a['sleep_start']:.3f}..{a['sleep_end']:.3f}")
-    print("pipeline_downbeats=" + ",".join(f"{t:.3f}" for t in a["pipeline"]))
-    print("s10_marimba=" + ",".join(f"{c['t']:.3f}:{note}" for c, note in zip(a["clones"], ("C5", "E5", "G5", "C6"))))
-    print("s13_major_stabs=" + ",".join(f"{c['t']:.3f}:C" for c in a["stabs"]))
-    print(f"reunion_scene={a['reunion_start']:.3f}..{a['outro']:.3f}")
-    print("s15_pop_chords=" + ",".join(f"{c['t']:.3f}:C" for c in a["reunions"]))
-    print(f"pad_only_from={a['outro']:.3f} fade={a['fade_start']:.3f}..{a['silence_start']:.3f}")
+    print(f"band_entry={bar_line(report['sections'][1]['start'], 'next'):.6f}")
+    print(f"sleep_cue={a['sleep_start']:.3f} sleep_ramp={bar_line(a['sleep_start'], 'floor'):.6f}")
+    print(f"wake_filter={a['sleep_end']:.3f} drum_return={bar_line(a['sleep_end'], 'next'):.6f}")
+    print("s15_marimba_C5_E5_G5=" + ",".join(f"{c['t']:.3f}" for c in a["reunions"]))
+    print(f"outro_ramp={bar_line(a['outro']):.6f} closing_Cmaj9={bar_line(report['timeline_seconds'] - FADE_SECONDS, 'floor'):.6f}")
+    print(f"fade={a['fade_start']:.6f}..{report['timeline_seconds']:.6f}")
     print("cue_counts=" + ", ".join(f"{k}:{v}" for k, v in report["cue_counts"].items()))
     for s in report["sections"]:
         measurement = pcm_stats(pcm, round(s["start"] * sr), round(s["end"] * sr))
         print(f"chapter={s['n']} {LABELS[s['n']]} {s['start']:.3f}..{s['end']:.3f} rms_dbfs={measurement['rms_dbfs']:.6f}")
-    print(f"silent_tail_seconds={len(silent) / sr:.6f} silent_tail_nonzero_samples={np.count_nonzero(silent)} last_frame={pcm[-1].tolist()}")
+    print(f"continuity_windows={continuity['windows']} failures={len(continuity['failures'])} max_dip_db={continuity['max_dip_db']:.6f} worst_seconds={continuity['worst_seconds']:.3f}")
+    print(f"silent_tail_seconds={silent_tail:.6f} last_frame={pcm[-1].tolist()}")
     digest = hashlib.sha256()
     with args.output.open("rb") as source:
         for block in iter(lambda: source.read(1024 * 1024), b""):
