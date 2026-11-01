@@ -1,0 +1,429 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -2,7 +2,7 @@
+ members = ["."]
+ 
+ [workspace.package]
+-version = "2.1.3+video-log.1"
++version = "2.1.3+video-log.2"
+ edition = "2021"
+ license = "MIT"
+ 
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1342,7 +1342,7 @@
+ 
+ [[package]]
+ name = "sph"
+-version = "2.1.3+video-log.1"
++version = "2.1.3+video-log.2"
+ dependencies = [
+  "async-trait",
+  "chromiumoxide",
+--- a/src/session/mod.rs
++++ b/src/session/mod.rs
+@@ -13,15 +13,32 @@
+ 
+ use crate::apperr::{AppError, Code, Result, Stage};
+ use crate::browser::{self, fetch, SharedWriter};
+-use crate::login::watch::{CookieEntry, LoginWatch, Poll};
+ 
+ pub const DEFAULT_ACCOUNT: &str = "default";
+ pub const ACCOUNT_FILE: &str = "account.json";
+ pub const PROFILE_DIR: &str = "profile";
+ pub const ASSISTANT_HOME: &str = "https://channels.weixin.qq.com/platform";
+ const POLL_INTERVAL: Duration = Duration::from_secs(1);
+-/// 登录检测轮询的目标端点：助手平台域，登录成功后会出现新的会话 cookie。
+-const ASSISTANT_COOKIE_ENDPOINT: &str = "https://channels.weixin.qq.com/platform";
++const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
++const CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
++const LOGIN_STABLE_POLLS: usize = 2;
++
++// Require visible authenticated navigation, not cookie growth: relogin can
++// replace existing cookie values, and restored sessions need no cookie change.
++const ASSISTANT_LOGGED_IN_JS: &str = r#"(() => {
++    if (/login|passport/i.test(location.pathname)) return false;
++    const roots = [document, ...Array.from(document.querySelectorAll('wujie-app'))
++        .map(app => app.shadowRoot).filter(Boolean)];
++    const visible = el => {
++        const box = el.getBoundingClientRect(), style = getComputedStyle(el);
++        return box.width > 0 && box.height > 0 &&
++            style.display !== 'none' && style.visibility !== 'hidden';
++    };
++    const has = selector => roots.some(root =>
++        Array.from(root.querySelectorAll(selector)).some(visible));
++    if (has('.qrcode-tip, #qrcode-login, .login-qrcode')) return false;
++    return has('.brand-name') && has('.finder-ui-desktop-menu__sub__li');
++})()"#;
+ 
+ /// 账号档案（account.json 的格式）。不含任何秘密。
+ #[derive(Debug, Clone, Serialize, Deserialize)]
+@@ -166,8 +183,8 @@
+ /// 助手登录的可注入抽象（测试永不需要真实浏览器）。
+ #[async_trait::async_trait]
+ pub trait AssistantBrowser: Send {
+-    /// 采集适用于目标端点的 cookie（登录检测输入）。
+-    async fn cookies(&self, endpoint: &str) -> std::result::Result<Vec<CookieEntry>, String>;
++    /// 查询可见的已登录后台界面，不读取或记录 cookie。
++    async fn is_logged_in(&mut self) -> std::result::Result<bool, String>;
+     async fn close(&mut self);
+ }
+ 
+@@ -201,7 +218,7 @@
+     }
+ }
+ 
+-/// 视频号助手扫码登录：打开可见浏览器（持久 profile），轮询 cookie 状态机
++/// 视频号助手扫码登录：打开可见浏览器（持久 profile），轮询已登录后台界面
+ /// 检测登录，检测到后优雅关闭（profile 落盘）并写档案。
+ /// 任何失败路径都不破坏现有 profile。
+ pub async fn login_assistant(
+@@ -256,8 +273,17 @@
+     );
+ 
+     let login_result = wait_login_detected(&mut *session, timeout).await;
+-    session.close().await;
++    // CDP may never answer after the user closes the window. Neither the
++    // probe nor cleanup may leave the upload wrapper waiting indefinitely.
++    let close_result = tokio::time::timeout(CLOSE_TIMEOUT, session.close()).await;
+     login_result?;
++    close_result.map_err(|_| {
++        AppError::new(
++            Code::Timeout,
++            Stage::LoginBrowser,
++            "登录浏览器关闭超时；请重新运行登录验证会话",
++        )
++    })?;
+     // 让浏览器进程完全退出、profile 完全落盘
+     tokio::time::sleep(Duration::from_millis(500)).await;
+ 
+@@ -272,34 +298,47 @@
+     Ok(())
+ }
+ 
+-/// 轮询目标端点 cookie jar，复用三段式登录状态机。
++/// 连续确认后台界面就绪；总超时包含挂起的浏览器请求。
+ async fn wait_login_detected(session: &mut dyn AssistantBrowser, timeout: Duration) -> Result<()> {
+     let deadline = tokio::time::Instant::now() + timeout;
+-    let mut watch = LoginWatch::new();
+-    let mut tick = tokio::time::interval(POLL_INTERVAL);
+-    tick.tick().await;
+-    loop {
+-        if tokio::time::Instant::now() >= deadline {
+-            return Err(AppError::new(
+-                Code::Timeout,
+-                Stage::LoginBrowser,
+-                "登录超时（包含等待人工扫码的时间）",
+-            ));
+-        }
+-        tokio::select! {
+-            _ = tick.tick() => {
+-                match session.cookies(ASSISTANT_COOKIE_ENDPOINT).await {
+-                    Err(_) => continue,
+-                    Ok(mut cookies) => {
+-                        cookies.sort_by(|a, b| a.name.cmp(&b.name));
+-                        if watch.poll(&cookies) == Poll::Detected {
+-                            return Ok(());
+-                        }
++    let mut stable = 0;
++    let mut failures = 0;
++    let poll = async {
++        loop {
++            match tokio::time::timeout(PROBE_TIMEOUT, session.is_logged_in()).await {
++                Ok(Ok(true)) => {
++                    stable += 1;
++                    failures = 0;
++                    if stable >= LOGIN_STABLE_POLLS {
++                        return Ok(());
++                    }
++                }
++                Ok(Ok(false)) => {
++                    stable = 0;
++                    failures = 0;
++                }
++                _ => {
++                    stable = 0;
++                    failures += 1;
++                    if failures >= 3 {
++                        return Err(AppError::new(
++                            Code::LoginBrowserFailed,
++                            Stage::LoginBrowser,
++                            "登录浏览器已关闭或连续无响应，请重新运行登录",
++                        ));
+                     }
+                 }
+             }
+-        }
+-    }
++            tokio::time::sleep(POLL_INTERVAL).await;
++        }
++    };
++    tokio::time::timeout_at(deadline, poll).await.map_err(|_| {
++        AppError::new(
++            Code::Timeout,
++            Stage::LoginBrowser,
++            "登录超时（包含等待人工扫码的时间）",
++        )
++    })?
+ }
+ 
+ /// 生产浏览器会话（chromiumoxide）。
+@@ -328,28 +367,30 @@
+ 
+ #[async_trait::async_trait]
+ impl AssistantBrowser for RealAssistantBrowser {
+-    async fn cookies(&self, endpoint: &str) -> std::result::Result<Vec<CookieEntry>, String> {
+-        use chromiumoxide::cdp::browser_protocol::network::GetCookiesParams;
+-        let resp = self
+-            .page
+-            .execute(GetCookiesParams {
+-                urls: Some(vec![endpoint.to_string()]),
+-            })
+-            .await
+-            .map_err(|e| e.to_string())?;
+-        Ok(resp
+-            .result
+-            .cookies
+-            .into_iter()
+-            .map(|c| CookieEntry {
+-                name: c.name,
+-                value: c.value,
+-            })
+-            .collect())
++    async fn is_logged_in(&mut self) -> std::result::Result<bool, String> {
++        if self
++            ._browser
++            .try_wait()
++            .map_err(|e| e.to_string())?
++            .is_some()
++        {
++            return Err("browser closed".into());
++        }
++        self.page
++            .evaluate(ASSISTANT_LOGGED_IN_JS)
++            .await
++            .map_err(|e| e.to_string())?
++            .value()
++            .and_then(|v| v.as_bool())
++            .ok_or_else(|| "invalid login probe result".into())
+     }
+ 
+     async fn close(&mut self) {
++        if matches!(self._browser.try_wait(), Ok(Some(_))) {
++            return;
++        }
+         let _ = self._browser.close().await;
++        let _ = self._browser.wait().await;
+     }
+ }
+ 
+@@ -369,13 +410,13 @@
+     }
+ 
+     struct FakeBrowser {
+-        script: StdMutex<VecDeque<Vec<CookieEntry>>>,
++        script: StdMutex<VecDeque<bool>>,
+         poll: StdMutex<usize>,
+         closed: StdMutex<bool>,
+     }
+ 
+     impl FakeBrowser {
+-        fn new(script: Vec<Vec<CookieEntry>>) -> FakeBrowser {
++        fn new(script: Vec<bool>) -> FakeBrowser {
+             FakeBrowser {
+                 script: StdMutex::new(script.into_iter().collect()),
+                 poll: StdMutex::new(0),
+@@ -390,11 +431,11 @@
+ 
+     #[async_trait::async_trait]
+     impl AssistantBrowser for FakeBrowser {
+-        async fn cookies(&self, _endpoint: &str) -> std::result::Result<Vec<CookieEntry>, String> {
++        async fn is_logged_in(&mut self) -> std::result::Result<bool, String> {
+             let s = self.script.lock().unwrap();
+             let mut p = self.poll.lock().unwrap();
+             if s.is_empty() {
+-                return Ok(vec![]);
++                return Ok(false);
+             }
+             let idx = (*p).min(s.len() - 1);
+             *p += 1;
+@@ -410,32 +451,19 @@
+ 
+     #[async_trait::async_trait]
+     impl AssistantBrowser for ArcSession {
+-        async fn cookies(&self, endpoint: &str) -> std::result::Result<Vec<CookieEntry>, String> {
+-            self.0.cookies(endpoint).await
++        async fn is_logged_in(&mut self) -> std::result::Result<bool, String> {
++            let s = self.0.script.lock().unwrap();
++            let mut p = self.0.poll.lock().unwrap();
++            let result = s
++                .get((*p).min(s.len().saturating_sub(1)))
++                .copied()
++                .unwrap_or(false);
++            *p += 1;
++            Ok(result)
+         }
+         async fn close(&mut self) {
+             *self.0.closed.lock().unwrap() = true;
+         }
+-    }
+-
+-    fn guest() -> Vec<CookieEntry> {
+-        vec![CookieEntry {
+-            name: "guest_a".into(),
+-            value: "1".into(),
+-        }]
+-    }
+-
+-    fn logged_in() -> Vec<CookieEntry> {
+-        vec![
+-            CookieEntry {
+-                name: "guest_a".into(),
+-                value: "1".into(),
+-            },
+-            CookieEntry {
+-                name: "sessionid".into(),
+-                value: "s".into(),
+-            },
+-        ]
+     }
+ 
+     #[tokio::test]
+@@ -443,12 +471,7 @@
+         let base = tempdir();
+         let config = base.join("cfg");
+         let session = Arc::new(FakeBrowser::new(vec![
+-            guest(),
+-            guest(),
+-            guest(),
+-            logged_in(),
+-            logged_in(),
+-            logged_in(),
++            false, false, false, true, true, true,
+         ]));
+         let session2 = session.clone();
+         let stderr_vec: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+@@ -500,10 +523,122 @@
+     }
+ 
+     #[tokio::test]
++    async fn login_restored_session_needs_no_cookie_growth() {
++        let mut session = FakeBrowser::new(vec![true]);
++        wait_login_detected(&mut session, Duration::from_secs(5))
++            .await
++            .unwrap();
++        assert_eq!(*session.poll.lock().unwrap(), LOGIN_STABLE_POLLS);
++    }
++
++    #[tokio::test]
++    async fn login_requires_consecutive_authenticated_polls() {
++        let mut session = FakeBrowser::new(vec![true, false, true, true]);
++        wait_login_detected(&mut session, Duration::from_secs(6))
++            .await
++            .unwrap();
++        assert_eq!(*session.poll.lock().unwrap(), 4);
++    }
++
++    struct UnresponsiveBrowser;
++    #[async_trait::async_trait]
++    impl AssistantBrowser for UnresponsiveBrowser {
++        async fn is_logged_in(&mut self) -> std::result::Result<bool, String> {
++            std::future::pending().await
++        }
++        async fn close(&mut self) {}
++    }
++
++    #[tokio::test]
++    async fn login_deadline_covers_pending_browser_request() {
++        let result = tokio::time::timeout(
++            Duration::from_secs(1),
++            wait_login_detected(&mut UnresponsiveBrowser, Duration::from_millis(50)),
++        )
++        .await;
++        assert_eq!(result.unwrap().unwrap_err().code, Code::Timeout);
++    }
++
++    struct UnresponsiveClose;
++    #[async_trait::async_trait]
++    impl AssistantBrowser for UnresponsiveClose {
++        async fn is_logged_in(&mut self) -> std::result::Result<bool, String> {
++            Ok(true)
++        }
++        async fn close(&mut self) {
++            std::future::pending().await
++        }
++    }
++
++    #[tokio::test]
++    async fn login_close_timeout_does_not_report_success() {
++        let base = tempdir();
++        let opts = LoginOptions {
++            launch: Some(Arc::new(|_| {
++                Box::pin(async { Ok(Box::new(UnresponsiveClose) as Box<dyn AssistantBrowser>) })
++            })),
++            stderr: Arc::new(Mutex::new(Vec::new())),
++            ..Default::default()
++        };
++        let result = tokio::time::timeout(
++            Duration::from_secs(9),
++            login_assistant(&base, DEFAULT_ACCOUNT, true, opts),
++        )
++        .await;
++        assert_eq!(result.unwrap().unwrap_err().code, Code::Timeout);
++        assert!(!AccountDir::new(&accounts_root(&base), DEFAULT_ACCOUNT)
++            .account_file()
++            .exists());
++    }
++
++    #[tokio::test]
++    async fn login_page_probe_and_closed_browser() {
++        let Ok(chrome) = std::env::var("SPH_CHROME") else {
++            eprintln!("skip: SPH_CHROME is not set");
++            return;
++        };
++        // Only about:blank and synthetic DOM, with an isolated empty profile.
++        let profile = tempdir();
++        let (browser, page) = browser::launch(Path::new(&chrome), &profile, false)
++            .await
++            .unwrap();
++        let mut session = RealAssistantBrowser {
++            _browser: browser,
++            page,
++        };
++        assert!(!session.is_logged_in().await.unwrap());
++        for (html, expected) in [
++            ("<div class='brand-name'>视频号助手</div>", false),
++            ("<div class='finder-ui-desktop-menu__sub__li'>视频</div>", false),
++            ("<div class='brand-name'>视频号助手</div><div class='finder-ui-desktop-menu__sub__li'>视频</div>", true),
++            ("<div class='brand-name'>视频号助手</div><div class='finder-ui-desktop-menu__sub__li'>视频</div><div class='login-qrcode'>扫码</div>", false),
++            ("<div class='brand-name'>视频号助手</div><div class='finder-ui-desktop-menu__sub__li'>视频</div><div class='login-qrcode' style='display:none'>扫码</div>", true),
++        ] {
++            session.page.evaluate(format!("document.body.innerHTML = {}", serde_json::to_string(html).unwrap())).await.unwrap();
++            assert_eq!(session.is_logged_in().await.unwrap(), expected, "{html}");
++        }
++        session.page.evaluate("document.body.innerHTML='<wujie-app></wujie-app>'; document.querySelector('wujie-app').attachShadow({mode:'open'}).innerHTML='<div class=brand-name>视频号助手</div><div class=finder-ui-desktop-menu__sub__li>视频</div>'").await.unwrap();
++        wait_login_detected(&mut session, Duration::from_secs(5))
++            .await
++            .unwrap();
++        session._browser.close().await.unwrap();
++        session._browser.wait().await.unwrap();
++        let result = tokio::time::timeout(
++            Duration::from_secs(5),
++            wait_login_detected(&mut session, Duration::from_secs(30)),
++        )
++        .await;
++        assert_eq!(result.unwrap().unwrap_err().code, Code::LoginBrowserFailed);
++        tokio::time::timeout(Duration::from_secs(1), session.close())
++            .await
++            .unwrap();
++    }
++
++    #[tokio::test]
+     async fn login_timeout_leaves_profile_intact() {
+         let base = tempdir();
+         let config = base.join("cfg");
+-        let session = Arc::new(FakeBrowser::new(vec![guest()]));
++        let session = Arc::new(FakeBrowser::new(vec![false]));
+         let session2 = session.clone();
+         let opts = LoginOptions {
+             timeout: Duration::from_millis(250),

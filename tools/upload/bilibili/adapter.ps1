@@ -7,6 +7,21 @@
     }
 }
 
+function Get-BilibiliSession($Plan) {
+    # list validates credentials (and refreshes when needed); renew alone can be
+    # a no-op for web-cookie logins. Never print the returned account/video data.
+    $run = Invoke-UploadTool $Plan @('--rust-log', 'error', '-u', $Plan.CredentialPath, 'list', '--max-pages', '1') -CaptureOutput -CaptureError
+    if ($run.ExitCode -eq 0) { return 'Ready' }
+    $diagnostic = $run.Output + "`n" + $run.ErrorOutput
+    # Match explicit authentication failures, not arbitrary nonzero exits or
+    # network errors. Keep native diagnostics private: they can include tokens.
+    if ($diagnostic -match '(?i)(?:Bilibili code\s+|"?code"?\s*:\s*)(?:-101|-2)(?!\d)' -or
+        $diagnostic -match '账号未登录|未登录|登录已失效|登录已过期|登录失效|登录过期') {
+        return 'NeedsLogin'
+    }
+    throw "[bilibili] 登录检查失败（退出码 $($run.ExitCode)）；未确认登录过期，本次未开始上传。请检查网络或使用 biliup 的 list 命令诊断。"
+}
+
 function New-BilibiliPlan($Project) {
     $meta = $Project.Meta
     $plan = New-BilibiliTool

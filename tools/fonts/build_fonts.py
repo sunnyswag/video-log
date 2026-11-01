@@ -26,7 +26,11 @@ faces = [
     ('FMono', 700, D + 'DejaVuSansMono-Bold.ttf', None),
     ('FMonoCJK', 400, N + 'NotoSansCJK-Regular.ttc', 7),
     ('FMonoCJK', 700, N + 'NotoSansCJK-Bold.ttc', 7),
+    ('FSerif', 700, N + 'NotoSerifCJKsc-Bold.otf', None),
+    ('FSerif', 900, N + 'NotoSerifCJKsc-Black.otf', None),
 ]
+# 衬线体按需嵌入：只有画面代码里写了 FSerif 才打包，其余各期的 fonts.css 不变
+faces = [x for x in faces if x[0] != 'FSerif' or 'FSerif' in src]
 css = []
 total = 0
 for fam, w, path, idx in faces:
@@ -37,7 +41,7 @@ for fam, w, path, idx in faces:
     opts.name_IDs = ['*']
     opts.notdef_outline = True
     sub = subset.Subsetter(opts)
-    tx = SUP if fam == 'FSup' else (''.join(c for c in text if c not in SUP) if fam == 'FCJK' else text)
+    tx = SUP if fam == 'FSup' else (''.join(c for c in text if c not in SUP) if fam in ('FCJK', 'FSerif') else text)
     sub.populate(text=tx)
     sub.subset(f)
     buf = io.BytesIO()

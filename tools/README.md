@@ -67,6 +67,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -C
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\upload\upload.ps1 -Project 2026-10-16-32bit-ms-timer -Yes
 ```
 
-`-DryRun` 只预览本地参数；`-Platforms bilibili` 或 `-Platforms sph` 可只发布一个平台。双击 `upload/上传视频.bat` 可先勾选平台，再选择项目；默认两个平台都勾选，↑/↓ 移动、空格取消或恢复勾选，回车确认。首次视频号登录运行 `upload.ps1 -Login -Platforms sph`。
+`-DryRun` 只预览本地参数；`-Platforms bilibili` 或 `-Platforms sph` 可只发布一个平台。双击 `upload/upload_video.bat` 可先勾选平台，再选择项目；默认两个平台都勾选，↑/↓ 移动、空格取消或恢复勾选，回车确认。首次视频号登录运行 `upload.ps1 -Login -Platforms sph`。
 
-项目外层的成片与 JSON 命名规则保持不变，平台差异写进 JSON 的 `sph` 对象，结果记录放入该期 `work/upload/`。程序、Cookie、浏览器会话和运行产物仅存本地，不提交 Git。完整字段、安装、登录及失败补传见 [使用说明](upload/使用说明.md)。
+项目外层的成片与 JSON 命名规则保持不变，平台差异写进 JSON 的 `sph` 对象，结果记录放入该期 `work/upload/`。程序、Cookie、浏览器会话和运行产物仅存本地，不提交 Git。完整字段、安装、登录及失败补传见 [使用说明](upload/Readme.md)。
