@@ -288,7 +288,7 @@ function typingDots(g, x, y, t, al = 1) { g.save(); g.globalAlpha *= al; rr(g, x
 /* 你的气泡（右上角浮出的原话） */
 function youSay(g, s, p, o = {}) {
   if (p <= 0) return;
-  const x = o.x ?? 1840, y = o.y ?? 132;
+  const x = o.x ?? 1840, y = o.y ?? 152;
   at(g, x, y, pop(Math.min(1, p)), () => { bubble(g, 0, 0, s, 'you', 1e9, { fs: o.fs || 28 }); text(g, '你', -12, -14, { s: 24, w: 700, c: C.ink3, a: 'right' }); }, { al: o.al });
 }
 /* 窗格：顶部标题栏（期名 + 主色点），内容裁切 */
@@ -342,7 +342,7 @@ function note(g, x, y, s, col = C.amber, o = {}) {
   at(g, x, y, s, () => {
     g.save(); shadow(g, .4, 12, 5); g.fillStyle = col; g.fillRect(-60, -60, 120, 120); g.restore();
     g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(-60, -60, 120, 18);
-    text(g, o.title || '经验', 0, -18, { s: 26, w: 900, c: C.dark });
+    if (s >= .8) text(g, o.title || '经验', 0, -18, { s: 30, w: 900, c: C.dark }); else { g.fillStyle = 'rgba(26,18,13,.7)'; g.fillRect(-30, -26, 60, 12); }
     g.fillStyle = 'rgba(26,18,13,.55)'; for (let k = 0; k < 3; k++) g.fillRect(-42, 12 + k * 16, 84 - k * 20, 6);
   }, { rot: o.rot || 0, al: o.al });
 }

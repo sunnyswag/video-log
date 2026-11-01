@@ -35,20 +35,20 @@ const film = FilmKit.create({
 function chapterWipe(g, { sc, lt, t }) {
   const name = CARD[sc.card]; if (!name || lt > 1.95) return;
   const sub = CHAPTERS[sc.card][0].split('｜').pop();
-  const pin = eio(seg(lt, 0, .5)), pout = eio(seg(lt, 1.4, 1.92));
+  const pin = eo(seg(lt, 0, 1.0)), pout = eio(seg(lt, 1.45, 1.92));
   const x0 = lerp(-W - 300, -150, pin) + lerp(0, W + 500, pout);
   const band = new Path2D(); band.moveTo(x0, 0); band.lineTo(x0 + W + 300, 0); band.lineTo(x0 + W + 150, H); band.lineTo(x0 - 150, H); band.closePath();
   g.save();
   g.save(); shadow(g, .5, 40, 0); g.fillStyle = C.ochre; g.fill(band); g.restore();
   g.clip(band);
   for (let k = 0; k < 30; k++) { const yy = 60 + k * 36; g.fillStyle = 'rgba(26,18,13,.05)'; g.fillRect(x0 - 200 + hash(k) * 300, yy, 200 + hash(k * 3) * 500, 10); }
-  const a = eo(seg(lt, .3, .6)) * (1 - eo(seg(lt, 1.3, 1.5))), dx = (1 - eo(seg(lt, .3, .75))) * 70;
+  const a = eo(seg(lt, .45, .75)) * (1 - eo(seg(lt, 1.35, 1.55))), dx = (1 - eo(seg(lt, .45, .9))) * 70;
   text(g, name, 960 + dx, 470, { f: 'title', s: 150, w: 900, c: C.dark, ls: 10, al: a });
   text(g, sub, 960 + dx * .6, 600, { s: 40, w: 700, c: rgba(C.dark, .8), ls: 4, al: a });
   g.restore();
   // 我在色带前沿跑
-  const fx = (lt < 1.4 ? x0 + W + 230 : x0 + W + 230), fy = 760;
-  if (fx > -100 && fx < W + 100) hero(g, fx, fy, 1.3, t, { pose: 'walk', face: 'happy' });
+  const fx = x0 + W + 200 - 90, fy = 760;
+  if (fx > -120 && fx < W + 120) hero(g, fx, fy, 1.4, t, { pose: 'walk', face: 'happy' });
 }
 
 /* 外框：左 STEP/段落名，中片名，右帧计数 */
@@ -223,8 +223,8 @@ S('s03', {
     const open = eio(seg(lt, c[1], c[1] + .6)) * (1 - eio(seg(lt, c[2], c[2] + .5)));
     const bs = ap(lt, c[0] + .6, .5);
     if (bs > 0) handbook(g, 1080, 440, bs * (1 - .25 * eio(seg(lt, c[2], c[2] + .6))), open, {
-      left: (gg, W2, H2, k) => ['流程', '分工', '规矩'].forEach((s, i) => { const p = ap(lt, c[1] + .4 + i * .2, .4); if (p <= 0) return; at(gg, -W2 * k + 70, -90 + i * 80, p, () => { rr(gg, -50, -24, 120, 48, 10); gg.fillStyle = [C.orange, C.zc, C.cx][i]; gg.fill(); text(gg, s, 10, 1, { s: 28, w: 900, c: C.dark }); }); }),
-      right: (gg, W2, H2) => ['一期怎么做', '谁做什么', '哪些坑别踩'].forEach((s, i) => { const t0 = c[1] + .5 + i * .8; if (lt < t0) return; const y = -90 + i * 84; icCheck(gg, 36, y, 30, C.orange, seg(lt, t0, t0 + .3), 6); text(gg, s, 62, y + 1, { s: 30, w: 900, a: 'left', c: C.dark, al: fa(lt, t0) }); }),
+      left: (gg, W2, H2, k) => ['流程', '分工', '规矩'].forEach((s, i) => { const p = ap(lt, c[1] + .4 + i * .2, .4) * (lt > c[2] ? fo(lt, c[2], .2) : 1); if (p <= 0) return; at(gg, -W2 * k + 70, -90 + i * 80, p, () => { rr(gg, -50, -24, 120, 48, 10); gg.fillStyle = [C.orange, C.zc, C.cx][i]; gg.fill(); text(gg, s, 10, 1, { s: 28, w: 900, c: C.dark }); }); }),
+      right: (gg, W2, H2) => ['一期怎么做', '谁做什么', '哪些坑别踩'].forEach((s, i) => { const t0 = c[1] + .5 + i * .8; if (lt < t0 || lt > c[2] + .2) return; const y = -90 + i * 84; icCheck(gg, 36, y, 30, C.orange, seg(lt, t0, t0 + .3), 6); text(gg, s, 62, y + 1, { s: 30, w: 900, a: 'left', c: C.dark, al: fa(lt, t0) }); }),
     });
     // 复印出 8 本小册子
     ALL.forEach((s, k) => { const p = ap(lt, c[2] + .5 + k * .12, .4); if (p <= 0) return; at(g, 420 + k * 154, 760, p, () => { rr(g, -44, -60, 88, 120, 8); g.fillStyle = C.orange; g.fill(); g.fillStyle = EPC[s]; g.fillRect(-44, -60, 18, 120); text(g, String(k + 1), 10, -4, { f: 'title', s: 40, w: 900, c: C.dark }); }); });
@@ -396,12 +396,12 @@ S('s09', {
       const cx = X0 + k * 140 + 70, cy = 640;
       // 机器格
       const ma = fa(lt, c[1]) * (1 - back);
-      if (ma > 0) { g.save(); g.globalAlpha *= ma; card(g, cx - 60, cy - 50, 120, 120, { r: 12, fill: '#1E1611', lw: 2, stroke: lt > doneAt(k) ? C.green : C.line }); text(g, String(k + 1), cx, cy - 18, { f: 'title', s: 30, w: 900, c: C.ink2 });
+      if (ma > 0) { g.save(); g.globalAlpha *= ma; card(g, cx - 60, cy - 50, 120, 120, { r: 12, fill: '#1E1611', lw: 2, stroke: lt > doneAt(k) ? C.green : C.line }); text(g, String(k + 1), cx, cy + 10, { f: 'title', s: 30, w: 900, c: C.ink2 });
         const p = clamp((lt - c[1] - .4) / ((SEGD[k] - 240) / 145 * 2.4 + .01)); rr(g, cx - 40, cy + 34, 80, 12, 6); g.fillStyle = C.line; g.fill(); rr(g, cx - 40, cy + 34, 80 * p, 12, 6); g.fillStyle = p >= 1 ? C.green : C.orange; g.fill(); g.restore(); }
       // 胶片段：在长条上 → 掉进格子 → 拼回
       const gap = 10 * eo(seg(lt, c[0] + .4 + k * .2, c[0] + .6 + k * .2));
-      const sx = lerp(lerp(X0 + k * sw + (k - 4.5) * gap * .4, cx - 50, drop(k)), X0 + k * sw, back), sy = lerp(lerp(420, cy - 40, drop(k)), 420, back);
-      const ww = lerp(lerp(sw - 2, 100, drop(k)), sw, back), hh = lerp(lerp(70, 30, drop(k)), 70, back);
+      const sx = lerp(lerp(X0 + k * sw + (k - 4.5) * gap * .4, cx - 50, drop(k)), X0 + k * sw, back), sy = lerp(lerp(420, cy - 46, drop(k)), 420, back);
+      const ww = lerp(lerp(sw - 2, 100, drop(k)), sw, back), hh = lerp(lerp(70, 26, drop(k)), 70, back);
       const roll = eio(seg(lt, c[2] + 1.6, c[2] + 2.2));
       if (roll < 1) { g.save(); g.globalAlpha *= 1 - roll; rr(g, sx + roll * (960 - sx), sy, ww * (1 - roll * .9), hh, 4); g.fillStyle = '#2A1F18'; g.fill();
         for (let q = 0; q < 3; q++) { g.fillStyle = C.cream; g.fillRect(sx + roll * (960 - sx) + 6 + q * ww / 3, sy + 4, 8, 6); g.fillRect(sx + roll * (960 - sx) + 6 + q * ww / 3, sy + hh - 10, 8, 6); }
@@ -459,7 +459,7 @@ S('s11', {
     const ff = seg(lt, c[2] + .5, c[2] + 1.5);
     B1.forEach((s, k) => {
       const p = ap(lt, c[0] + .2 + k * .2, .45); if (p <= 0) return;
-      const rv = Math.max(clamp((lt - c[0] - .6 - k * .3) / 14) * .62, ff);
+      const rv = Math.max(clamp((lt - c[0] - .4 - k * .3) / 7.5) * .78, ff);
       at(g, PANEX(k) + PANEW / 2, PANEY + PANEH / 2, p, () => {
         pane(g, -PANEW / 2, -PANEH / 2, PANEW, PANEH, s, EPC[s], (gg, w, h) => growThumb(gg, s, w, h, t + k, rv), { done: ff >= 1 ? seg(lt, c[2] + 1.6 + k * .18, c[2] + 1.9 + k * .18) : 0 });
         hero(g, -PANEW / 2 + 52, PANEH / 2 - 8, .42, t + k * .25, { pose: 'type', hat: EPC[s], seed: k + 2 });
@@ -617,9 +617,9 @@ function drawCover(g, frame) {
   drawBackground(g, { ...frame, t: 2 });
   text(g, '我分了 4 个身', 960, 190, { f: 'title', s: 140, w: 900, ls: 8 });
   text(g, 'Claude 讲它怎么做这 8 期视频', 960, 318, { s: 50, w: 900, c: C.ochre, ls: 4 });
-  B1.forEach((s, k) => { const x = 250 + k * 470; pane(g, x - 190, 400, 380, 250, s, EPC[s], (gg, w, h) => growThumb(gg, s, w, h, 3 + k, .55 + k * .12));
-    hero(g, x, 860, .8, 1.1 + k * .2, { hat: EPC[s], face: 'happy', pose: 'type' }); });
-  hero(g, 960, 1020, 1.0, 1.4, { face: 'happy', armsUp: true });
+  B1.forEach((s, k) => { const x = 250 + k * 470; pane(g, x - 190, 390, 380, 250, s, EPC[s], (gg, w, h) => growThumb(gg, s, w, h, 3 + k, .7 + k * .1));
+    hero(g, x, 800, 1.25, 1.1 + k * .2, { hat: EPC[s], face: 'happy', pose: 'type' }); });
+  hero(g, 960, 1010, 1.7, 1.4, { face: 'happy', armsUp: true });
   postFX(g, { ...frame, t: 0 });
 }
 
