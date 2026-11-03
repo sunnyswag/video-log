@@ -5,7 +5,7 @@
  * ===================================================================== */
 'use strict';
 const CARD = { 2: ['01', '先分类，再动手', 'CLASSIFY FIRST'], 3: ['02', '同名符号，构建时二选一', 'SAME NAME, PICKED AT BUILD'],
-  4: ['03', '一份循环，跑一次或两次', 'ONE LOOP, ONE OR TWO MOTORS'], 5: ['04', '云端那一刀：每款一张表', 'ONE TABLE PER PRODUCT'],
+  4: ['03', '一份循环，跑一次或两次', 'ONE LOOP, ONE OR TWO MOTORS'], 5: ['04', '内外之间，一层映射', 'ONE MAPPING LAYER'],
   6: ['05', '两刀正交，2×2', 'TWO AXES, 2×2'], 7: ['06', '一个不能删的空函数', 'THE LINK ANCHOR'], 8: ['✓', '三条设计经验', 'THREE TAKEAWAYS'] };
 const SERIES = { title: '工作档案', sub: '把做过的设计，讲成故事' };
 
@@ -796,7 +796,7 @@ S('s18', {
 });
 
 /* =====================================================================
- * 第四章：云端那一刀，每款一张表
+ * 第四章：内外之间，一层映射（v2 按作者思路重讲：内部数据结构 → dispatcher 双向映射 → 每款一张映射规则）
  * ===================================================================== */
 S('s19', {
   cues: [[1.8, 'draw'], [2.3, 'whoosh'], [6.0, 'whoosh'], [6.7, 'blip', .6], [6.9, 'blip', .6], [7.1, 'blip', .6], [10.5, 'draw', .6], [11.3, 'draw', .6], [12.1, 'draw', .6]],
@@ -824,71 +824,121 @@ S('s19', {
     ['服务布局', '值域', '独有属性'].forEach((s, i) => text(g, s, 960, 600 + i * 70, { s: 24, w: 900, c: C.red, al: seg(lt, 10.6 + i * .8, 11.0 + i * .8) }));
   },
 });
-S('s20', {
-  cues: [[.6, 'tick', .6], [1.2, 'tick', .6], [1.8, 'tick', .6], [4.4, 'latch'], [4.8, 'error', .5], [6.9, 'whoosh'], [7.6, 'latch', .6]],
-  draw(g, lt) {
-    box(g, 660, 380, 600, 160, '', seg(lt, .2, .8), { ticks: true });
-    text(g, '公共代码', 960, 440, { s: 36, w: 900, al: seg(lt, .5, .9) }); text(g, 'spec_report/ · 373 行', 960, 492, { f: 'mono', s: 24, w: 700, c: C.ink2, al: seg(lt, .6, 1.0) });
-    const ns = [['改编号', 420, 250, .6, [520, 280, 660, 400]], ['加属性', 960, 200, 1.2, [960, 226, 960, 330]], ['改值域', 1500, 250, 1.8, [1400, 280, 1260, 400]]];
-    ns.forEach(([s, x, y, t0, [ax, ay, bx, by]], i) => {
-      note(g, s, x, y, seg(lt, t0, t0 + .4), { rot: (i - 1) * .06 });
-      const k = seg(lt, t0 + .3, t0 + .9), bounce = seg(lt, 4.5, 5.0);
-      arrow(g, [[ax, ay], [lerp(ax, bx, 1 - .35 * bounce), lerp(ay, by, 1 - .35 * bounce)]], { p: k, c: C.amber, w: 2.5 });
-      redCross(g, (ax + bx) / 2, (ay + by) / 2, 30, seg(lt, 4.7 + i * .1, 5.1 + i * .1));
+/* 三栏：内部 | dispatcher | 外部（映射规则）。o.p 描出进度，o.cards 规则卡数组 [{y, name, lines, lit, al, dx}] */
+function threeCols(g, lt, o = {}) {
+  const p = o.p ?? 1;
+  [['内部', 390], ['中间', 960], ['外部（云端 spec）', 1530]].forEach(([s, x], i) => text(g, s, x, 160, { s: 30, w: 900, c: C.amber, al: seg(p, i * .15, .4 + i * .15) }));
+  frame(g, 160, 190, 460, 640, { p: seg(p, 0, .5), fill: rgba(C.plate, .3), lw: 2 });
+  frame(g, 730, 190, 460, 640, { p: seg(p, .15, .65), fill: rgba(C.plate, .3), lw: 2 });
+  frame(g, 1300, 190, 460, 640, { p: seg(p, .3, .8), fill: rgba(C.plate, .3), lw: 2 });
+  box(g, 220, 230, 340, 70, '业务代码', seg(p, .2, .6), { fs: 28 });
+  box(g, 770, 380, 380, 180, '', seg(p, .35, .8), { ticks: true, lit: o.dlit ?? .4 });
+  text(g, 'dispatcher', 960, 448, { f: 'mono', s: 36, w: 700, c: C.cyan, al: seg(p, .5, .9) });
+  text(g, '转换器 · 零产品知识', 960, 502, { s: 24, w: 700, c: C.ink2, al: seg(p, .55, .95) });
+  const fl = o.flow ?? .6;
+  pipe(g, [[620, 430], [770, 430]], lt, { p: seg(p, .6, .8), flow: fl, head: true }); pipe(g, [[1150, 430], [1300, 430]], lt, { p: seg(p, .65, .85), flow: fl, head: true });
+  pipe(g, [[1300, 510], [1150, 510]], lt, { p: seg(p, .7, .9), flow: fl, head: true, fc: C.amber }); pipe(g, [[770, 510], [620, 510]], lt, { p: seg(p, .75, .95), flow: fl, head: true, fc: C.amber });
+  text(g, '上报：内 → 外', 960, 350, { s: 24, w: 700, c: C.cyan, al: seg(p, .7, 1) });
+  text(g, '下发：外 → 内', 960, 600, { s: 24, w: 700, c: C.amber, al: seg(p, .75, 1) });
+  cloud(g, 1530, 262, pop(seg(p, .5, .9)), '云端');
+  (o.cards || []).forEach(c => {
+    const a = c.al ?? 1; if (a <= 0) return;
+    g.save(); g.globalAlpha *= a; g.translate(c.dx || 0, 0);
+    frame(g, 1330, c.y, 400, c.h || 130, { p: c.p ?? 1, lit: c.lit || 0, dash: c.dash, fill: rgba(C.plate, .75), lw: 2, c: c.lit > .5 ? C.cyan : C.ink });
+    text(g, c.name, 1350, c.y + 30, { s: 26, w: 900, a: 'left', c: c.lit > .5 ? C.cyan : C.ink });
+    c.lines.forEach((l, i) => {
+      const hl = c.hl === i ? (c.hlA ?? 1) : 0;
+      if (hl > 0) { g.save(); g.fillStyle = rgba(C.cyan, .18 * hl); g.fillRect(1340, c.y + 50 + i * 34, 380, 32); g.restore(); }
+      text(g, l, 1350, c.y + 66 + i * 34, { s: 24, w: 700, a: 'left', c: hl > .5 ? C.cyan : C.ink2 });
     });
-    lockIcon(g, 960, 368, .9, seg(lt, 4.3, 4.7), seg(lt, 4.1, 4.4));
-    const c = seg(lt, 6.7, 7.4);
-    if (c > 0) {
-      g.save(); g.globalAlpha *= c; g.translate((1 - eo(c)) * 200, 0);
-      box(g, 300, 690, 260, 60, 'Kconfig choice', 1, { f: 'mono', fs: 24 }); pipe(g, [[560, 720], [660, 720]], lt, { flow: .6, head: true });
-      box(g, 660, 690, 240, 60, 'Makefile', 1, { f: 'mono', fs: 24 }); pipe(g, [[900, 720], [1000, 720]], lt, { flow: .6, head: true });
-      const sel = Math.floor(lt / 1.2) % 2;
-      folder(g, 1000, 640, 300, 180, 'spec/product_a/', 0, { lit: sel ? 0 : .8, off: sel ? .6 : 0 });
-      folder(g, 1340, 640, 300, 180, 'spec/product_b/', 0, { lit: sel ? .8 : 0, off: sel ? 0 : .6 });
-      g.restore();
-      note(g, '同一套手法', 960, 600, seg(lt, 7.4, 7.8), { rot: 0 });
+    g.restore();
+  });
+}
+const RULE2 = ['上行：查表（事件 + 端点）', '下行：拆服务号、属性号'];
+S('k1', {
+  cues: [[.5, 'type'], [4.4, 'latch'], [4.8, 'draw', .5], [5.3, 'draw', .5], [5.8, 'draw', .5], [6.3, 'draw', .5], [8.4, 'tick', .6], [8.9, 'tick', .6], [9.4, 'tick', .6]],
+  draw(g, lt) {
+    const T = SCRIPT.k1.caps.map(c => c[0]), sw = lt > T[1] + .2;
+    tagBox(g, '对照：假设的写法', 1590, 190, { sc: pop(seg(lt, .2, .6)), dash: [8, 6], c: C.amber, tc: C.amber, fs: 24 });
+    const files = [['curtain.c', 'on_reverse(r):', 'REVERSE', 'r'], ['travel.c', 'on_position(p):', 'POSITION', 'p'], ['storage.c', 'on_cloud_set(siid, piid, v):', null, null], ['wakeup.c', 'on_travel_mode(m):', 'TRAVEL_MODE', 'm']];
+    const P = sw ? 'B' : 'A';
+    files.forEach(([f, head, prop, v], i) => {
+      const x = 180 + (i % 2) * 640, y = 200 + Math.floor(i / 2) * 320, t0 = .4 + i * .5;
+      const line = prop ? `  report(${P}_SVC, ${P}_P_${prop}, ${v});` : `  if (siid == ${P}_SVC_RC) …`;
+      codeCard(g, x, y, 600, [head, line], { fs: 24, lh: 40, p: seg(lt, t0, t0 + 1.0), lt, title: f, al: seg(lt, t0 - .2, t0) });
+      const k = seg(lt, T[1] + .4 + i * .5, T[1] + .9 + i * .5);
+      if (k > 0) { const sub = prop ? `${P}_SVC, ${P}_P_${prop}` : `${P}_SVC_RC`, pre = line.indexOf(sub), x0 = x + 26 + textW(g, line.slice(0, pre), { f: 'mono', s: 24, w: 400 }), sw2 = textW(g, sub, { f: 'mono', s: 24, w: 400 }); redCircle(g, x0 + sw2 / 2, y + 124, sw2 / 2 + 14, 22, k, { seed: i + 3 }); }
+    });
+    const pt = seg(lt, T[1], T[1] + .4), fsy = Math.max(.05, Math.abs(Math.cos(Math.PI * pt)));
+    at(g, 1590, 290, 1, () => { frame(g, -110, -40, 220, 80, { construct: false, lit: .5, fill: rgba(C.plate, .8) }); text(g, `${P} 款产品`, 0, 2, { s: 34, w: 900, c: sw ? C.amber : C.cyan }); }, { sy: fsy, al: seg(lt, .3, .7) });
+    if (sw) text(g, '到处都得改', 1590, 380, { s: 30, w: 900, c: C.red, al: seg(lt, T[1] + 2.5, T[1] + 2.9) });
+    ['改编号', '加属性', '改值域'].forEach((s, i) => {
+      const k = seg(lt, T[2] + i * .5, T[2] + .4 + i * .5);
+      note(g, s, 1590, 500 + i * 110, k, { rot: (i - 1) * .05, c: C.red, tc: C.red });
+      if (k > 0) path(g, partial([[1520, 500 + i * 110], [1440, 500 + i * 110], [1380, 300 + i * 160]], k), { c: rgba(C.red, .6), w: 1.8, dash: [6, 6] });
+    });
+  },
+});
+S('k2', {
+  cues: [[.5, 'draw'], [1.0, 'draw', .6], [1.5, 'draw', .6], [4.5, 'blip'], [8.2, 'whoosh'], [13.1, 'latch'], [13.6, 'latch', .6]],
+  draw(g, lt) {
+    const T = SCRIPT.k2.caps.map(c => c[0]);
+    threeCols(g, lt, { p: seg(lt, .3, 2.6), dlit: seg(lt, T[2], T[2] + .5) * .8, flow: lt > T[2] ? .8 : .3,
+      cards: [{ y: 360, name: 'A 款映射规则', lines: RULE2, lit: lt > T[3] + .4 ? .8 : 0, al: seg(lt, T[3], T[3] + .4), p: seg(lt, T[3], T[3] + .5) },
+              { y: 520, name: 'B 款映射规则', lines: RULE2, al: seg(lt, T[3] + .3, T[3] + .7) * .7, p: seg(lt, T[3] + .3, T[3] + .8) }] });
+    evtCap(g, 390, 470, ['类型', '端点', '值'], { fs: 28, glow: .5, s: pop(seg(lt, T[1], T[1] + .5)), lit: [seg(lt, T[1] + .4, T[1] + .7), seg(lt, T[1] + .8, T[1] + 1.1), seg(lt, T[1] + 1.2, T[1] + 1.5)] });
+    text(g, '内部事件', 390, 540, { s: 24, w: 700, c: C.ink2, al: seg(lt, T[1] + .4, T[1] + .8) });
+    text(g, '构建时选中一张', 1530, 720, { s: 24, w: 700, c: C.cyan, al: seg(lt, T[3] + 1.0, T[3] + 1.4) });
+    text(g, '规则编进固件，每款一个目录', 1530, 780, { s: 24, w: 700, c: C.ink2, al: seg(lt, T[3] + 1.4, T[3] + 1.8) });
+  },
+});
+const RA = ['EP1 → （空）', 'EP2 → 窗帘服务 · 位置'], RB = ['EP1 → 聚合服务 · 位置', 'EP2 → 左电机服务 · 位置', 'EP3 → 右电机服务 · 位置'];
+S('k3', {
+  cues: [[.5, 'blip'], [3.6, 'whoosh', .6], [4.5, 'blip', .6], [5.0, 'whoosh', .6], [8.5, 'latch'], [9.0, 'whoosh', .6], [9.8, 'blip', .6], [10.2, 'whoosh', .6], [12.9, 'success']],
+  draw(g, lt) {
+    const T = SCRIPT.k3.caps.map(c => c[0]), fl = seg(lt, T[2], T[2] + .4), isB = fl >= .5;
+    const passA = seg(lt, T[1] + .2, T[1] + 1.2), outA = seg(lt, T[1] + 1.4, T[1] + 2.4), passB = seg(lt, T[2] + .5, T[2] + 1.5), outB = seg(lt, T[2] + 1.6, T[2] + 2.6);
+    const sy = fl > 0 && fl < 1 ? Math.abs(Math.cos(Math.PI * fl)) : 1;
+    threeCols(g, lt, { p: 1, dlit: (passA > 0 && passA < 1) || (passB > 0 && passB < 1) ? 1 : .4, flow: .4 });
+    at(g, 1530, 500, 1, () => { g.translate(-1530, -500);
+      const rows = isB ? RB : RA, h = isB ? 180 : 146, hlA = isB ? seg(lt, T[2] + 1.2, T[2] + 1.5) : seg(lt, T[1] + .9, T[1] + 1.2);
+      frame(g, 1330, 400, 400, h, { construct: false, lit: .7, fill: rgba(C.plate, .85), lw: 2, c: C.cyan });
+      text(g, isB ? 'B 款映射规则' : 'A 款映射规则', 1350, 430, { s: 26, w: 900, a: 'left', c: C.cyan });
+      rows.forEach((r, i) => { const hl = i === 1 ? hlA : 0; if (hl > 0) { g.save(); g.fillStyle = rgba(C.cyan, .2 * hl); g.fillRect(1340, 450 + i * 36, 380, 34); g.restore(); } text(g, r, 1350, 467 + i * 36, { s: 24, w: 700, a: 'left', c: hl > .5 ? C.cyan : C.ink2 }); });
+    }, { sy, al: seg(lt, .2, .6) });
+    const IN = ['位置上报', 'EP2', '50%'];
+    evtCap(g, 390, 470, IN, { fs: 26, glow: .5 });
+    text(g, '开合 50%', 390, 540, { s: 26, w: 700, c: C.ink2, al: seg(lt, .4, .8) });
+    for (const k of [passA, passB]) if (k > 0 && k < 1) { const x = lerp(420, 720, eio(k)); evtCap(g, x, 430, IN, { fs: 24, glow: .6, al: 1 - seg(k, .8, 1) }); }
+    const outs = [[outA, '窗帘服务 · 位置', T[1] + 2.4, 1 - seg(lt, T[2] - .3, T[2])], [outB, '左电机服务 · 位置', T[2] + 2.6, 1]];
+    for (const [k, lab, tEnd, al] of outs) if (k > 0 && al > 0) {
+      const u = eio(k), x = lerp(1210, 1500, u), y = lerp(376, 336, u) - Math.sin(u * Math.PI) * 40;
+      evtCap(g, x, y, [lab, '50%'], { fs: 24, glow: .6, c: C.green, al });
+      ripple(g, 1500, 330, lt - tEnd);
     }
+    if (lt > T[3]) { redCircle(g, 390, 470, 200, 50, seg(lt, T[3], T[3] + .6), { seed: 7, c: C.green }); check(g, 390, 610, 44, seg(lt, T[3] + .5, T[3] + .9)); text(g, '没变', 440, 612, { s: 30, w: 900, a: 'left', c: C.green, al: seg(lt, T[3] + .7, T[3] + 1.0) }); }
   },
 });
 S('s21', {
-  cues: [[.5, 'draw'], [.8, 'tick', .5], [2.3, 'blip'], [4.6, 'draw'], [8.0, 'draw', .6], [9.8, 'latch'], [11.2, 'latch']],
+  cues: [[.5, 'draw'], [.8, 'tick', .5], [2.3, 'blip'], [5.2, 'draw'], [8.6, 'draw', .6], [10.4, 'latch'], [11.6, 'latch']],
   draw(g, lt) {
     box(g, 300, 330, 520, 220, '', seg(lt, .3, 1.0), { ticks: true, lit: .3 });
-    text(g, '公共转换器', 560, 390, { s: 34, w: 900, al: seg(lt, .6, 1.0) });
+    text(g, 'dispatcher', 560, 382, { f: 'mono', s: 34, w: 700, c: C.cyan, al: seg(lt, .6, 1.0) }); text(g, '（公共转换器）', 560, 418, { s: 24, w: 700, c: C.ink2, al: seg(lt, .7, 1.1) });
     const n = Math.round(118 * eo(seg(lt, .6, 2.0)));
     dimLine(g, 300, 296, 820, 296, `${n} 行`, seg(lt, .5, 1.6), { lc: C.amber, s: 26 });
     text(g, '产品宏：0', 560, 456, { s: 30, w: 900, c: C.amber, al: seg(lt, 2.2, 2.6) });
     text(g, '6 个通用 invoker', 560, 506, { s: 24, w: 700, c: C.ink2, al: seg(lt, 2.6, 3.0) });
-    pipe(g, [[820, 440], [960, 440]], lt, { p: seg(lt, 4.4, 4.8), flow: .6, head: true });
-    box(g, 960, 370, 360, 140, 'extern const 表', seg(lt, 4.6, 5.2), { f: 'mono', dash: [10, 8], c: C.cyan, tc: C.cyan });
-    const tb = [[1480, 220, 230, 'A 款表 · 18 项', 18], [1480, 520, 280, 'B 款表 · 约 20 项', 20]], sel = lt < 9.8 ? 0 : lt < 11.2 ? 1 : 0;
+    pipe(g, [[820, 440], [960, 440]], lt, { p: seg(lt, 5.0, 5.4), flow: .6, head: true });
+    box(g, 960, 370, 360, 140, 'extern const 表', seg(lt, 5.2, 5.8), { f: 'mono', dash: [10, 8], c: C.cyan, tc: C.cyan });
+    const tb = [[1480, 220, 230, 'A 款表 · 18 项', 18], [1480, 520, 280, 'B 款表 · 约 20 项', 20]], sel = lt < 10.4 ? 0 : lt < 11.6 ? 1 : 0;
     tb.forEach(([x, y, h, t, rows], i) => {
-      const p = seg(lt, 7.9 + i * .2, 8.6 + i * .2), on = sel === i ? 1 : .35;
-      frame(g, x, y, 300, h, { p, lit: sel === i ? .6 : 0, fill: rgba(C.plate, .5), al: lerp(1, on, seg(lt, 8.6, 9.0)) });
+      const p = seg(lt, 8.5 + i * .2, 9.2 + i * .2), on = sel === i ? 1 : .35;
+      frame(g, x, y, 300, h, { p, lit: sel === i ? .6 : 0, fill: rgba(C.plate, .5), al: lerp(1, on, seg(lt, 9.2, 9.6)) });
       text(g, t, x + 150, y + 30, { s: 24, w: 900, c: sel === i ? C.cyan : C.ink2, al: seg(p, .5, 1) });
       for (let r = 0; r < rows; r++) path(g, [[x + 20, y + 60 + r * (h - 76) / rows], [x + 280 - hash(r + i * 9) * 60, y + 60 + r * (h - 76) / rows]], { c: rgba(C.ink, .35), w: 1.6, al: seg(p, .6, 1) * on });
     });
-    if (lt > 8.4) { const ty = sel ? 650 : 335; path(g, [[1320, 440], [1400, 440], [1400, ty], [1478, ty]], { c: C.cyan, w: 3, glow: .6 }); ripple(g, 1478, ty, lt - (sel ? 9.8 : lt < 11.2 ? 8.4 : 11.2)); }
-    text(g, '构建时二选一', 1630, 834, { s: 24, w: 700, c: C.cyan, al: seg(lt, 8.6, 9.0) });
-  },
-});
-const L22 = ['// A 款（单电机）：聚合槽位留空', '{ EVT_REPORT_POSITION, invoke_by_ep,', '  .fn = { NULL, a_report_position } },', '// B 款（双电机）：三个端点，三个属性', '{ EVT_REPORT_POSITION, invoke_by_ep,', '  .fn = { b_report_agg, b_report_left, b_report_right } },'];
-S('s22', {
-  cues: [[.5, 'type'], [3.0, 'blip', .5], [3.4, 'blip', .5], [3.8, 'blip', .5], [4.2, 'blip', .5], [4.6, 'blip', .5], [6.9, 'error']],
-  draw(g, lt) {
-    codeCard(g, 220, 150, 1480, L22, { p: seg(lt, .4, 2.6), lt, title: '映射表（示意）' });
-    ['EP1', 'EP2', 'EP3'].forEach((s, i) => text(g, s, 640 + i * 340, 560, { f: 'mono', s: 26, w: 700, c: C.ink2, al: seg(lt, 2.8, 3.2) }));
-    const rowsT = [[640, 'A 款', ['NULL', 'a_report_position']], [760, 'B 款', ['b_report_agg', 'b_report_left', 'b_report_right']]];
-    let k = 0;
-    rowsT.forEach(([y, lab, cells]) => {
-      text(g, lab, 400, y, { s: 30, w: 900, al: seg(lt, 2.8, 3.2) });
-      cells.forEach((c, i) => {
-        const t0 = 3.0 + (k++) * .4, on = seg(lt, t0, t0 + .3), nul = c === 'NULL', fl = nul && lt > 6.7 ? .5 + .5 * Math.sin((lt - 6.7) * 9) : 0;
-        frame(g, 490 + i * 340, y - 32, 300, 64, { p: on, lw: 2, dash: nul ? [8, 6] : null, c: nul ? C.red : C.cyan, fill: nul ? rgba(C.red, .06 + .12 * fl) : rgba(C.cyan, .1), lit: nul ? 0 : .4 });
-        text(g, c, 640 + i * 340, y + 1, { f: 'mono', s: 24, w: 700, c: nul ? C.red : C.ink, al: on });
-      });
-    });
-    if (lt > 6.7) text(g, '聚合槽位留空', 640, 708, { s: 24, w: 700, c: C.red, al: seg(lt, 6.8, 7.2) });
+    if (lt > 9.0) { const ty = sel ? 650 : 335; path(g, [[1320, 440], [1400, 440], [1400, ty], [1478, ty]], { c: C.cyan, w: 3, glow: .6 }); ripple(g, 1478, ty, lt - (sel ? 10.4 : lt < 11.6 ? 9.0 : 11.6)); }
+    text(g, '构建时二选一', 1630, 834, { s: 24, w: 700, c: C.cyan, al: seg(lt, 9.2, 9.6) });
   },
 });
 S('s23', {
@@ -921,56 +971,49 @@ S('s23', {
     if (lt > 10.4) { box(g, 760, 250, 400, 60, '上游：先过滤 EP1', seg(lt, 10.4, 10.9), { dash: [8, 6], c: C.faint, tc: C.ink2 }); strike(g, 770, 1150, 282, seg(lt, 11.1, 11.6)); }
   },
 });
-S('s24', {
-  cues: [[.5, 'draw'], [1.0, 'blip'], [4.6, 'type'], [5.0, 'draw', .6], [8.5, 'whoosh'], [8.9, 'error', .5], [9.5, 'error', .5], [10.0, 'success']],
-  draw(g, lt) {
-    const cx = [260, 640, 1220, 1660], rows = [['事件类型', 'invoker（值怎么转）', '槽位'], ['位置上报', '整数直传 ƒ', 'EP1 · EP2 · EP3'], ['电机反转', 'int → bool 包装 ƒ', 'EP2 · EP3'], ['遥控配对状态', '拆成两个属性 ƒ', 'EP2']];
-    const add = seg(lt, 8.3, 8.8), all = add > 0 ? [...rows, ['……', '字符串列表 ƒ', '…']] : rows;
-    all.forEach((r, i) => {
-      const y = 150 + i * 56, p = i === 4 ? add : seg(lt, .3 + i * .15, .8 + i * .15);
-      if (i === 4 && add > 0) { g.save(); g.fillStyle = rgba(C.green, .14 * add); g.fillRect(cx[0], y, cx[3] - cx[0], 56); g.restore(); }
-      path(g, partial([[cx[0], y + 56], [cx[3], y + 56]], p), { c: rgba(C.ink, i ? .3 : .7), w: i ? 1.4 : 2.2 });
-      r.forEach((s, j) => text(g, s, cx[j] + 20 + (i === 4 ? (1 - eo(add)) * 60 : 0), y + 29, { s: i ? 24 : 26, w: i ? 700 : 900, a: 'left', c: j === 1 && i ? (i === 4 ? C.green : C.cyan) : i ? C.ink2 : C.ink, al: seg(p, .4, 1) }));
-    });
-    const inv = seg(lt, .9, 1.3); if (inv > 0) { g.save(); g.globalAlpha *= inv; g.strokeStyle = C.cyan; g.lineWidth = 2.5; g.strokeRect(cx[1], 150, cx[2] - cx[1], 56 * all.length); g.restore(); }
-    box(g, 260, 520, 660, 150, '', seg(lt, 4.4, 5.0), { lit: .3 });
-    text(g, '转换器', 290, 556, { s: 28, w: 900, a: 'left', al: seg(lt, 4.6, 5.0) });
-    text(g, typed('entry->invoke(entry, event);', seg(lt, 4.7, 5.6)), 290, 620, { f: 'mono', s: 26, w: 700, a: 'left', c: C.cyan });
-    text(g, '不 switch 类型 · 加一种形态，这里一行不动', 590, 712, { s: 24, w: 700, c: C.ink2, al: seg(lt, 5.4, 5.8) });
-    if (lt > 10.0) stamp(g, '不动', 820, 556, clamp((lt - 10.0) / .6), { c: C.green, icon: 'check', fs: 26 });
-    const cases = ['switch (type) {', '  case INT:  …', '  case BOOL: …', '  case RC:   …'], extra = ['  case STR:  …', '  case EVT:  …'];
-    const ne = (lt > 8.7) + (lt > 9.3), L = [...cases, ...extra.slice(0, ne), '}'];
-    if (lt > 4.8) {
-      codeCard(g, 1040, 500, 620, L, { fs: 24, lh: 36, al: seg(lt, 4.8, 5.3) * .9, title: 'switch 版（对照）', hl: ne ? [4, ne > 1 ? 5 : 4] : [], hlA: 1 });
-      text(g, '每加一种形态，就要改公共层', 1350, 466, { s: 24, w: 700, c: C.red, al: seg(lt, 8.8, 9.2) });
-    }
-  },
-});
 S('s25', {
-  cues: [[.5, 'draw'], [1.1, 'latch', .6], [1.9, 'latch', .6], [2.6, 'tick'], [3.3, 'blip'], [4.3, 'whoosh', .6], [7.6, 'error'], [8.2, 'success']],
+  cues: [[.5, 'whoosh'], [1.1, 'latch', .6], [1.9, 'latch', .6], [2.6, 'tick'], [4.1, 'draw'], [7.8, 'blip'], [11.2, 'whoosh', .6], [12.4, 'error'], [12.9, 'success']],
   draw(g, lt) {
+    const T = SCRIPT.s25.caps.map(c => c[0]);
     cloud(g, 230, 300, .95, '云端');
     text(g, 'set_properties', 230, 380, { f: 'mono', s: 24, w: 700, c: C.ink2 });
-    const B = [[420, 'switch(服务号)', 'mono'], [760, 'switch(属性号)', 'mono'], [1100, '值域校验', 'cjk'], [1400, '端点 + 事件', 'cjk']];
-    const k = seg(lt, .6, 3.4), px = lerp(330, 1640, k);
+    const B = [[420, 'switch(服务号)', 'mono'], [760, 'switch(属性号)', 'mono'], [1100, '值域校验', 'cjk'], [1400, '归一成内部事件', 'cjk']];
+    const k = seg(lt, .6, 3.4), px = lerp(330, 1640, k), rl = seg(lt, T[1], T[1] + .6), vl = seg(lt, T[2], T[2] + .5);
+    frame(g, 400, 230, 960, 150, { p: rl, dash: [12, 8], c: C.cyan, fill: rgba(C.cyan, .03), lw: 2 });
+    text(g, '这款产品的下行规则', 880, 214, { s: 24, w: 900, c: C.cyan, al: rl });
     B.forEach(([x, s, f], i) => {
-      const w = i < 2 ? 280 : 240, on = px > x && px < x + w + 60 ? 1 : 0;
-      box(g, x, 270, w, 60, s, seg(lt, .2 + i * .15, .7 + i * .15), { f, fs: 24, lit: on * .8 });
+      const w = i < 2 ? 280 : 240, on = px > x && px < x + w + 60 ? 1 : 0, hl = i < 2 ? rl * (.5 + .5 * Math.sin(lt * 4)) * (1 - vl) : i === 2 ? vl : 0, last = i === 3;
+      box(g, x, 270, w, 60, s, seg(lt, .2 + i * .15, .7 + i * .15), { f, fs: 24, lit: Math.max(on * .8, hl * .8, last ? vl : 0), c: last ? C.amber : undefined, tc: last ? C.amber : undefined });
       if (i < 3) arrow(g, [[x + w, 300], [B[i + 1][0] - 4, 300]], { p: seg(lt, .5 + i * .15, .9 + i * .15), c: C.ink2, w: 2 });
     });
     arrow(g, [[330, 300], [416, 300]], { p: seg(lt, .3, .6), c: C.ink2, w: 2 });
-    text(g, '一级：产品服务布局', 560, 360, { s: 24, w: 700, c: C.ink2, al: seg(lt, 1.2, 1.6) });
-    text(g, '二级：产品属性布局', 900, 360, { s: 24, w: 700, c: C.ink2, al: seg(lt, 1.9, 2.3) });
+    text(g, '一级：服务布局', 560, 412, { s: 24, w: 700, c: C.ink2, al: seg(lt, T[1] + .4, T[1] + .8) });
+    text(g, '二级：属性布局', 900, 412, { s: 24, w: 700, c: C.ink2, al: seg(lt, T[1] + .6, T[1] + 1.0) });
+    text(g, '公共层 · 下行直通', 1520, 240, { s: 24, w: 900, c: C.amber, al: vl });
     if (k > 0 && k < 1) dot(g, px, 300, 10, C.amber);
-    const gs = [[300, 'A 款：行程点 0..2', false, 4.2], [1060, 'B 款：多一个 3 = 开始校准', true, 4.6]];
+    const gs = [[300, 'A 款：行程点 0..2', false, T[3] + .3], [1060, 'B 款：多一个 3 = 开始校准', true, T[3] + .6]];
     gs.forEach(([x, t, ok, t0]) => {
-      frame(g, x, 500, 560, 300, { p: seg(lt, 3.9, 4.5), ticks: true, fill: rgba(C.plate, .4) });
-      text(g, t, x + 280, 540, { s: 26, w: 900, al: seg(lt, 4.1, 4.5) });
-      const d = seg(lt, t0, t0 + .7);
-      if (d > 0) evtCap(g, x + 280, lerp(470, 640, eo(d)), ['值 = 3'], { fs: 26, glow: .5, c: C.amber, al: ok ? 1 - seg(lt, 7.8, 8.05) : 1 - seg(lt, 7.5, 7.9) * .6 });
-      if (!ok) { redCross(g, x + 280, 640, 70, seg(lt, 7.5, 7.9)); text(g, '值域错误，拒绝', x + 280, 740, { s: 28, w: 900, c: C.red, al: seg(lt, 7.7, 8.1) }); }
-      else { if (lt > 8.1) evtCap(g, x + 280, 650, ['电机校准事件'], { fs: 26, glow: .6, c: C.green, s: pop(seg(lt, 8.1, 8.5)) }); text(g, '转成“开始校准”', x + 280, 740, { s: 28, w: 900, c: C.green, al: seg(lt, 8.4, 8.8) }); }
+      frame(g, x, 500, 560, 300, { p: seg(lt, T[3], T[3] + .6), ticks: true, fill: rgba(C.plate, .4) });
+      text(g, t, x + 280, 540, { s: 26, w: 900, al: seg(lt, T[3] + .2, T[3] + .6) });
+      const d = seg(lt, t0, t0 + .7), res = T[3] + 1.4;
+      if (d > 0) evtCap(g, x + 280, lerp(470, 640, eo(d)), ['值 = 3'], { fs: 26, glow: .5, c: C.amber, al: ok ? 1 - seg(lt, res + .3, res + .55) : 1 - seg(lt, res, res + .4) * .6 });
+      if (!ok) { redCross(g, x + 280, 640, 70, seg(lt, res, res + .4)); text(g, '值域错误，拒绝', x + 280, 740, { s: 28, w: 900, c: C.red, al: seg(lt, res + .2, res + .6) }); }
+      else { if (lt > res + .6) evtCap(g, x + 280, 650, ['电机校准事件'], { fs: 26, glow: .6, c: C.green, s: pop(seg(lt, res + .6, res + 1.0)) }); text(g, '翻成内部的校准事件', x + 280, 740, { s: 28, w: 900, c: C.green, al: seg(lt, res + .9, res + 1.3) }); }
     });
+  },
+});
+S('k4', {
+  cues: [[.6, 'whoosh'], [4.6, 'stamp'], [5.2, 'stamp']],
+  draw(g, lt) {
+    const T = SCRIPT.k4.caps.map(c => c[0]), c3 = seg(lt, .6, 1.4);
+    threeCols(g, lt, { p: 1, dlit: .4, flow: .5, cards: [
+      { y: 340, name: 'A 款映射规则', lines: RULE2, al: .75 }, { y: 490, name: 'B 款映射规则', lines: RULE2, al: .75 },
+      { y: 640, name: 'C 款映射规则', lines: RULE2, lit: seg(lt, 1.2, 1.6) * .9, dash: c3 < 1 ? [10, 8] : null, al: c3, dx: (1 - eo(c3)) * 260 }] });
+    text(g, '+ 复制目录：表 + 读写处理', 1530, 786, { s: 24, w: 700, c: C.ink2, al: seg(lt, 1.6, 2.0) });
+    text(g, '+ Kconfig 选项 · Makefile 一行', 1530, 813, { s: 24, w: 700, c: C.ink2, al: seg(lt, 1.8, 2.2) });
+    evtCap(g, 390, 470, ['类型', '端点', '值'], { fs: 28 });
+    stamp(g, '一行不改', 390, 680, clamp((lt - T[1] - .3) / .7), { c: C.green, icon: 'check', fs: 30, seed: 2 });
+    stamp(g, '一行不改', 960, 690, clamp((lt - T[1] - .9) / .7), { c: C.green, icon: 'check', fs: 30, seed: 5 });
   },
 });
 
@@ -1096,27 +1139,6 @@ S('s28', {
     });
   },
 });
-S('s29', {
-  cues: [[.6, 'whoosh'], [1.2, 'draw', .6], [4.6, 'tick'], [5.2, 'type'], [8.4, 'stamp']],
-  draw(g, lt) {
-    const nw = seg(lt, .6, 1.3), items = [['device/', 290], ['product_a/', 380], ['product_b/', 470]];
-    text(g, 'spec/', 300, 210, { f: 'mono', s: 30, w: 700, a: 'left', al: seg(lt, .2, .5) });
-    draft(g, [[320, 232], [320, lerp(470, 560, nw)]], seg(lt, .2, .8), { c: C.ink2, w: 2 });
-    items.forEach(([s, y], i) => { path(g, [[320, y], [360, y]], { c: C.ink2, w: 2, al: seg(lt, .3, .6) }); fileIcon(g, 368, y - 18, 28, 36, { al: seg(lt, .3, .6) }); text(g, s, 410, y, { f: 'mono', s: 28, w: 700, a: 'left', c: C.ink2, al: seg(lt, .4, .7) }); });
-    if (nw > 0) {
-      const dx = (1 - eo(nw)) * 300;
-      path(g, [[320, 560], [360, 560]], { c: C.cyan, w: 2, al: nw }); frame(g, 366 + dx, 540, 32, 40, { construct: false, dash: [6, 4], c: C.cyan, lw: 2, al: nw });
-      text(g, 'product_c/', 410 + dx, 560, { f: 'mono', s: 28, w: 700, a: 'left', c: C.cyan, al: nw });
-      ['映射表', '处理函数'].forEach((s, i) => { const k = seg(lt, 1.4 + i * .3, 1.8 + i * .3); path(g, [[440, 590], [440, 630 + i * 50], [470, 630 + i * 50]], { c: C.cyan, w: 1.6, al: k }); text(g, s, 484, 630 + i * 50, { s: 26, w: 700, a: 'left', c: C.cyan, al: k }); });
-    }
-    const add = lt > 4.6, mk = lt > 5.0;
-    codeCard(g, 1060, 170, 620, ['choice 产品', '  PRODUCT_A', '  PRODUCT_B', ...(add ? ['+ PRODUCT_C'] : [])], { fs: 24, lh: 38, title: 'Kconfig', hl: add ? [3] : [], hlA: seg(lt, 4.6, 5.0), al: seg(lt, 4.3, 4.6) });
-    codeCard(g, 1060, 400, 620, ['SRC_DIRS += spec/$(PRODUCT)', ...(mk ? ['+ PRODUCT_C → spec/product_c'] : [])], { fs: 24, lh: 38, title: 'Makefile', hl: mk ? [1] : [], hlA: seg(lt, 5.0, 5.4), al: seg(lt, 4.4, 4.7) });
-    box(g, 1060, 640, 620, 140, '公共层 spec_report/', seg(lt, 7.9, 8.4), { fs: 28 });
-    stamp(g, '零改动', 1596, 694, clamp((lt - 8.4) / .7), { fs: 30 });
-  },
-});
-
 /* =====================================================================
  * 第六章：一个不能删的空函数（⚠ 第 31 幕为机制演绎）
  * ===================================================================== */
@@ -1188,7 +1210,7 @@ S('s32', {
 /* =====================================================================
  * 总结与片尾
  * ===================================================================== */
-const TAKE = [['01', ['差异交给', '构建系统去选'], '公共代码不认产品'], ['02', ['先分类，', '再动手'], '每一步都能编译、能回归'], ['03', ['零运行时成本，', '也有代价'], '独有接口要屏蔽，链接锚要留']];
+const TAKE = [['01', ['差异挡在', '内部代码之外'], '同名符号 + 映射规则'], ['02', ['先分类，', '再动手'], '每一步都能编译、能回归'], ['03', ['零运行时成本，', '也有代价'], '独有接口要屏蔽，链接锚要留']];
 function takeCard(g, i, lt, mode) { // mode: 'reveal' 正在展开 / 'done' 已展开（略暗）
   const x = 180 + i * 540, cx = x + 240, rv = mode === 'reveal', p = rv ? seg(lt, .2, .9) : 1, a = rv || mode === 'lit' ? 1 : .6, [num, title, sub] = TAKE[i];
   g.save(); g.globalAlpha *= a;
@@ -1197,7 +1219,7 @@ function takeCard(g, i, lt, mode) { // mode: 'reveal' 正在展开 / 'done' 已�
   text(g, num, cx, 280, { f: 'disp', s: 96, w: 900, noFill: false, c: rgba(C.ink, .08), stroke: C.cyan, lw: 3, al: q });
   title.forEach((t, k) => text(g, t, cx, 380 + k * 50, { s: 38, w: 900, al: q }));
   g.save(); g.globalAlpha *= seg(q, .3, 1);
-  if (i === 0) { box(g, cx - 70, 520, 140, 46, 'variant/', 1, { f: 'mono', fs: 24 }); pipe(g, [[cx - 70, 543], [cx - 130, 543], [cx - 130, 620]], lt, { flow: .6 }); pipe(g, [[cx + 70, 543], [cx + 130, 543], [cx + 130, 620]], lt, { flow: .6 }); box(g, cx - 200, 620, 140, 46, 'single/', 1, { f: 'mono', fs: 24, lit: .5 }); box(g, cx + 60, 620, 140, 46, 'dual/', 1, { f: 'mono', fs: 24, dash: [6, 5] }); }
+  if (i === 0) { box(g, cx - 210, 560, 120, 56, '内部', 1, { fs: 24 }); box(g, cx - 75, 560, 150, 56, 'dispatcher', 1, { f: 'mono', fs: 24, lit: .6 }); box(g, cx + 90, 560, 120, 56, '规则', 1, { fs: 24 }); pipe(g, [[cx - 90, 588], [cx - 75, 588]], lt, { flow: .6 }); pipe(g, [[cx + 75, 588], [cx + 90, 588]], lt, { flow: .6 }); }
   if (i === 1) { for (let d = 0; d < 11; d++) frame(g, cx - 198 + d * 36, 520, 30, 50, { lw: 1.6, construct: false, fill: rgba(C.red, .12) }); draft(g, [[cx - 190, 640], [cx + 190, 640]], 1, { w: 2.4 }); for (let s = 0; s < 6; s++) dot(g, cx - 190 + s * 76, 640, 9, C.cyan); }
   if (i === 2) { balance(g, cx - 40, 540, .5, '', '', 1); anchorIcon(g, cx + 150, 600, .55, { c: C.amber }); }
   g.restore();
