@@ -32,6 +32,8 @@ BAR = BEAT * 4
 STEP = BEAT / 2
 SEED = 20261101
 DUCK_DB = 1.8
+# 各类音效相对原始合成的增益：元素切换的 pop / tick 要听得清，whoosh 不压过音乐
+CUE_GAIN_DB = dict(pop=13, tick=14, hop=6, type=8, ding=5, snip=6, flip=5, bloop=5, bonk=5, poof=5, whoosh=-1)
 FADE_SECONDS = 3.0
 TARGET_RMS_DB = -24.4
 PEAK_DB = -1.0
@@ -450,9 +452,9 @@ def render(info):
     duration, sections, cues, anchors = prepare(info)
     music = music_bus(duration, sections, anchors)
     sfx = np.zeros_like(music)
-    fx = {kind: (lambda v, kind=kind: cue_voice(kind) * v) for kind in CUE_DURATIONS}
+    fx = {kind: (lambda v, kind=kind: cue_voice(kind) * v * 10 ** (CUE_GAIN_DB.get(kind, 0) / 20))
+          for kind in CUE_DURATIONS}
     ak.place_cues(sfx, cues, fx)
-    sfx *= 10 ** (-3 / 20)
     # 分块侧链节省内存；halo 覆盖最长 cue，始终读取未避让的音乐。
     triggers = np.array([c["t"] for c in cues if c["v"] > 0])
     chunk, halo = SR * 20, SR * 2
@@ -464,12 +466,15 @@ def render(info):
                          key=sfx[left:right], times=times, depth_db=DUCK_DB,
                          threshold=.008, attack=.012, hold=.045, release=.150)
         music[a:b] *= ducked[a - left:b - left]
+    # 连续性只检查音乐本身：音效的起落不算断裂
+    music_only = music.copy()
+    ending_envelope(music_only, anchors)
     music += sfx
     del sfx
     ending_envelope(music, anchors)
     mix = ak.limit_bus(music, ceiling_db=PEAK_DB)
     mix = ak.normalize(mix, target_rms_db=TARGET_RMS_DB, peak_db=PEAK_DB)
-    report = dict(timeline_seconds=duration, anchors=anchors, sections=sections,
+    report = dict(music_only=music_only, timeline_seconds=duration, anchors=anchors, sections=sections,
                   cue_counts=dict(sorted(Counter(c["type"] for c in cues).items())))
     return mix, report
 
@@ -517,7 +522,7 @@ def main():
     sr, pcm = wavfile.read(args.output, mmap=True)
     stats = pcm_stats(pcm)
     error = stats["rms_dbfs"] - TARGET_RMS_DB
-    continuity = continuity_stats(pcm, sr)
+    continuity = continuity_stats(report.pop("music_only"), sr)
     nonzero = np.flatnonzero(np.any(pcm != 0, axis=1))
     silent_tail = (len(pcm) - nonzero[-1] - 1) / sr if len(nonzero) else len(pcm) / sr
     if (sr != SR or pcm.dtype != np.int16 or pcm.ndim != 2 or pcm.shape[1] != 2
